@@ -9,25 +9,25 @@
 #include <math.h>
 #include <string.h>
 #include "min_max_heap.h"
-
+#include <cstdlib>
 
 /*
-   The following class and functions implement a min-max heap, which can be used for implementing a 
+   The following class and functions implement a min-max heap, which can be used for implementing a
    distributed best bound first search.
    1. Min-max heaps.  See Symmetric Min-Max Heap: A Simpler Data Structure for Double-Ended Priority Queue
-      by Arvind and Rangan; Information Processing Letters, 69, 1999 for an explanation of min-max heaps.  
+      by Arvind and Rangan; Information Processing Letters, 69, 1999 for an explanation of min-max heaps.
       This heap supports the following operations in O(log n) time:
       a. Insert an item into the heap.
       b. Delete the minimum item from the heap.
       c. Delete the maximum item from the heap.
-   2. The heap is represented by a binary tree where the root node is empty.  If x is a node in the tree, 
+   2. The heap is represented by a binary tree where the root node is empty.  If x is a node in the tree,
       let Tx be the subtree rooted at x.  It maintains the following invariant for every node x in the tree.
       a. The node with the maximum key in Tx (excluding x itself) is in the right child of x.
       b. The node with the minimum key in Tx (excluding x itself) is in the left child of x.  (Note: The paper did not say "excluding x itself" here, but there example indicates this must be the case.)
-   3. The items in the heap are stored in heap[1], ..., heap[n], where n is the number of items 
+   3. The items in the heap are stored in heap[1], ..., heap[n], where n is the number of items
       currently in the heap minus 1.
    4. Parent, child, and sibling are defined in the usual way.
-   5. Let z be a node such that z > 3 and g be its grandparent.  
+   5. Let z be a node such that z > 3 and g be its grandparent.
       Left(z) is the left child of g and right(z) is the right child of g.
    6. Given a node k, the indices of its relatives can be computed as follows:
       a. parent(k) = floor(k / 2)         k > 1
@@ -89,7 +89,7 @@ void min_max_heap::siftup(int k)
    SIFT_UP performs a siftup operation on the item in position k of the heap.
    1. It performs the following operations.
       a. If key(k) < key(left_sibling(k)), then swap k with its left sibling.
-      b. It then repeatedly swaps the item in position k 
+      b. It then repeatedly swaps the item in position k
          i. with left(k) if key(k) < key(left(k))
         ii. with right(k) if key(k) > key(right(k))
          until either it is in position 2 or 3 or until no more swaps are needed.
@@ -165,7 +165,7 @@ heap_record min_max_heap::get_min()
 
 heap_record min_max_heap::delete_min()
 /*
-   1. DELETE_MIN deletes the item with minimum key from the heap.   
+   1. DELETE_MIN deletes the item with minimum key from the heap.
    2. A copy of the item with the minimum key is returned.
    3. If the heap is empty, the key of the item that is returned is set equal to -1.
    4. Written 6/15/07.
@@ -211,10 +211,10 @@ void min_max_heap::siftdown_min(int k)
    }
 
    while(k < last) {
-      
+
       // If the key of the item in position k is greater than its right sibling, then swap it with its right sibling.
-      
-      k1 = k + 1;   
+
+      k1 = k + 1;
       if(heap[k].key > heap[k1].key) {
          this->swap(k, k1);
          continue;
@@ -222,13 +222,13 @@ void min_max_heap::siftdown_min(int k)
 
       // If the key of the item in position k is greater than either its left child or its left nephew,
       // then swap it with the one with the smaller key.
-      
+
       k1 = 2 * k;                                     // k1 = left child of k.
       if(k1 > last) {
          break;
       }
       key1 = heap[k1].key;
-      
+
       left_nephew = 2 * k + 2;                       // Note: This formula for the left nephew assumes that k is a left child.
       if(left_nephew <= last) {
          left_nephew_key = heap[left_nephew].key;
@@ -252,7 +252,7 @@ void min_max_heap::siftdown_min(int k)
 
 heap_record min_max_heap::get_max()
 /*
-   1. MAX_ITEM returns the item with maximum key from the heap (without deleting it).   
+   1. MAX_ITEM returns the item with maximum key from the heap (without deleting it).
    2. A copy of the item with the maximum key is returned.
    3. If the heap is empty, the key of the item that is returned is set equal to -1.
    4. Written 3/4/08.
@@ -281,7 +281,7 @@ heap_record min_max_heap::get_max()
 
 heap_record min_max_heap::delete_max()
 /*
-   1. DELETE_MAX deletes the item with maximum key from the heap.   
+   1. DELETE_MAX deletes the item with maximum key from the heap.
    2. A copy of the item with the maximum key is returned.
    3. If the heap is empty, the key of the item that is returned is set equal to -1.
    4. Written 6/15/07.
@@ -335,10 +335,10 @@ void min_max_heap::siftdown_max(int k)
    }
 
    while(k <= last) {
-      
+
       // If the key of the item in position k is less than its left sibling, then swap it with its left sibling.
-            
-      k1 = k - 1;   
+
+      k1 = k - 1;
       if(heap[k].key < heap[k1].key) {
          this->swap(k, k1);
          continue;
@@ -346,7 +346,7 @@ void min_max_heap::siftdown_max(int k)
 
       // Check if k has a right child.  If it does not, then if key(k) is less than the key of its left child or any of its nephews,
       // then k is swapped with the one with the largest key.  If k becomes a left child, then the process is halted.
-      
+
       if(2 * k + 1 > last) {
          key1 = INT_MIN;
          i = 2 * k - 2;
@@ -360,9 +360,9 @@ void min_max_heap::siftdown_max(int k)
          if(heap[k].key < key1) {
             this->swap(k, k1);
             k = k1;
-            
+
             // If k is now a left child, then break out of the loop.
-            
+
             if((k % 2) == 0) {
                break;
             } else {
@@ -372,10 +372,10 @@ void min_max_heap::siftdown_max(int k)
             break;
          }
       }
-      
+
       // If the key of the item in position k is less than either its rightt child or its right nephew,
       // then swap it with the one with the larger key.
-      
+
       k1 = 2 * k - 1;                                 // k1 = right nephew of k. Note: This formula for the right nephew assumes that k is a right child.
       key1 = heap[k1].key;
 
@@ -540,26 +540,26 @@ void min_max_heap::print()
    width = field_width * (1 << (n_levels - 2));
    cnt = 0;
    for(d = 1; d <= n_levels - 1; d++) {
-      _itoa_s(field_width / 2, w, 10);
-      strcpy_s(s, "%");
-      strcat_s(s, w);
-      strcat_s(s, "c");
+      _itoa(field_width / 2, w, 10);
+      strcpy(s, "%");
+      strcat(s, w);
+      strcat(s, "c");
       printf(s, ' ');
       stop = 1 << (d - 1);
       for(i = 1; i  <= stop; i++) {
          cnt = cnt++;
-         _itoa_s(width, w, 10);
-         strcpy_s(s, "%");
-         strcat_s(s, w);
-         strcat_s(s, "d%");
-         strcat_s(s, w);
-         strcat_s(s, "c");     
+         _itoa(width, w, 10);
+         strcpy(s, "%");
+         strcat(s, w);
+         strcat(s, "d%");
+         strcat(s, w);
+         strcat(s, "c");
          printf(s, heap[cnt].key, ' ');
       }
       printf("\n");
       width = width / 2;                     // Don't need the floor function due to integral division.
    }
-   start = 1 << (d - 1); 
+   start = 1 << (d - 1);
    for(i = start; i <= last; i++) {
       printf(" %3d", heap[i].key);
    }

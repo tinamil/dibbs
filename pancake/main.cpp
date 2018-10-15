@@ -7,6 +7,7 @@
 */
 
 #include "main.h"
+#include <limits>
 
 bistates_array states;                 // Stores the states
 unsigned char  *goal;                  // goal sequence of pancakes

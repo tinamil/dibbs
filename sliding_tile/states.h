@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cassert>
 //#include "heap_record.h"
+#include <cstdlib>
 
 #define  N_LOCATIONS 16             // Number of locations
 
@@ -14,7 +15,7 @@
    1. The array supports the following operations in constant time:
       a. Insert a state into the array.
       b. Replace a state in the array, given the index of the state to be replaced.
-   2. The array is a simple array of states. 
+   2. The array is a simple array of states.
       a. last = the index in states where the last state is stored.
    3. A states_array consists of the following.
       a. last = the index in states where the last state is stored.
@@ -79,14 +80,14 @@ public:
                                              //exit(1);
                                              return(-1);
                                           }
-                                          n_stored++;  
+                                          n_stored++;
                                           states[last] = *state;
-   
+
                                           return(last);
                                        }
    void  replace_state(const int index, const state *state) {
                                                                assert((0 <= index) && (index <= last));
-                                                               n_stored++;  
+                                                               n_stored++;
                                                                states[index] = *state;
                                                             }
    void  check_for_dominated_states()  {

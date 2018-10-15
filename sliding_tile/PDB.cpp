@@ -5,12 +5,14 @@
 #include <vector>
 #include <queue>
 #include "PDB.h"
-
+#include <cstring>
+#include <ctime>
+#include <stdio.h>
 
 /*
    The following classes and functions construc Disjoint Pattern Databases (DPDBs), which are used
    to construct better lower bounds for the 15-puzzle.
-   1. Disjoint pattern databases.  See Disjoint Pattern Database Heuristics by Korf and Felner and 
+   1. Disjoint pattern databases.  See Disjoint Pattern Database Heuristics by Korf and Felner and
       Solving the the 24 Puzzle with Instance Dependent Pattern Databases by Felner and Adler.
    2. To be a valid lower bound, the patterns must be disjoint, meaning that they are distinct
       subsets of the tiles.
@@ -44,7 +46,7 @@ subproblem& subproblem::operator=(const subproblem& rhs)
       n_moves = rhs.n_moves;
       n_tiles_in_pattern = rhs.n_tiles_in_pattern;
       index = rhs.index;
-      
+
 	   //delete[] char_array;
       if(location == NULL) {
          location = new unsigned char[n_tiles_in_pattern];
@@ -65,7 +67,7 @@ void PDB::build_IDA(unsigned char  **distances, unsigned char **moves)
    1. This function uses iterative deepening to compute the database.
    2. Input Variables
       a. distances[i][j] = Manhattan distance between location i and location j.
-      b. moves[i] = list of possible ways to move the empty tile from location i. 
+      b. moves[i] = list of possible ways to move the empty tile from location i.
    3. Output Variables
       a. database[index] = minimum number of moves to reach the goal configuration
                            starting from the configuration corresponding index.
@@ -134,23 +136,23 @@ void PDB::build_dfs(unsigned char *location, unsigned char empty_location, unsig
    1. This algorithm performs limited Depth First Search (DFS).
       It is designed to be used within an iterative deepening algorithm to create a pattern database.
    2. Input Variables
-      a. location[i] = location of tile i of the pattern.  
+      a. location[i] = location of tile i of the pattern.
          The elements of location are stored beginning in location[0].
       b. empty_location = location of the empty tile.
       c. MD = Manhattan lower bound on the number of moves needed to reach the goal postion.
       d. n_moves = number of moves that have been made so far.
       e. index = the index (in database) corresponding to the configuration represented by location.
-      f. min_moves[index0] = minimum number of moves to reach the goal configuration starting from the 
+      f. min_moves[index0] = minimum number of moves to reach the goal configuration starting from the
                              configuration corresponding index0, which includes the location of the empty tile.
       g. occupied[i] = true if location i is occupied by a tile in the pattern.
       h. bound = limit the search to subproblems whose number of moves is less than or equal to bound.
       i. distances[i][j] = Manhattan distance between location i and location j.
-      j. moves[i] = list of possible ways to move the empty tile from location i.      
+      j. moves[i] = list of possible ways to move the empty tile from location i.
    3. Output Variables
       a. found = true if a descendent is found with n_moves = bound.
       b. database[index] = minimum number of moves to reach the goal configuration
                            starting from the configuration corresponding index is set for descendents of this subproblem.
-      c. min_moves[index0] = minimum number of moves to reach the goal configuration starting from the 
+      c. min_moves[index0] = minimum number of moves to reach the goal configuration starting from the
                              configuration corresponding index0, which includes the location of the empty tile,
                              is set for descendents of this subproblem.
    4. Written 1/6/12.
@@ -242,7 +244,7 @@ void PDB::build_breadth_first_search(unsigned char  **distances, unsigned char *
    1. This function uses breadth first search to compute the database.
    2. Input Variables
       a. distances[i][j] = Manhattan distance between location i and location j.
-      b. moves[i] = list of possible ways to move the empty tile from location i. 
+      b. moves[i] = list of possible ways to move the empty tile from location i.
    3. Output Variables
       a. database[index] = minimum number of moves to reach the goal configuration
                            starting from the configuration corresponding index.
@@ -290,10 +292,10 @@ void PDB::build_breadth_first_search(unsigned char  **distances, unsigned char *
    // Compute the index of this configuration, including the empty tile at its maximum location.
    index0 = compute_index0(location, max_location);
    //min_moves[index0] = n_moves - MD;
-   
+
    // Generate subproblems from the root problem.
    // Do not perform this in the main breadth first search loop because it will attempt to generate subproblems from every subproblem with level = 0.
-   
+
    level = 0;
    n_explored = 0;
    gen_subproblems(location, empty_location, level, min_moves, occupied, distances, moves);
@@ -331,7 +333,7 @@ void PDB::build_breadth_first_search(unsigned char  **distances, unsigned char *
 
       cpu = (double) (clock() - start_time) / CLOCKS_PER_SEC;
       //printf("level = %3d  n_explored = %10I64d  cpu = %8.2f\n", level, n_explored, cpu);
-      
+
       level += 2;
    } while(found == true);
 
@@ -364,21 +366,21 @@ void PDB::gen_subproblems(unsigned char *location, unsigned char empty_location,
    1. This algorithm performs limited Depth First Search (DFS).
       It is designed to be used within an iterative deepening algorithm to create a pattern database.
    2. Input Variables
-      a. location[i] = location of tile i of the pattern.  
+      a. location[i] = location of tile i of the pattern.
          The elements of location are stored beginning in location[0].
       b. empty_location = location of the empty tile.
       c. MD = Manhattan lower bound on the number of moves needed to reach the goal postion.
       d. n_moves = number of moves that have been made so far.
       e. index = the index (in database) corresponding to the configuration represented by location.
-      f. min_moves[index0] = minimum number of moves to reach the goal configuration starting from the 
+      f. min_moves[index0] = minimum number of moves to reach the goal configuration starting from the
                              configuration corresponding index0, which includes the location of the empty tile.
       g. occupied[i] = true if location i is occupied by a tile in the pattern.
       h. bound = limit the search to subproblems whose number of moves is less than or equal to bound.
       i. distances[i][j] = Manhattan distance between location i and location j.
-      j. moves[i] = list of possible ways to move the empty tile from location i.      
+      j. moves[i] = list of possible ways to move the empty tile from location i.
    3. Output Variables
       a. found = true if a descendent is found with n_moves = bound.
-      b. min_moves[index0] = minimum number of moves to reach the goal configuration starting from the 
+      b. min_moves[index0] = minimum number of moves to reach the goal configuration starting from the
                              configuration corresponding index0, which includes the location of the empty tile,
                              is set for descendents of this subproblem.
    4. Written 1/6/12.
@@ -450,7 +452,7 @@ void PDB::accessible_dfs(bool *accessible, unsigned char empty_location, unsigne
       a. accessible[i] = true if location i has been visited during the dfs search.
       b. empty_location = location of the empty tile.
       c. occupied[i] = true if location i is occupied by a tile in the pattern.
-      d. moves[i] = list of possible ways to move the empty tile from location i. 
+      d. moves[i] = list of possible ways to move the empty tile from location i.
    3. Output Variables
       a. accessible[i] = is set to true for each location visited during this dfs search.
       b. max_location = maximum location visited during the dfs search.  It should be set equal to 0 prior to the root invocation of the dfs.
@@ -477,13 +479,13 @@ void PDB::accessible_dfs(bool *accessible, unsigned char empty_location, unsigne
 
 unsigned char PDB::min_moves(unsigned char  **distances, unsigned char **moves, unsigned char *source_location)
 /*
-   1. Given the locations of the tiles in the pattern (in source_location), this function determines the 
+   1. Given the locations of the tiles in the pattern (in source_location), this function determines the
       miniumum number of moves to move from the source location to the goal destination.
    2. The purose of this function is to check the values stored in database.
    3. Input Variables
       a. distances[i][j] = Manhattan distance between location i and location j.
-      b. moves[i] = list of possible ways to move the empty tile from location i. 
-      c. source_location[i] = location of tile i of the pattern.  
+      b. moves[i] = list of possible ways to move the empty tile from location i.
+      c. source_location[i] = location of tile i of the pattern.
          The elements of location are stored beginning in location[0].
    4. Written 1/2/12.
    5. This code is incorrect.  It was based on an incorrect understanding of how to compute a PDB.
@@ -518,12 +520,12 @@ unsigned char PDB::pattern_dfs(unsigned char *location, unsigned char LB, unsign
    1. This algorithm performs limited Depth First Search (DFS) on a pattern.
       It is designed to be used within an iterative deepening algorithm.
    2. Input Variables
-      a. source_location[i] = location of tile i of the pattern.  
+      a. source_location[i] = location of tile i of the pattern.
          The elements of location are stored beginning in location[0].
       b. LB = Manhattan lower bound on the number of moves needed to reach the goal postion.
       c. z = objective function value = number of moves that have been made so far.
       d. distances[i][j] = Manhattan distance between location i and location j.
-      e. moves[i] = list of possible ways to move the empty tile from location i. 
+      e. moves[i] = list of possible ways to move the empty tile from location i.
    3. Output Variables
       a. min_bound = minimum bound of subproblems whose lower bound exceeds bound is returned.
       b. solved = true (false) if the goal position was (not) reached during the search.
@@ -599,7 +601,7 @@ __int64 PDB::compute_index0(unsigned char *location, unsigned char empty_locatio
          to store only the entries that are actually used.
       c. The code is based on code written by Robert Hilchie, which I found on the web.
    2. Input Variables
-      a. location[i] = location of tile i of the pattern.  
+      a. location[i] = location of tile i of the pattern.
          The elements of location are stored beginning in location[0].
    3. Written 1/6/12.
 */
@@ -645,7 +647,7 @@ void PDB::invert_index0(__int64 index0, unsigned char *location, unsigned char *
       a. index0 = index corresponding to a configuration of the tiles in the pattern and the empty tile.
       b. The code is based on code written by Robert Hilchie, which I found on the web.
    3. Output Variables
-      a. location[i] = location of tile i of the pattern.  
+      a. location[i] = location of tile i of the pattern.
          The elements of location are stored beginning in location[0].
       b. empty_location = location of the empty tile.
    3. Written 1/16/12.
@@ -683,7 +685,7 @@ __int64 PDB::compute_index(unsigned char *location)
 /*
    1. This function computes the index (in database) corresponding to the configuration represented by location.
    2. Input Variables
-      a. location[i] = location of tile i of the pattern.  
+      a. location[i] = location of tile i of the pattern.
          The elements of location are stored beginning in location[0].
    3. Written 12/27/11.
 */
@@ -705,7 +707,7 @@ __int64 PDB::compute_index2(unsigned char *location_of_all_tiles)
          In compute_index, location only specifies the location of the tiles in the pattern, and it specifies
          them in the order that the tiles appear in the pattern.
    2. Input Variables
-      a. location_of_all_tiles[t] = location of tile t.  
+      a. location_of_all_tiles[t] = location of tile t.
          The elements of location are stored beginning in location_of_all_tiles[0].
    3. Written 12/29/11.
 */
@@ -776,7 +778,7 @@ void PDB::print_binary()
 
    // Open the file.  a = append, + = remove EOF marker prior to appending, b = binary.
 
-   if (fopen_s(&out, "database.bin", "a+b") != 0) {
+   if (((*(&out))=fopen(("database.bin"),  ("a+b")))==NULL != 0) {
       fprintf(stderr,"Unable to open database file for output\n");
       exit(1);
    }
@@ -840,7 +842,7 @@ void PDB::print_config(unsigned char *location, unsigned char empty_location)
 /*************************************************************************************************/
 
 void DPDB::add(unsigned char  **distances, unsigned char **moves, const int n_tiles_in_pattern, const unsigned char *pattern)
-{  
+{
    int            i;
 
    n_PDBs++;
@@ -896,7 +898,7 @@ void DPDB::read(const int n_databases, const int *n_tiles_in_patterns, unsigned 
 
    // Open the input file.  r = read, b = binary.
 
-   if (fopen_s(&in, file_name, "rb") != 0) {
+   if (((*(&in))=fopen((file_name),  ("rb")))==NULL != 0) {
       fprintf(stderr,"Unable to open database file for input\n");
       exit(1);
    }
@@ -915,7 +917,7 @@ void DPDB::read(const int n_databases, const int *n_tiles_in_patterns, unsigned 
 //_________________________________________________________________________________________________
 
 unsigned char DPDB::compute_lb(unsigned char  *tile_in_location)
-{  
+{
    unsigned char  LB, LB_reflection, *location_of_all_tiles;
    int            i, p;
    __int64        index;
@@ -949,7 +951,7 @@ unsigned char DPDB::compute_lb(unsigned char  *tile_in_location)
 
 //_________________________________________________________________________________________________
 bool DPDB::check_lb(unsigned char  **distances, unsigned char **moves, unsigned char  *tile_in_location, unsigned char LB)
-{  
+{
    unsigned char  LB2, *location_of_all_tiles, *source_location;
    int            i, p;
 

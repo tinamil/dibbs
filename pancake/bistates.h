@@ -6,6 +6,8 @@
 #include <fstream>
 #include <cassert>
 //#include "heap_record.h"
+#include <cstdlib>
+#include <cstring>
 
 #define  N_LOCATIONS 16             // Number of locations
 
@@ -14,7 +16,7 @@
    1. The array supports the following operations in constant time:
       a. Insert a state into the array.
       b. Replace a state in the array, given the index of the state to be replaced.
-   2. The array is a simple array of states. 
+   2. The array is a simple array of states.
       a. last = the index in states where the last state is stored.
    3. A states_array consists of the following.
       a. last = the index in states where the last state is stored.
@@ -75,8 +77,8 @@ public:
    int   n_of_states()  const {return last + 1;}
    void  null()         {last = -1; max_size = 0; n_pancakes = 0; n_stored = 0; bistates = NULL;}
    void  clear()        {  //for(int i = 0; i <= last; i++) delete [] bistates[i].seq;
-                           last = -1; 
-                           //n_pancakes = 0; 
+                           last = -1;
+                           //n_pancakes = 0;
                            n_stored = 0;
                         }
    bool  empty()        const {return(last == -1);}
@@ -100,7 +102,7 @@ public:
                                                    //exit(1);
                                                    return(-1);
                                                 }
-                                                n_stored++; 
+                                                n_stored++;
                                                 bistates[last].g1 = bistate->g1;
                                                 bistates[last].h1 = bistate->h1;
                                                 bistates[last].open1 = bistate->open1;
@@ -123,7 +125,7 @@ public:
                                              }
    void  replace_bistate(const int index, const bistate *bistate) {
                                                                      assert((0 <= index) && (index <= last));
-                                                                     n_stored++;  
+                                                                     n_stored++;
                                                                      bistates[index] = *bistate;
                                                                   }
    void  print_bistate(const int index)   {

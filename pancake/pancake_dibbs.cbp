@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="pancake_dibbs" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="build">
+				<Option output="bin/build/pancake_dibbs" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/build/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="a_star.cpp" />
+		<Unit filename="bidirectional.cpp" />
+		<Unit filename="bimemory.cpp" />
+		<Unit filename="bistates.h" />
+		<Unit filename="hash_table.cpp" />
+		<Unit filename="hash_table.h" />
+		<Unit filename="heap_record.h" />
+		<Unit filename="io.cpp" />
+		<Unit filename="iterative_deepening.cpp" />
+		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
+		<Unit filename="min_max_heap.cpp" />
+		<Unit filename="min_max_heap.h" />
+		<Unit filename="problems.cpp" />
+		<Unit filename="random.cpp" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

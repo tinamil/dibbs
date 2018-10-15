@@ -54,7 +54,7 @@ public:
                      n_explored = 0; n_explored_forward = 0; n_explored_reverse = 0; start_time = clock(); best_cpu = 0; cpu = 0; states_cpu = 0; optimal = 1;
                      for(int i = 0; i <= MAX_DEPTH; i++) { best_solution[i] = 0; n_explored_depth[i] = 0;}
                   };
-   void    initialize() {  best_z = UCHAR_MAX; h1_root = 0; best_branch = 0; n_generated = 0; n_generated_forward = 0; n_generated_reverse = 0; 
+   void    initialize() {  best_z = UCHAR_MAX; h1_root = 0; best_branch = 0; n_generated = 0; n_generated_forward = 0; n_generated_reverse = 0;
                            n_explored = 0; n_explored_forward = 0; n_explored_reverse = 0; start_time = clock(); best_cpu = 0; cpu = 0; states_cpu = 0; optimal = 1;
                            for(int i = 0; i <= MAX_DEPTH; i++) { best_solution[i] = 0; n_explored_depth[i] = 0;}
                         };
@@ -72,7 +72,7 @@ public:
    double   best_cpu;                   // time at which best solution was found
    double   cpu;                        // cpu used during search process
    double   states_cpu;                 // cpu used to find and store states
-   int      optimal;                    // = 1 if the search verified the optimality of the solution 
+   int      optimal;                    // = 1 if the search verified the optimality of the solution
    unsigned char  best_solution[MAX_DEPTH + 1];    // the optimal sequence of flips
    __int64  n_explored_depth[MAX_DEPTH + 1]; // n_explored_depth[d] = number of states explored during the branch and bound algorithm
 };
@@ -99,9 +99,9 @@ extern   int      algorithm;        /* -a option: algorithm
                                        4 = bidirectional */
 extern   int      best_measure;     /* -b option: best_measure
                                        1 = f = g + h
-                                       2 = f_bar = f_d + g_d - h_d' = 2*g_d + h_d - h_d' 
+                                       2 = f_bar = f_d + g_d - h_d' = 2*g_d + h_d - h_d'
                                        3 = f_d - (g_d /(MAX_DEPTH + 1) Break ties in f_d in favor of states with larger g_d.*/
-extern   int      gap_x;            // -g option: Value of X for the GAP-X heuristic.  See "Bidirectional Search That Is Guaranteed to Meet in the Middle."
+//extern   int      gap_x;            // -g option: Value of X for the GAP-X heuristic.  See "Bidirectional Search That Is Guaranteed to Meet in the Middle."
 extern   int      search_strategy;  /* -e option: search (exploration) strategy
                                        1 = depth first search
                                        2 = breadth first search

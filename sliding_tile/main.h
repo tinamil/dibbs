@@ -17,6 +17,7 @@
 #include "min_max_stacks.h"
 #include "PDB.h"
 #include "hash_table.h"
+#include <limits>
 
 using namespace std;
 
@@ -49,7 +50,7 @@ public:
    clock_t start_time;                 // starting cpu time
    clock_t end_time;                   // ending cpu time
    double  cpu;                        // cpu used during search process
-   bool    solved;                     // = true (false) if the goal position was (not) reached during the search 
+   bool    solved;                     // = true (false) if the goal position was (not) reached during the search
    unsigned char  min_z_plus_LB;
    unsigned char  current_solution[MAX_DEPTH + 1]; // current_solution[z] = location of the empty tile after z moves in the current solution
    unsigned char  min_solution[MAX_DEPTH + 1];     // min_solution[z] = location of the empty tile after z moves in the solution with the minimum bound
@@ -69,7 +70,7 @@ public:
                            2 = g + 1.5 h (AWA*)
                            3 = g - h2
                            4 = best = z + LB - maximum number of moves that can be made without exceeding a bound on the number of uphill moves
-                           5 = -z - maximum number of moves that can be made without exceeding a bound on the number of uphill moves 
+                           5 = -z - maximum number of moves that can be made without exceeding a bound on the number of uphill moves
                            6 = f_bar = f_d + g_d - h_d' = 2*g_d + h_d - h_d' */
    double   cpu_limit;     // cpu limit for search process
    int      dpdb_lb;       // -d option: 1 = ue disjoint LB, 0 = do not use (def = 0)
@@ -90,7 +91,7 @@ public:
 
 class searchinfo {
 public:
-   searchinfo()   {  best_z = UCHAR_MAX; root_LB = 0; best_branch = 0; n_generated = 0; n_explored = 0; start_time = clock(); 
+   searchinfo()   {  best_z = UCHAR_MAX; root_LB = 0; best_branch = 0; n_generated = 0; n_explored = 0; start_time = clock();
                      best_cpu = 0; cpu = 0; states_cpu = 0; optimal = 1; cnt = 0;
                      for(int i = 0; i <= MAX_DEPTH; i++) { best_solution[i] = 0; n_explored_depth[i] = 0;}
                   };
@@ -116,7 +117,7 @@ public:
    double   best_cpu;                   // time at which best solution was found
    double   cpu;                        // cpu used during search process
    double   states_cpu;                 // cpu used to find and store states
-   int      optimal;                    // = 1 if the search verified the optimality of the solution 
+   int      optimal;                    // = 1 if the search verified the optimality of the solution
    unsigned char  best_solution[MAX_DEPTH + 1];    // best_solution[z] = location of the empty tile after z moves in the best solution found
    __int64  n_explored_depth[MAX_DEPTH + 1]; // n_explored_depth[d] = number of states explored during the branch and bound algorithm
    __int64  cnt;
@@ -146,7 +147,7 @@ extern   int      algorithm;     /* -a option: algorithm
                                     1 = depth first search
                                     2 = breadth first search
                                     3 = best first search
-                                    4 = cyclic best first search 
+                                    4 = cyclic best first search
                                     5 = cyclic best first search using min_max_stacks
                                     6 = CBFS: Cylce through LB instead of depth.  Use min-max heaps. */
 extern   int      best_measure;  // -b option: 1 = LB
@@ -158,7 +159,7 @@ extern   int      direction_rule;/* -r option: rule for choosing the direction i
                                     1 = closed cardinality rule: |C1| <= |C2| => forward
                                     2 = Best First Direction (BFD): f1_bar_min <= f2_bar_min => forward
                                     3 = Best First Direction (BFD) with fbar_leveling.  Break ties using |O1| <= |O2| => forward
-                                    4 = open cardinality rule with fbar_leveling. |O1| <= |O2| = > forward */ 
+                                    4 = open cardinality rule with fbar_leveling. |O1| <= |O2| = > forward */
 extern   double   seed;          // -s option: random seed (def = 3.1567)
 
 // Data structures for selecting the next unexplored state.
@@ -239,7 +240,7 @@ int check_state(state *state);
 // Functions in heuristics.cpp
 
 unsigned char look_ahead_UB(unsigned char *tile_in_location, unsigned char look_ahead);
-unsigned char look_ahead_UB_dfs(unsigned char *tile_in_location, unsigned char empty_location, unsigned char prev_location, 
+unsigned char look_ahead_UB_dfs(unsigned char *tile_in_location, unsigned char empty_location, unsigned char prev_location,
                              unsigned char LB, unsigned char z, look_ahead_UB_parameters *parameters, look_ahead_UB_info *info);
 unsigned char examine_current_path(unsigned char *initial_configuration, unsigned char *solution, unsigned char LB, unsigned char z, unsigned char look_ahead, look_ahead_UB_parameters *parameters, look_ahead_UB_info *info);
 

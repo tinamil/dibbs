@@ -1,5 +1,6 @@
 #include "main.h"
 #include <queue>
+#include <limits>
 
 static bool             solved;
 static unsigned char    bound1;                       // Limit the forward search to states whose f1_bar is less than or equal to bound1.
@@ -64,7 +65,7 @@ unsigned char ID_DIBBS(unsigned char *source, unsigned char initial_UB, searchin
    goal = new unsigned char[n_tiles + 1];
    for (i = 0; i <= n_tiles; i++) goal[i] = i;
 
-   // Determine the locations of the tiles in the source configuration.  
+   // Determine the locations of the tiles in the source configuration.
    // source_location[t] = location of tile t in the source (initial) configuration.
    // The elements of source_location are stored beginning in source_location[0].
 
@@ -216,7 +217,7 @@ unsigned char ID_DIBBS(unsigned char *source, unsigned char initial_UB, searchin
       if (prn_info > 0) {
          cpu = (double)(clock() - start_time) / CLOCKS_PER_SEC;
          if (direction == 1) printf("Forward\n"); else printf("Reverse\n");
-         printf("UB = %3d old_bound1 = %3d  new_bound1 = %3d   old_bound2 = %3d  new_bound2 = %3d  n_exp = %12I64d  n_exp_f = %12I64d  n_exp_r = %12I64d  n_gen = %12I64d  n_gen_f = %12I64d  n_gen_r = %12I64d  cpu = %7.2f\n", 
+         printf("UB = %3d old_bound1 = %3d  new_bound1 = %3d   old_bound2 = %3d  new_bound2 = %3d  n_exp = %12I64d  n_exp_f = %12I64d  n_exp_r = %12I64d  n_gen = %12I64d  n_gen_f = %12I64d  n_gen_r = %12I64d  cpu = %7.2f\n",
                  UB, old_bound1, bound1, old_bound2, bound2, n_explored, n_explored_forward, n_explored_reverse, n_generated, n_generated_forward, n_generated_reverse, cpu);
          if (prn_info > 1) {
             //for (i = 0, sum1 = 0; (i <= MAX_DEPTH) && (n_exp_depth[i] > 0); i++) {printf("%3d %14I64d\n", i, n_exp_depth[i]); sum1 += n_exp_depth[i];}
@@ -313,7 +314,7 @@ unsigned char forward_dfs(unsigned char *source_location, bistate *state, unsign
    //}
 
    // Create new state and fill in values that will be the same for all subproblems.
-   
+
    g1_sub = g1 + 1;
    new_state.fill(g1_sub, 0, 1, n_tiles + 1, empty_location, -1, UCHAR_MAX, 0, 2, n_tiles + 1, -1, 0, state->tile_in_location, n_tiles);
 
@@ -349,9 +350,9 @@ unsigned char forward_dfs(unsigned char *source_location, bistate *state, unsign
          h2_sub = h2 + distances[empty_location][source_location[tile]] - distances[new_location][source_location[tile]];
          new_state.h2 = h2_sub;
          //if(!DPDB->check_lb(distances, moves, tile_in_location, LB_sub)) {
-         //   fprintf(stderr, "LB is incorrect\n"); 
+         //   fprintf(stderr, "LB is incorrect\n");
          //   prn_dfs_subproblem(tile_in_location, new_location, empty_location, LB_sub, z + 1);
-         //   exit(1); 
+         //   exit(1);
          //}
          f1_sub = g1_sub + h1_sub;
          f1_bar_sub = 2 * g1_sub + h1_sub - h2_sub;
@@ -395,7 +396,7 @@ unsigned char forward_dfs(unsigned char *source_location, bistate *state, unsign
             if(state_index == -1) {
                fprintf(stderr, "Ran out of states. n_exp = %14I64d  n_gen = %14I64d  Press ENTER to continue.\n", n_explored, n_generated);
                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');    // Keep the console window open.
-               exit(1); 
+               exit(1);
             }
             if (g1_sub < min_g1[h1_sub][h2_sub]) min_g1[h1_sub][h2_sub] = g1_sub;
          }
@@ -420,7 +421,7 @@ unsigned char forward_dfs(unsigned char *source_location, bistate *state, unsign
 
          new_state.tile_in_location[empty_location] = 0;
          new_state.tile_in_location[new_location] = tile;
-         
+
          if(solved) {
             //prn_configuration(tile_in_location);   printf("\n");
             solution[g1 + 1] = new_location;
@@ -462,7 +463,7 @@ unsigned char reverse_dfs(unsigned char *source_location, bistate *state, unsign
 */
 {
    unsigned char  b, empty_location, f2_sub, f2_bar, f2_bar_sub, g2, g2_sub, h1, h1_sub, h2, h2_sub, min_bound, new_location, prev_location, *pnt_move, stop, tile;
-   int            hash_index_sub, hash_value, hash_value_sub, i, state_index, status; 
+   int            hash_index_sub, hash_value, hash_value_sub, i, state_index, status;
    bistate        new_state;
    pair<int, int>    status_index;
 
@@ -522,9 +523,9 @@ unsigned char reverse_dfs(unsigned char *source_location, bistate *state, unsign
          h2_sub = h2 + distances[empty_location][source_location[tile]] - distances[new_location][source_location[tile]];
          new_state.h2 = h2_sub;
          //if(!DPDB->check_lb(distances, moves, tile_in_location, LB_sub)) {
-         //   fprintf(stderr, "LB is incorrect\n"); 
+         //   fprintf(stderr, "LB is incorrect\n");
          //   prn_dfs_subproblem(tile_in_location, new_location, empty_location, LB_sub, z + 1);
-         //   exit(1); 
+         //   exit(1);
          //}
          f2_sub = g2_sub + h2_sub;
          f2_bar_sub = 2 * g2_sub + h2_sub - h1_sub;
@@ -546,7 +547,7 @@ unsigned char reverse_dfs(unsigned char *source_location, bistate *state, unsign
                   info->best_cpu = (double)(clock() - info->start_time) / CLOCKS_PER_SEC;
                   //printf("UB = %3d  bound1 = %3d  bound2 = %4d  %4d  n_exp = %14I64d  n_exp_f = %14I64d  n_exp_r = %14I64d  n_gen = %14I64d  n_gen_f = %14I64d  n_gen_r = %14I64d  cpu = %8.2f\n",
                   //        UB, bound1, bound2, 2 * UB - bound1 - bound2, n_explored, n_explored_forward, n_explored_reverse, n_generated, n_generated_forward, n_generated_reverse, info->best_cpu);
-                  
+
                   //LB = ((old_bound1 + old_bound2) / 2) + 1;
                   //LB += (UB - LB) % 2;          // This termination criteria depends on the parity property of the sliding tile puzzle.
                   if (LB >= UB) {
