@@ -3,6 +3,7 @@ from typing import Optional, Tuple, List, Callable, Set, Any, FrozenSet, Iterabl
 from maze import Maze
 import math
 from queue import PriorityQueue
+import DIBBS
 
 
 """Profiling imports from profilehooks and memory_profiler packages, commented out as they are external packages"""
@@ -78,6 +79,7 @@ class Node:
         else:
             self.heuristic = 0
         self.combined = self.cost + self.heuristic
+        self.f_bar = self.combined + self.cost - heuristic_func(self, self.position, maze.getStart())
 
     def get_path(self) -> List[Tuple[int, int]]:
         """Iterates backwards through the parent nodes to produce a path from start to this position"""
@@ -183,7 +185,7 @@ def search(maze: Maze, searchMethod: str) -> Tuple[List[Tuple[int, int]], int]:
         "dfs": dfs,
         "greedy": greedy,
         "astar": astar,
-        "aco": ACO,
+        "dibbs": DIBBS.DIBBS(maze).search
     }.get(searchMethod)(maze)
    
 
@@ -216,108 +218,20 @@ def astar(maze: Maze) -> Tuple[List[Tuple[int, int]], int]:
     return ret_val
 
 
-def dibbs(maze: Maze) -> Tuple[List[Tuple[int, int]], int]:
-    objectives = set(maze.getObjectives())
-    assert(len(objectives) == 1)
-    start = maze.getStart()
-    objective = objectives.pop()
-    upper_bound = math.inf
-    f1_bar_min = 0
-    f2_bar_min = 0
-    forward = True
-    start_node = Node(maze, None, frozenset(objectives), start, 0, heuristic_func=heuristic)
-    forward_frontier = list()
-    forward_frontier.append(start_node)
-    backward_frontier = list()
-    backward_frontier.append(objective)
-
-    closed = set()
-    while frontier:
-        """Take the next value from the frontier"""
-
-        if pop_right:
-            next_value = frontier.pop()
-        else:
-            next_value = frontier.pop(0)
-        """Check for either find_any or find_all termination objectives"""
-        if find_any and next_value.position in objectives:
-            completed.add(next_value)
-            return next_value.get_path(), len(completed)
-        elif next_value.is_done():
-            completed.add(next_value)
-            return next_value.get_path(), len(completed)
-        """Iterate through node neighbors and add them to the frontier"""
-        if next_value not in completed:
-            for neighbor in getNeighbors(maze, *next_value.position):
-                if not find_any:
-                    """If the neighbor is also an objective, remove objective from the neighbors objective list"""
-                    new_obj = next_value.obj.difference([neighbor])
-                else:
-                    new_obj = objectives
-
-                node = Node(maze, next_value, new_obj, neighbor, next_value.cost + 1, heuristic_func=heuristic)
-
-                """If not waiting for the node to appear in the frontier (A*), and this is the last objective, 
-                terminate now"""
-                if not wait_for_frontier and ((not find_any and node.is_done())
-                                              or (find_any and node.position in objectives)):
-                    completed.add(node)
-                    return node.get_path(), len(completed)
-
-                if node not in completed:
-                    frontier.append(node)
-            completed.add(next_value)
-
-    while upper_bound > f1_bar_min + f2_bar_min / 2.0:
-        if forward:
-            forward = False
-            f1_bar_min = expand_forward()
-        else:
-            forward = True
-            f2_bar_min = expand_reverse()
-    return ret_val
-
-
-
-def expand_forward(frontier):
-    
-
-
-def expand_reverse():
-    pass
-
-
 def parameterized_astar(maze: Maze, start: Tuple[int, int],
                         objectives: Set[Tuple[int, int]]) -> Tuple[List[Tuple[int, int]], int]:
     """Searches the provided maze, starting at the provided start position, to find the minimum path to the set of
     provided objective positions.  If no objectives provided, throw a ValueError.  If only one objective, then utilize
     A* with Manhattan distance, otherwise utilize A* with recursive A* MST heuristic"""
-    #if len(objectives) > 1:
-    #    return optimized_search_alg(maze, start, objectives)
-    #elif len(objectives) == 1:
-    return search_alg(maze, start=start, objectives=objectives, sort_key=lambda z: z.combined,
-                          heuristic=lambda w, pos, o: min((manhattan_distance(pos, x) for x in o), default=0),
-                          find_any=True, wait_for_frontier=True)
-    #else:
-    #    raise ValueError("0 Objectives Received")
-
-
-def getNeighbors(maze: Maze, row: int, col: int) -> List[Tuple[int, int]]:
-    """Identify available neighbor positions, but in left, down, right, up order
-    instead of the default right, left, up, down order.  Helps some, hurts some,
-    otherwise is about the same as using the original getNeighbors function defined
-    in Maze."""
-    possibleNeighbors = [
-        (row - 1, col),
-        (row, col - 1),
-        (row + 1, col),
-        (row, col + 1),
-    ]
-    neighbors = []
-    for r, c in possibleNeighbors:
-        if maze.isValidMove(r, c):
-            neighbors.append((r, c))
-    return neighbors
+    if len(objectives) > 1:
+        return optimized_search_alg(maze, start, objectives)
+    elif len(objectives) == 1:
+        goal = maze.getObjectives().pop()
+        return search_alg(maze, start=start, objectives=objectives, sort_key=lambda z: z.combined,
+                          heuristic=lambda w, pos, o: manhattan_distance(pos, goal),
+                          wait_for_frontier=True)
+    else:
+        raise ValueError("0 Objectives Received")
 
 
 def search_alg(maze: Maze, start: Tuple[int, int], objectives: Set[Tuple[int, int]],
@@ -363,7 +277,7 @@ def search_alg(maze: Maze, start: Tuple[int, int], objectives: Set[Tuple[int, in
             return next_value.get_path(), len(completed)
         """Iterate through node neighbors and add them to the frontier"""
         if next_value not in completed:
-            for neighbor in getNeighbors(maze, *next_value.position):
+            for neighbor in maze.getNeighbors(*next_value.position):
                 if not find_any:
                     """If the neighbor is also an objective, remove objective from the neighbors objective list"""
                     new_obj = next_value.obj.difference([neighbor])
@@ -431,7 +345,7 @@ def optimized_search_alg(maze: Maze, start: Tuple[int, int],
         """Find the neighboring states that we haven't already seen or that we have seen but at a higher cost
         and add them to the frontier"""
         if next_value not in completed or completed[next_value] > next_value.cost:
-            for neighbor in getNeighbors(maze, *next_value.position):
+            for neighbor in maze.getNeighbors(*next_value.position):
                 node = Node(maze, next_value, next_value.obj.difference([neighbor]), neighbor, next_value.cost + 1,
                             heuristic_func=heuristic)
                 if node not in completed or completed[node] > node.cost:
@@ -439,153 +353,3 @@ def optimized_search_alg(maze: Maze, start: Tuple[int, int],
             completed[next_value] = next_value.cost
 
     raise ValueError("No path to objectives")
-
-
-def ACO(maze: Maze) -> Tuple[List[Tuple[int, int]], int]:
-    """
-        Multiprocess Ant Colony Optimization algorithm that takes a Maze and probabilistically finds a path.
-
-        A probabilistic ordering of the objectives is created for each CPU core available.  A* is used to find
-        an actual path through that ordering.
-
-        Then path probabilities are updated with shorter paths getting higher weights and re-run for 1000
-        attempts, keeping track of the best path found to return at the end.
-    """
-    ant_count = cpu_count()
-    iterations = 1000
-
-    """Percentage of pheromone to keep after each iteration"""
-    pheromone_evap_coefficient = .99
-    """Inverse distance is raised to this power"""
-    dist_weight = 2
-    """Pheromone is raised to this power"""
-    pheromone_weight = 2
-
-    best_path: List[Tuple[int, int]] = None
-    best_path_states = set()
-    """Pheromones are the desirability of a path based on previous ant experiences"""
-    pheromones: Dict[Set[Tuple[Iterable[Tuple[int, int]], Tuple[int, int]]], float] = dict()
-    with Pool(processes=None) as pool:
-        for iteration in range(iterations):
-            """For each ant, find a probabilistic path, check if best, then add that path to the pheromone tracker"""
-            objectives = set(maze.getObjectives())
-            start = maze.getStart()
-            results = []
-            for _ in range(ant_count):
-                """Create asynchronous processes"""
-                results.append(pool.apply_async(random_path, (maze, start, objectives, pheromones, dist_weight,
-                                                              pheromone_weight)))
-
-            best_path_this_run = math.inf
-            for async_result in results:
-                """Wait up to 60 seconds for the result to finish. If 60 seconds elapse a TimeoutError will be raised"""
-                result = async_result.get(timeout=60)
-
-                """Retrieve the path and the ordering of the objectives from the ant"""
-                my_path = result[0]
-                used_pheromones = result[1]
-
-                """Check if this is the new global best path"""
-                if best_path is None or len(my_path) < len(best_path):
-                    best_path = my_path
-                    best_path_states = used_pheromones
-
-                """Check if this is the new best path for this iteration"""
-                if len(my_path) < best_path_this_run:
-                    best_path_this_run = len(my_path)
-
-                """Update the pheromone table"""
-                for pheromone_state in used_pheromones:
-                    val = 1/len(my_path)
-                    if pheromone_state not in pheromones:
-                        pheromones[pheromone_state] = 1.0
-                    pheromones[pheromone_state] += val
-
-                """Elitist optimization, always place a full pheromone trail on the best known path so far"""
-                for pheromone_state in best_path_states:
-                    if pheromone_state not in pheromones:
-                        pheromones[pheromone_state] = 1.0
-                    pheromones[pheromone_state] += 1
-
-            """All ants have finished this iteration.  Update each pheromone by subtracting evaporation"""
-            for transition, value in pheromones.items():
-                pheromones[transition] = pheromone_evap_coefficient * value
-
-            print(str(iterations - iteration) + " remaining iterations, best path length overall = " +
-                  str(len(best_path)) + "; best path length this run = " + str(best_path_this_run))
-
-    return best_path, len(pheromones)
-
-
-def get_path_length(maze: Maze, ordered_objectives: List[Tuple[int, int]]):
-    my_path = []
-    my_position = maze.getStart()
-    for obj in ordered_objectives:
-        path = parameterized_astar(maze, my_position, {obj})
-        my_path += path
-        my_position = obj
-
-    return my_path
-
-
-def random_path(maze: Maze, start: Tuple[int, int], objectives: Set[Tuple[int, int]], pheromones: Dict, dist_weight,
-                pheromone_weight) -> Tuple[List[Tuple[int, int]], Set[Tuple[Tuple[int, int], Tuple[int, int]]]]:
-    """
-    Finds a random path through the maze using the provided pheromone weights and an inverse distance metric.
-    Args:
-        maze: The provided maze
-        start: The starting position
-        objectives: The set of objectives to find
-        pheromones: A dictionary of pheromone state transition desirability values
-        dist_weight: A number value that the distance will be raised to the dist_weight power.
-        pheromone_weight: A number value that the pheromone cost will be raised to the pheromone_weight power.
-
-    Returns:
-        A tuple of the path and a number of state transitions
-    """
-    my_objectives = objectives.copy()
-    my_position = start
-    my_path: List[Tuple[int, int]] = []
-    used_pheromones: Set[Tuple[Tuple[int, int], Tuple[int, int]]] = set()
-
-    """Search until all objectives are reached"""
-    while my_objectives:
-
-        """Assign an inverse distance and pheromone weight to each possible objective state and store in 
-        neighbor_values"""
-        neighbor_values = []
-        for objective in my_objectives:
-            inv_dist = 1.0 / manhattan_distance(my_position, objective) ** dist_weight
-            if (my_position, objective) not in pheromones:
-                pheromones[(my_position, objective)] = 1.0
-            obj_pheromones = pheromones[(my_position, objective)] ** pheromone_weight
-            used_pheromones.add((my_position, objective))
-            neighbor_values.append((inv_dist, obj_pheromones, objective))
-
-        """Sum all of the weights to use for normalization"""
-        summed_probability = sum(neighbor_value[0] * neighbor_value[1] for neighbor_value in neighbor_values)
-        cumulative_probability = 0
-
-        """Randomly select one of the neighbor states (one remaining objective) by multiplying the inverse distance 
-        by the pheromone desirability of that state transition"""
-        random_value = random.random()
-        selected_neighbor = None
-
-        for neighbor in neighbor_values:
-            """Keep adding probability to the cumulative probability, will sum to 1 if all states are explored"""
-            my_probability = neighbor[0] * neighbor[1] / summed_probability
-            my_cumulative_probability = my_probability + cumulative_probability
-            cumulative_probability += my_probability
-            """Found the state matching the random probability selected, terminate search"""
-            if random_value < my_cumulative_probability:
-                selected_neighbor = neighbor[2]
-                break
-        assert selected_neighbor is not None
-
-        """Find an optimal A* search path from the current position to the selected objective state and 
-        add that to my path"""
-        path, _ = parameterized_astar(maze, my_position, {selected_neighbor})
-        my_objectives = my_objectives - set(path)
-        my_position = selected_neighbor
-        my_path += path
-    return my_path, used_pheromones
