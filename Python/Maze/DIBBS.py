@@ -17,6 +17,7 @@ class Node:
         self.heuristic = heuristic_func(self)
         self.combined = self.cost + self.heuristic
         self.f_bar = self.combined + self.cost - heuristic_func(self)
+        self.reverse_parent = None
 
     def get_path(self) -> List[Tuple[int, int]]:
         """Iterates backwards through the parent nodes to produce a path from start to this position"""
@@ -68,6 +69,7 @@ class DIBBS:
         assert (len(maze.getObjectives()) == 1)
 
         self.upper_bound = math.inf
+        self.best_node = None
         objective = maze.getObjectives().pop()
         start = maze.getStart()
 
@@ -80,47 +82,56 @@ class DIBBS:
         self.forward_frontier.append(start_node)
         self.backward_frontier: List[Node] = list()
         self.backward_frontier.append(end_node)
-        self.forward_closed: Dict[Node, int] = dict()
-        self.backward_closed: Dict[Node, int] = dict()
+        self.forward_closed: Dict[Node, Node] = dict()
+        self.backward_closed: Dict[Node, Node] = dict()
         self.forward_costs: defaultdict[Node, int] = defaultdict(lambda: math.inf)
         self.backward_costs: defaultdict[Node, int] = defaultdict(lambda: math.inf)
 
     def search(self, _) -> Tuple[List[Tuple[int, int]], int]:
         while self.upper_bound > (self.forward_frontier[len(self.forward_frontier) - 1].f_bar +
                                   self.backward_frontier[len(self.backward_frontier) - 1].f_bar) / 2.0:
-            if self.forward_frontier[len(self.forward_frontier) - 1].f_bar < \
-                    self.backward_frontier[len(self.backward_frontier) - 1].f_bar:
-                self.expand(self.forward_frontier, self.forward_closed, self.forward_heuristic, self.forward_costs,
-                            self.backward_costs)
+            if self.choose_direction(self.forward_frontier, self.backward_frontier):
+                self.expand(self.forward_frontier, self.forward_closed, self.forward_heuristic,
+                            self.backward_frontier, self.backward_closed)
                 self.forward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             else:
-                self.expand(self.backward_frontier, self.backward_closed, self.backward_heuristic, self.backward_costs,
-                            self.forward_costs)
+                self.expand(self.backward_frontier, self.backward_closed, self.backward_heuristic,
+                            self.forward_frontier, self.forward_closed)
                 self.backward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
 
-        best_forward_fbar = self.forward_frontier[len(self.forward_frontier) - 1].f_bar
-        best_backward_fbar = self.backward_frontier[len(self.backward_frontier) - 1].f_bar
-        self.forward_frontier = list(filter(lambda x: x.f_bar == best_forward_fbar, self.forward_frontier))
-        self.backward_frontier = list(filter(lambda x: x.f_bar == best_backward_fbar, self.backward_frontier))
-        for f_node in self.forward_frontier:
-            for b_node in self.backward_frontier:
-                if f_node.position == b_node.position:
-                    path = f_node.get_path()[:-1]
-                    reverse_path = b_node.get_path()
-                    path.extend(reversed(reverse_path))
-                    return path, len(self.forward_closed) + len(self.backward_closed)
+        path = self.best_node.get_path()[:-1]
+        reverse_path = self.best_node.reverse_parent.get_path()
 
-    def expand(self, frontier: List[Node], closed: Dict[Node, int], heuristic: Callable,
-               my_costs: defaultdict[Node, int], other_costs: defaultdict[Node, int]):
+        if path[0] != self.maze.getStart():
+            path, reverse_path = reverse_path, path
+
+        path.extend(reversed(reverse_path))
+
+        return path, len(self.forward_closed) + len(self.backward_closed)
+
+    def expand(self, frontier: List[Node], closed: Dict[Node, Node], heuristic: Callable, other_frontier: List[Node],
+               other_closed: Dict[Node, Node]):
         next_value = frontier.pop()
         """Iterate through node neighbors and add them to the frontier"""
         if next_value not in closed:
             for neighbor in self.maze.getNeighbors(*next_value.position):
                 node = Node(self.maze, next_value, neighbor, next_value.cost + 1, heuristic_func=heuristic)
-                if node in closed and node.f_bar < closed[node]:
+                if node in closed and node.f_bar < closed[node].f_bar:
                     closed.pop(node)
                 if node not in closed:
                     frontier.append(node)
-                    my_costs[node] = node.cost
-                    self.upper_bound = min(self.upper_bound, node.cost + other_costs[node])
-            closed[next_value] = next_value.f_bar
+                    reverse_found = None
+                    if node in other_closed:
+                        reverse_found = other_closed[node]
+                    elif node in other_frontier:
+                        reverse_found = other_frontier[other_frontier.index(node)]
+                    if reverse_found is not None and node.cost + reverse_found.cost < self.upper_bound:
+                        self.upper_bound = node.cost + reverse_found.cost
+                        self.best_node = node
+                        self.best_node.reverse_parent = reverse_found
+            closed[next_value] = next_value
+
+    @staticmethod
+    def choose_direction(forward_frontier, backward_frontier):
+        #return len(forward_frontier) < len(backward_frontier)
+        return forward_frontier[len(forward_frontier) - 1].f_bar < backward_frontier[len(backward_frontier) - 1].f_bar
