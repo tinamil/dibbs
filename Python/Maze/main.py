@@ -2,11 +2,13 @@
 
 import argparse
 import time
+import sys
 
 from maze import Maze
 from search import search
 import pygame
 from pygame.locals import *
+import rubiks
 
 
 class Application:
@@ -126,21 +128,23 @@ class Application:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Maze Search')
-
-    parser.add_argument('filename',
-                        help='path to maze file [REQUIRED]')
-    parser.add_argument('--method', dest="search", type=str, default="bfs",
-                        choices=["bfs", "dfs", "greedy", "astar", "dibbs"],
-                        help='search method - default bfs')
-    parser.add_argument('--scale', dest="scale", type=int, default=20,
-                        help='scale - default: 20')
-    parser.add_argument('--fps', dest="fps", type=int, default=30,
-                        help='fps for the display - default 30')
-    parser.add_argument('--save', dest="save", type=str, default=None,
-                        help='save output to image file - default not saved')
-
-    args = parser.parse_args()
-    app = Application(args.scale, args.fps)
-    app.execute(args.filename, args.search, args.save)
+    cube = rubiks.Rubiks()
+    cube.rotate(None, None)
+    # parser = argparse.ArgumentParser(description='Maze Search')
+    #
+    # parser.add_argument('filename',
+    #                     help='path to maze file [REQUIRED]')
+    # parser.add_argument('--method', dest="search", type=str, default="bfs",
+    #                     choices=["bfs", "dfs", "greedy", "astar", "dibbs"],
+    #                     help='search method - default bfs')
+    # parser.add_argument('--scale', dest="scale", type=int, default=20,
+    #                     help='scale - default: 20')
+    # parser.add_argument('--fps', dest="fps", type=int, default=30,
+    #                     help='fps for the display - default 30')
+    # parser.add_argument('--save', dest="save", type=str, default=None,
+    #                     help='save output to image file - default not saved')
+    #
+    # args = parser.parse_args()
+    # app = Application(args.scale, args.fps)
+    # app.execute(args.filename, args.search, args.save)
 
