@@ -23,6 +23,9 @@ class Transformation(enum.IntEnum):
     y = 10
     z = 11
 
+    def __repr__(self):
+        return self.name
+
 
 @enum.unique
 class Direction(enum.IntEnum):
@@ -312,7 +315,16 @@ class Rubiks:
         for row in range(9):
             __goal[face][row] = np.uint8(face)
     __transforms = build_transform_lookups()
-    __corner_indices = np.array([[True, False, True, False, False, False, True, False, True]*6]).reshape(6, 9)
+
+    # All of the faces of each corner, except for up/right/front
+    # because it's determined by the the other 7 corners faces
+    __corner_indices = np.array([[True, False,  True, False, False, False,  True, False,  False],
+                                 [False, False,  True, False, False, False,  True, False,  True],
+                                 [True, False,  False, False, False, False,  True, False,  True],
+                                 [True, False,  True, False, False, False,  True, False,  True],
+                                 [True, False,  True, False, False, False,  True, False,  True],
+                                 [True, False,  True, False, False, False,  True, False,  True]]).reshape(6, 9)
+
 
     def __init__(self, initial=None):
         if initial is None:
