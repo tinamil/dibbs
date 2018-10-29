@@ -6,7 +6,9 @@ from typing import Deque, Tuple
 import pickle
 from math import factorial
 import psutil
+import random
 
+# Uses facelet numbering defined at http://kociemba.org/cube.htm
 
 @enum.unique
 class Transformation(enum.IntEnum):
@@ -89,7 +91,7 @@ def build_transform_lookups():
             [['U1', 'U2', 'F3', 'U4', 'U5', 'F6', 'U7', 'U8', 'F9'],
              ['R7', 'R4', 'R1', 'R8', 'R5', 'R2', 'R9', 'R6', 'R3'],
              ['F1', 'F2', 'D3', 'F4', 'F5', 'D6', 'F7', 'F8', 'D9'],
-             ['D1', 'D2', 'B1', 'D4', 'D5', 'B4', 'D7', 'D8', 'B7'],
+             ['D1', 'D2', 'B7', 'D4', 'D5', 'B4', 'D7', 'D8', 'B1'],
              ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9'],
              ['U9', 'B2', 'B3', 'U6', 'B5', 'B6', 'U3', 'B8', 'B9']],
 
@@ -181,54 +183,54 @@ def build_transform_lookups():
         # Rotate M
         [
             # 90
-            [['U1', 'B2', 'U3', 'U4', 'B5', 'U6', 'U7', 'B8', 'U9'],
+            [['U1', 'B8', 'U3', 'U4', 'B5', 'U6', 'U7', 'B2', 'U9'],
              ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9'],
              ['F1', 'U2', 'F3', 'F4', 'U5', 'F6', 'F7', 'U8', 'F9'],
              ['D1', 'F2', 'D3', 'D4', 'F5', 'D6', 'D7', 'F8', 'D9'],
              ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9'],
-             ['B1', 'D2', 'B3', 'B4', 'D5', 'B6', 'B7', 'D8', 'B9']],
+             ['B1', 'D8', 'B3', 'B4', 'D5', 'B6', 'B7', 'D2', 'B9']],
 
             # -90
             [['U1', 'F2', 'U3', 'U4', 'F5', 'U6', 'U7', 'F8', 'U9'],
              ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9'],
              ['F1', 'D2', 'F3', 'F4', 'D5', 'F6', 'F7', 'D8', 'F9'],
-             ['D1', 'B2', 'D3', 'D4', 'B5', 'D6', 'D7', 'B8', 'D9'],
+             ['D1', 'B8', 'D3', 'D4', 'B5', 'D6', 'D7', 'B2', 'D9'],
              ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9'],
-             ['B1', 'U2', 'B3', 'B4', 'U5', 'B6', 'B7', 'U8', 'B9']],
+             ['B1', 'U8', 'B3', 'B4', 'U5', 'B6', 'B7', 'U2', 'B9']],
         ],
 
         # Rotate E
         [
             # 90
             [['U1', 'U2', 'U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9'],
-             ['R1', 'R2', 'R3', 'B4', 'B5', 'B6', 'R7', 'R8', 'R9'],
-             ['F1', 'F2', 'F3', 'R4', 'R5', 'R6', 'F7', 'F8', 'F9'],
-             ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9'],
-             ['L1', 'L2', 'L3', 'F4', 'F5', 'F6', 'L7', 'L8', 'L9'],
-             ['B1', 'B2', 'B3', 'L4', 'L5', 'L6', 'B7', 'B8', 'B9']],
-
-            # -90
-            [['U1', 'U2', 'U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9'],
              ['R1', 'R2', 'R3', 'F4', 'F5', 'F6', 'R7', 'R8', 'R9'],
              ['F1', 'F2', 'F3', 'L4', 'L5', 'L6', 'F7', 'F8', 'F9'],
              ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9'],
              ['L1', 'L2', 'L3', 'B4', 'B5', 'B6', 'L7', 'L8', 'L9'],
              ['B1', 'B2', 'B3', 'R4', 'R5', 'R6', 'B7', 'B8', 'B9']],
+
+            # -90
+            [['U1', 'U2', 'U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9'],
+             ['R1', 'R2', 'R3', 'B4', 'B5', 'B6', 'R7', 'R8', 'R9'],
+             ['F1', 'F2', 'F3', 'R4', 'R5', 'R6', 'F7', 'F8', 'F9'],
+             ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9'],
+             ['L1', 'L2', 'L3', 'F4', 'F5', 'F6', 'L7', 'L8', 'L9'],
+             ['B1', 'B2', 'B3', 'L4', 'L5', 'L6', 'B7', 'B8', 'B9']],
         ],
 
         # Rotate S
         [
             # 90
-            [['U1', 'U2', 'U3', 'L2', 'L5', 'L8', 'U7', 'U8', 'U9'],
+            [['U1', 'U2', 'U3', 'L8', 'L5', 'L2', 'U7', 'U8', 'U9'],
              ['R1', 'U4', 'R3', 'R4', 'U5', 'R6', 'R7', 'U6', 'R9'],
              ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9'],
-             ['D1', 'D2', 'D3', 'R2', 'R5', 'R8', 'D7', 'D8', 'D9'],
+             ['D1', 'D2', 'D3', 'R8', 'R5', 'R2', 'D7', 'D8', 'D9'],
              ['L1', 'D4', 'L3', 'L4', 'D5', 'L6', 'L7', 'D6', 'L9'],
              ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9']],
 
             # -90
             [['U1', 'U2', 'U3', 'R2', 'R5', 'R8', 'U7', 'U8', 'U9'],
-             ['R1', 'D4', 'R3', 'R4', 'D5', 'R6', 'R7', 'D6', 'R9'],
+             ['R1', 'D6', 'R3', 'R4', 'D5', 'R6', 'R7', 'D4', 'R9'],
              ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9'],
              ['D1', 'D2', 'D3', 'L2', 'L5', 'L8', 'D7', 'D8', 'D9'],
              ['L1', 'U6', 'L3', 'L4', 'U5', 'L6', 'L7', 'U4', 'L9'],
@@ -325,7 +327,6 @@ class Rubiks:
                                  [True, False,  True, False, False, False,  True, False,  True],
                                  [True, False,  True, False, False, False,  True, False,  True]]).reshape(6, 9)
 
-
     def __init__(self, initial=None):
         if initial is None:
             self.__state = copy.copy(self.__goal)
@@ -375,7 +376,7 @@ class Rubiks:
         all_corners = factorial(8) * 3**8
         count = 0
         hash_lookup = dict()
-        while count < all_corners:
+        while count < all_corners and len(queue) > 0:
             next_state, depth = queue.popleft()
             corners = next_state[Rubiks.__corner_indices].tobytes()
             if corners not in hash_lookup:
