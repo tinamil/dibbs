@@ -7,6 +7,7 @@ import pickle
 from math import factorial
 import psutil
 import random
+import pprofile
 
 # Uses facelet numbering defined at http://kociemba.org/cube.htm
 
@@ -368,35 +369,49 @@ class Rubiks:
         # Work directly from an ndarray state, not the parent Rubiks
         state = Rubiks().__state
 
-        # Use a queue of remaining rotations to try for a Breadth First Search
-        queue = deque()
-        queue.append((state, 0))
+        queue = list()
+        queue.append((state, 0, state[Rubiks.__corner_indices].tobytes()))
 
-        # 8 corners, 7 of which can have 3 unique rotations, 88179840 possibilities
-        all_corners = factorial(8) * 3**7
-        count = 0
+        # 8 corners for 8 positions, 7 of which can have 3 unique rotations, 88179840 possibilities
+        all_corners = factorial(8) * 3**7 - 1
         hash_lookup = dict()
+        in_stack = dict()
         id_depth = 0
-        while count < all_corners and len(queue) > 0:
-            next_state, depth = queue.pop()
-            corners = next_state[Rubiks.__corner_indices].tobytes()
-            if corners not in hash_lookup:
-                hash_lookup[corners] = depth
-                count += 1
-                if count % 10000 == 0:
-                    print(count, depth, len(queue))
+        while len(hash_lookup) < all_corners:
+            next_state, depth, corners = queue.pop()
+            if depth == id_depth:
+                if corners not in hash_lookup:
+                    hash_lookup[corners] = depth
+                    if len(hash_lookup) % 10000 == 0:
+                        print(len(hash_lookup), depth, len(queue))
 
-                for plane in Transformation:
-                    for direction in Direction:
-                        new_state = next_state[Rubiks.__transforms[plane][direction]].reshape(6, 9)
-                        if depth < id_depth:
-                            queue.append((new_state, depth + 1))
+            elif depth < id_depth:
+                for plane in range(12):
+                    if plane < 6 or plane > 8:
+                        new_state = next_state[Rubiks.__transforms[plane][0]].reshape(6, 9)
+                        new_state_bytes = new_state[Rubiks.__corner_indices].tobytes()
+                        if new_state_bytes not in in_stack or in_stack[new_state_bytes] > depth + 1:
+                            queue.append((new_state, depth + 1, new_state_bytes))
+                            in_stack[new_state_bytes] = depth + 1
+
+                        new_state = next_state[Rubiks.__transforms[plane][1]].reshape(6, 9)
+                        new_state_bytes = new_state[Rubiks.__corner_indices].tobytes()
+                        if new_state_bytes not in in_stack or in_stack[new_state_bytes] > depth + 1:
+                            queue.append((new_state, depth + 1, new_state_bytes))
+                            in_stack[new_state_bytes] = depth + 1
 
             if len(queue) == 0:
-                hash_lookup = dict()
                 id_depth += 1
-                queue.append((state, 0))
+                in_stack = dict()
+                queue.append((state, 0, state[Rubiks.__corner_indices].tobytes()))
                 print(f"Incrementing id-depth to {id_depth}")
+
+        while len(queue) > 0:
+            next_state, depth, corners = queue.pop()
+            if corners not in hash_lookup or hash_lookup[corners] > depth:
+                if corners in hash_lookup:
+                    print("Found more values in the stack with lower depth, BUG!!!")
+                hash_lookup[corners] = depth
 
         with open(f'{file}.pkl', 'wb') as f:
             pickle.dump(hash_lookup, f, pickle.HIGHEST_PROTOCOL)
