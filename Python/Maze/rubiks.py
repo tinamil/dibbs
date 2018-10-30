@@ -369,32 +369,39 @@ class Rubiks:
         state = Rubiks().__state
 
         # Use a queue of remaining rotations to try for a Breadth First Search
-        queue: Deque[Tuple[np.ndarray, int]] = deque()
+        queue = deque()
         queue.append((state, 0))
 
         # 8 corners, 7 of which can have 3 unique rotations, 88179840 possibilities
-        all_corners = factorial(8) * 3**8
+        all_corners = factorial(8) * 3**7
         count = 0
         hash_lookup = dict()
+        id_depth = 0
         while count < all_corners and len(queue) > 0:
-            next_state, depth = queue.popleft()
+            next_state, depth = queue.pop()
             corners = next_state[Rubiks.__corner_indices].tobytes()
             if corners not in hash_lookup:
                 hash_lookup[corners] = depth
                 count += 1
-                if count % 1000 == 0:
-                    print(count, depth)
+                if count % 10000 == 0:
+                    print(count, depth, len(queue))
 
-                # If there is at least 1GB of swap memory available, then add each rotation
-                if psutil.virtual_memory().available > 1073741824:
-                    for plane in Transformation:
-                        for direction in Direction:
-                            new_state = next_state[Rubiks.__transforms[plane][direction]].reshape(6, 9)
+                for plane in Transformation:
+                    for direction in Direction:
+                        new_state = next_state[Rubiks.__transforms[plane][direction]].reshape(6, 9)
+                        if depth < id_depth:
                             queue.append((new_state, depth + 1))
+
+            if len(queue) == 0:
+                hash_lookup = dict()
+                id_depth += 1
+                queue.append((state, 0))
+                print(f"Incrementing id-depth to {id_depth}")
 
         with open(f'{file}.pkl', 'wb') as f:
             pickle.dump(hash_lookup, f, pickle.HIGHEST_PROTOCOL)
 
+    @staticmethod
     def load_pattern_database(file: str):
         with open(f'{file}.pkl', 'rb') as f:
             return pickle.load(f)
