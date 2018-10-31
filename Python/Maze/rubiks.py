@@ -373,7 +373,7 @@ class Rubiks:
         queue.append((state, 0, state[Rubiks.__corner_indices].tobytes()))
 
         # 8 corners for 8 positions, 7 of which can have 3 unique rotations, 88179840 possibilities
-        all_corners = factorial(8) * 3**7 - 1
+        all_corners = factorial(8) * 3**7
         hash_lookup = dict()
         in_stack = dict()
         id_depth = 0
