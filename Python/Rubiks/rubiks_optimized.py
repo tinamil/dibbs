@@ -3,6 +3,7 @@ import enum
 import numpy as np
 import pickle
 from math import factorial
+import time
 
 # Uses facelet numbering defined at http://kociemba.org/cube.htm
 # 6 center cubies are fixed position (rotation doesn't change) and define the solution color for that face
@@ -190,7 +191,7 @@ class Rubiks:
         found_index[cls.get_corner_index(state)] = True
         id_depth = 1
         count = 1
-        while count < all_corners:
+        while count < all_corners and count < 50000:
 
             if len(queue) == 0:
                 id_depth += 1
@@ -204,11 +205,9 @@ class Rubiks:
                 for rotation in range(3):
                     if last_face == face:
                         # Avoid rotating back to the previous state
-                        if last_rotation == Rotation.half and rotation == Rotation.half:
-                            continue
-                        elif last_rotation == Rotation.clockwise and rotation == Rotation.counterclockwise:
-                            continue
-                        elif last_rotation == Rotation.counterclockwise and rotation == Rotation.clockwise:
+                        if (last_rotation == 2 and rotation == 2) \
+                                or (last_rotation == 0 and rotation == 1) \
+                                or (last_rotation == 1 and rotation == 0):
                             continue
                     new_state = cls.rotate(next_state, face, rotation)
                     new_state_index = cls.get_corner_index(new_state)
@@ -277,6 +276,8 @@ class Color(enum.IntEnum):
 
 
 if __name__ == "__main__":
+    start = time.perf_counter()
     Rubiks.generate_pattern_database('database')
+    print("Finished: ", time.perf_counter() - start)
     #pattern_db = Rubiks.load_pattern_database('database')
     pass

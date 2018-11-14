@@ -3,11 +3,13 @@ import enum
 import numpy as np
 import pickle
 from math import factorial
+import time
 
 # Uses facelet numbering defined at http://kociemba.org/cube.htm
 
+
 @enum.unique
-class Transformation(enum.IntEnum):
+class Face(enum.IntEnum):
     up = 0
     right = 1
     front = 2
@@ -20,19 +22,20 @@ class Transformation(enum.IntEnum):
 
 
 @enum.unique
-class Direction(enum.IntEnum):
+class Rotation(enum.IntEnum):
     clockwise = 0
     counterclockwise = 1
+    halfway = 2
 
 
 @enum.unique
 class Color(enum.IntEnum):
-    orange = Transformation.up
-    red = Transformation.down
-    white = Transformation.front
-    blue = Transformation.right
-    yellow = Transformation.back
-    green = Transformation.left
+    orange = Face.up
+    red = Face.down
+    white = Face.front
+    blue = Face.right
+    yellow = Face.back
+    green = Face.left
     blank = -1
 
     def __repr__(self):
@@ -41,17 +44,17 @@ class Color(enum.IntEnum):
 
 def translate_face(face):
     if face is 'U':
-        return Transformation.up
+        return Face.up
     if face is 'D':
-        return Transformation.down
+        return Face.down
     if face is 'F':
-        return Transformation.front
+        return Face.front
     if face is 'B':
-        return Transformation.back
+        return Face.back
     if face is 'R':
-        return Transformation.right
+        return Face.right
     if face is 'L':
-        return Transformation.left
+        return Face.left
 
 
 def build_transform_lookups():
@@ -215,7 +218,7 @@ def build_transform_lookups():
              ['F1', 'F2', 'F3', 'F4', 'F6', 'F7', 'F8', 'F9'],
              ['D1', 'D2', 'D3', 'D4', 'D6', 'U3', 'U2', 'U1'],
              ['R9', 'L2', 'L3', 'R6', 'L6', 'R3', 'L8', 'L9'],
-             ['B9', 'B8', 'B7', 'B6', 'B5', 'B4', 'B3', 'B2']]
+             ['B9', 'B8', 'B7', 'B6', 'B4', 'B3', 'B2', 'B1']]
         ]
      ]
 
@@ -298,7 +301,7 @@ class Rubiks:
         state = Rubiks().__state
 
         queue = list()
-        queue.append((state, 0))
+        queue.append((state, 0, -1, 0))
 
         # 8 corners for 8 positions, 7 of which can have 3 unique rotations, 88179840 possibilities
         all_corners = factorial(8) * 3**7
@@ -307,32 +310,33 @@ class Rubiks:
         in_stack = dict()
         id_depth = 1
         while len(hash_lookup) < all_corners:
-
             if len(queue) == 0:
                 id_depth += 1
                 in_stack = dict()
-                queue.append((state, 0))
+                queue.append((state, 0, -1, 0))
                 print(f"Incrementing id-depth to {id_depth}")
 
-            next_state, depth = queue.pop()
+            next_state, depth, last_rotation, last_face = queue.pop()
 
             new_state_depth = depth + 1
-            for plane in range(6):
-                for direction in range(3):
-                    new_state = next_state[Rubiks.__transforms[plane][direction]].reshape(6, 8)
+            for face in range(6):
+                for rotation in range(3):
+                    if last_face == face:
+                        # Avoid rotating back to the previous state
+                        if (last_rotation == 2 and rotation == 2) or (last_rotation == 0 and rotation == 1) or (last_rotation == 1 and rotation == 0):
+                            continue
+                    new_state = next_state[Rubiks.__transforms[face][rotation]].reshape(6, 8)
                     new_state_bytes = new_state[Rubiks.__corner_indices].tobytes()
-                    if new_state_bytes not in in_stack or in_stack[new_state_bytes] > new_state_depth:
+                    if new_state_depth == id_depth and new_state_bytes not in hash_lookup:
+                        hash_lookup[new_state_bytes] = new_state_depth
+                        if len(hash_lookup) % 10000 == 0:
+                            print(len(hash_lookup), new_state_depth, len(queue))
+                    elif new_state_depth < id_depth and (new_state_bytes not in in_stack or in_stack[new_state_bytes] > new_state_depth):
                         in_stack[new_state_bytes] = new_state_depth
-                        if new_state_depth == id_depth:
-                            if new_state_bytes not in hash_lookup:
-                                hash_lookup[new_state_bytes] = new_state_depth
-                                if len(hash_lookup) % 10000 == 0:
-                                    print(len(hash_lookup), new_state_depth, len(queue))
-                        else:
-                            queue.append((new_state, new_state_depth))
+                        queue.append((new_state, new_state_depth, rotation, face))
 
         while len(queue) > 0:
-            next_state, depth = queue.pop()
+            next_state, depth, _, _ = queue.pop()
             corners = next_state[Rubiks.__corner_indices].tobytes()
             if corners not in hash_lookup or hash_lookup[corners] > depth:
                 if corners in hash_lookup:
@@ -349,6 +353,8 @@ class Rubiks:
 
 
 if __name__ == "__main__":
+    start = time.perf_counter()
     Rubiks.generate_pattern_database('database')
+    print("Finished: ", time.perf_counter() - start)
     #pattern_db = Rubiks.load_pattern_database('database')
     pass
