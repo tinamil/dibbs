@@ -4,6 +4,9 @@ import numpy as np
 import pickle
 import time
 from numba import jit, njit
+import random
+from typing import List, Dict, Tuple
+
 
 # 6 center cubies are fixed position (rotation doesn't change) and define the solution color for that face
 # 8 corner cubies are defined by an integer defining their rotation: 0-2186 (3^7-1, 8th cube is defined by the other 7)
@@ -91,6 +94,54 @@ __corner_booleans = np.array([True, True, False, False, True, True, False, False
 __corner_pos_indices = np.array([0, 4, 10, 14, 24, 28, 34, 38], dtype=np.uint8)
 __corner_rot_indices = np.array([1, 5, 11, 15, 25, 29, 35, 39], dtype=np.uint8)
 
+__factorial_lookup = np.array([
+    1, 1, 2, 6, 24, 120, 720, 5040, 40320,
+    362880, 3628800, 39916800, 479001600,
+    6227020800, 87178291200, 1307674368000,
+    20922789888000, 355687428096000, 6402373705728000,
+    121645100408832000, 2432902008176640000], dtype='int64')
+
+
+@njit
+def fast_factorial(n):
+    if n > 20:
+        raise ValueError
+    return __factorial_lookup[n]
+
+
+@enum.unique
+class Face(enum.IntEnum):
+    front = 0
+    up = 1
+    left = 2
+    back = 3
+    down = 4
+    right = 5
+
+    def __repr__(self):
+        return self.name
+
+
+@enum.unique
+class Rotation(enum.IntEnum):
+    clockwise = 0
+    counterclockwise = 1
+    half = 2
+
+
+@enum.unique
+class Color(enum.IntEnum):
+    orange = Face.up
+    red = Face.down
+    white = Face.front
+    blue = Face.right
+    yellow = Face.back
+    green = Face.left
+    blank = -1
+
+    def __repr__(self):
+        return self.name
+
 
 @jit(nopython=True)
 def rotate(state, face, rotation):
@@ -155,6 +206,41 @@ def get_corner_index(state):
     corner_index += corners[5] * 3  # 3^1
     corner_index += corners[6]  # 3^
     return corner_index
+
+
+@jit(nopython=True)
+def get_cube_index(state):
+    '''Count the number of inversions'''
+    size = 19
+    inversions = np.zeros(size, dtype=np.uint8)
+    for i in range(size):
+        if i % 2 == 1: continue
+        for j in range(i + 2, size+1):
+            if j % 2 == 1: continue
+            if state[i] > state[j]:
+                inversions[i/2] += 1
+
+    cube_index = 0
+    for i in range(size):
+        cube_index += inversions[i] * fast_factorial(size-i)
+
+    '''Index into the specific rotation that we're in'''
+    cube_index *= 4478976
+
+    '''View the odd (rotation) corner indices then convert them from a base 3 to base 10 number'''
+    for i in range(size):
+        if i % 2 == 0: continue
+        cube_index += state[i]
+    corners = state[__corner_rot_indices]
+    cube_index += corners[0] * 729  # 3^6
+    cube_index += corners[1] * 243  # 3^5
+    cube_index += corners[2] * 81  # 3^4
+    cube_index += corners[3] * 27  # 3^3
+    cube_index += corners[4] * 9  # 3^2
+    cube_index += corners[5] * 3  # 3^1
+    cube_index += corners[6]  # 3^
+    return cube_index
+
 
 
 @jit(nopython=True)
@@ -225,43 +311,53 @@ def is_solved(cube):
     return np.array_equal(cube, __goal)
 
 
-@enum.unique
-class Face(enum.IntEnum):
-    front = 0
-    up = 1
-    left = 2
-    back = 3
-    down = 4
-    right = 5
-
-    def __repr__(self):
-        return self.name
+def generate_random_cube():
+    cube = get_cube()
+    for i in range(1000):
+        face = random.randrange(6)
+        rot = random.randrange(3)
+        rotate(cube, face, rot)
 
 
-@enum.unique
-class Rotation(enum.IntEnum):
-    clockwise = 0
-    counterclockwise = 1
-    half = 2
+def scramble(notation: str) -> List[Tuple[Face, Rotation]]:
+    start = get_cube()
+    moves = notation.split()
+    for move in moves:
+        face, rotation = convert(move)
+        rotate(start, int(face), int(rotation))
+    return start
 
 
-@enum.unique
-class Color(enum.IntEnum):
-    orange = Face.up
-    red = Face.down
-    white = Face.front
-    blue = Face.right
-    yellow = Face.back
-    green = Face.left
-    blank = -1
+def translate_face(input_face: str) -> Face:
+    face = input_face.upper()
+    if face == 'U':
+        return Face.up
+    if face == 'D':
+        return Face.down
+    if face == 'F':
+        return Face.front
+    if face == 'B':
+        return Face.back
+    if face == 'R':
+        return Face.right
+    if face == 'L':
+        return Face.left
 
-    def __repr__(self):
-        return self.name
+    raise ValueError("No face match for " + str(input_face))
 
 
-if __name__ == "__main__":
-    start = time.perf_counter()
-    db = generate_pattern_database(get_cube())
-    print("Finished: ", time.perf_counter() - start)
-    # pattern_db = Rubiks.load_pattern_database('database')
-    pass
+def convert(notation_move: str) -> Tuple[Face, Rotation]:
+    if len(notation_move) == 1:
+        return translate_face(notation_move), Rotation.clockwise
+    elif len(notation_move) == 2:
+        face = translate_face(notation_move[0])
+        if notation_move[1] == "'":
+            rotation = Rotation.counterclockwise
+        elif notation_move[1] == '2':
+            rotation = Rotation.half
+        else:
+            raise ValueError("Unable to identify rotation type: " + str(notation_move))
+        return face, rotation
+    else:
+        raise ValueError("Length is not 1 or 2 characters to convert notation: " + str(notation_move))
+

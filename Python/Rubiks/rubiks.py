@@ -346,8 +346,6 @@ class Rubiks:
                 hash_lookup[corners] = depth
 
         return hash_lookup
-        #with open(f'{file}.pkl', 'wb') as f:
-        #    pickle.dump(hash_lookup, f, pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
     def load_pattern_database(file: str):
