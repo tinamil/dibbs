@@ -1,8 +1,8 @@
+from numba import jit
 import copy
 import enum
 import numpy as np
 import pickle
-from math import factorial
 import time
 
 # Uses facelet numbering defined at http://kociemba.org/cube.htm
@@ -261,27 +261,27 @@ class Rubiks:
 
     def __init__(self, initial=None):
         if initial is None:
-            self.__state = copy.copy(self.__goal)
+            self.state = copy.copy(self.__goal)
         else:
-            self.__state = initial.__state.copy()
+            self.state = initial.__state.copy()
 
     def __repr__(self):
-        return str(np.array([list(map(Color, x)) for x in self.__state.tolist()], dtype=Color).reshape(6, 8))
+        return str(np.array([list(map(Color, x)) for x in self.state.tolist()], dtype=Color).reshape(6, 8))
 
     def __eq__(self, other):
         if other is Rubiks:
-            return np.array_equal(self.__state, other.__state)
+            return np.array_equal(self.state, other.__state)
         else:
             return False
 
     def __hash__(self):
-        return hash(self.__state.tobytes())
+        return hash(self.state.tobytes())
 
     def random_generation(self):
         pass
 
     def is_objective(self):
-        return np.array_equal(self.__state, self.__goal)
+        return np.array_equal(self.state, self.__goal)
 
     def rotate(self, plane, direction):
         '''
@@ -289,32 +289,33 @@ class Rubiks:
         :param direction: 0 for 90 degrees, 1 for -90 degrees
         :return:
         '''
-        self.__state = self.__state[Rubiks.__transforms[plane][direction]].reshape(6, 8)
+        self.state = self.state[Rubiks.__transforms[plane][direction]].reshape(6, 8)
         return self
 
     def get_corners(self):
-        return self.__state[Rubiks.__corner_indices].tobytes()
+        return self.state[Rubiks.__corner_indices].tobytes()
+
 
     @staticmethod
-    def generate_pattern_database(file: str):
-        # Work directly from an ndarray state, not the parent Rubiks
-        state = Rubiks().__state
-
+    @jit(nopython=True)
+    def generate_pattern_database(initial_state):
         queue = list()
-        queue.append((state, 0, -1, 0))
+        queue.append((initial_state, 0, -1, 0))
 
         # 8 corners for 8 positions, 7 of which can have 3 unique rotations, 88179840 possibilities
-        all_corners = factorial(8) * 3**7
+        all_corners = 88179840
         hash_lookup = dict()
-        hash_lookup[state[Rubiks.__corner_indices].tobytes()] = 0
+        hash_lookup[initial_state[Rubiks.__corner_indices].tobytes()] = 0
+
         in_stack = dict()
+        count = 1
         id_depth = 1
-        while len(hash_lookup) < all_corners:
+        while count < all_corners:
             if len(queue) == 0:
                 id_depth += 1
                 in_stack = dict()
-                queue.append((state, 0, -1, 0))
-                print(f"Incrementing id-depth to {id_depth}")
+                queue.append((initial_state, 0, -1, 0))
+                print("Incrementing id-depth to ", id_depth)
 
             next_state, depth, last_rotation, last_face = queue.pop()
 
@@ -329,8 +330,9 @@ class Rubiks:
                     new_state_bytes = new_state[Rubiks.__corner_indices].tobytes()
                     if new_state_depth == id_depth and new_state_bytes not in hash_lookup:
                         hash_lookup[new_state_bytes] = new_state_depth
-                        if len(hash_lookup) % 10000 == 0:
-                            print(len(hash_lookup), new_state_depth, len(queue))
+                        count += 1
+                        if count % 10000 == 0:
+                            print(count, new_state_depth, len(queue))
                     elif new_state_depth < id_depth and (new_state_bytes not in in_stack or in_stack[new_state_bytes] > new_state_depth):
                         in_stack[new_state_bytes] = new_state_depth
                         queue.append((new_state, new_state_depth, rotation, face))
@@ -343,8 +345,9 @@ class Rubiks:
                     print("Found more values in the stack with lower depth, BUG!!!")
                 hash_lookup[corners] = depth
 
-        with open(f'{file}.pkl', 'wb') as f:
-            pickle.dump(hash_lookup, f, pickle.HIGHEST_PROTOCOL)
+        return hash_lookup
+        #with open(f'{file}.pkl', 'wb') as f:
+        #    pickle.dump(hash_lookup, f, pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
     def load_pattern_database(file: str):
@@ -354,7 +357,10 @@ class Rubiks:
 
 if __name__ == "__main__":
     start = time.perf_counter()
-    Rubiks.generate_pattern_database('database')
+    db = Rubiks.generate_pattern_database(Rubiks().state)
+    with open(f'database.pkl', 'wb') as f:
+        pickle.dump(db, f, pickle.HIGHEST_PROTOCOL)
+
     print("Finished: ", time.perf_counter() - start)
     #pattern_db = Rubiks.load_pattern_database('database')
     pass
