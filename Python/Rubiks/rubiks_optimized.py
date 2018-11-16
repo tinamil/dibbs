@@ -33,6 +33,17 @@ from typing import List, Dict, Tuple
 #                \|         |
 #                 12--13---14
 
+
+import _khash_ffi
+from numba import cffi_support
+
+cffi_support.register_module(_khash_ffi)
+
+khash_init = _khash_ffi.lib.khash_int2int_init
+khash_get = _khash_ffi.lib.khash_int2int_get
+khash_set = _khash_ffi.lib.khash_int2int_set
+khash_destroy = _khash_ffi.lib.khash_int2int_destroy
+
 '''Given a cubie [0-19] and a rotation [0-17] being performed, returns the new position of that cubie'''
 __turn_position_lookup = np.array([[0, 0, 5, 2, 12, 0, 0, 0, 12, 5, 2, 0, 0, 0, 17, 7, 14, 0],
                                    [1, 1, 1, 4, 8, 1, 1, 1, 1, 3, 9, 1, 1, 1, 1, 6, 13, 1],
@@ -118,9 +129,6 @@ class Face(enum.IntEnum):
     down = 4
     right = 5
 
-    def __repr__(self):
-        return self.name
-
 
 @enum.unique
 class Rotation(enum.IntEnum):
@@ -139,28 +147,24 @@ class Color(enum.IntEnum):
     green = Face.left
     blank = -1
 
-    def __repr__(self):
-        return self.name
 
-
-@jit(nopython=True)
-def rotate(state, face, rotation):
-    rotation_index = face * rotation
+@njit()
+def rotate(old_state: np.ndarray, face: int, rotation: int):
+    state = np.copy(old_state)
+    rotation_index = 6 * rotation + face
     # If half rotation then no change in rotations
     if rotation == Rotation.half:
-        for i in range(40):
-            if i % 2 == 0:
-                state[i] = __turn_position_lookup[state[i]][rotation_index]
+        for i in range(0, 40, 2):
+            state[i] = __turn_position_lookup[state[i]][rotation_index]
     else:
-        for i in range(40):
-            if i % 2 == 0:
-                if __turn_lookup[state[i]][rotation_index]:
-                    if __corner_booleans[i]:
-                        state[i + 1] = __corner_rotation[face][state[i + 1]]
-                    elif face == Face.left or face == Face.right:
-                        state[i + 1] = 1 - state[i + 1]
+        for i in range(0, 40, 2):
+            if __turn_lookup[state[i]][face]:
+                if __corner_booleans[i]:
+                    state[i + 1] = __corner_rotation[face][state[i + 1]]
+                elif face == Face.left or face == Face.right:
+                    state[i + 1] = 1 - state[i + 1]
 
-                    state[i] = __turn_position_lookup[state[i]][rotation_index]
+                state[i] = __turn_position_lookup[state[i]][rotation_index]
     return state
 
 
@@ -208,61 +212,71 @@ def get_corner_index(state):
     return corner_index
 
 
-@jit(nopython=True)
-def get_cube_index(state):
-    '''Count the number of inversions'''
-    size = 19
-    inversions = np.zeros(size, dtype=np.uint8)
-    for i in range(size):
-        if i % 2 == 1: continue
-        for j in range(i + 2, size+1):
-            if j % 2 == 1: continue
-            if state[i] > state[j]:
-                inversions[i/2] += 1
-
-    cube_index = 0
-    for i in range(size):
-        cube_index += inversions[i] * fast_factorial(size-i)
-
-    '''Index into the specific rotation that we're in'''
-    cube_index *= 4478976
-
-    '''View the odd (rotation) corner indices then convert them from a base 3 to base 10 number'''
-    for i in range(size):
-        if i % 2 == 0: continue
-        cube_index += state[i]
-    corners = state[__corner_rot_indices]
-    cube_index += corners[0] * 729  # 3^6
-    cube_index += corners[1] * 243  # 3^5
-    cube_index += corners[2] * 81  # 3^4
-    cube_index += corners[3] * 27  # 3^3
-    cube_index += corners[4] * 9  # 3^2
-    cube_index += corners[5] * 3  # 3^1
-    cube_index += corners[6]  # 3^
-    return cube_index
-
+# @jit(nopython=True)
+# def get_cube_index(state):
+#     '''Count the number of inversions'''
+#     size = 19
+#     inversions = np.zeros(size, dtype=np.uint8)
+#     for i in range(size):
+#         if i % 2 == 1: continue
+#         for j in range(i + 2, size+1):
+#             if j % 2 == 1: continue
+#             if state[i] > state[j]:
+#                 inversions[i//2] += 1
+#
+#     cube_index = 0
+#     for i in range(size):
+#         cube_index += inversions[i] * fast_factorial(size-i)
+#
+#     '''Index into the specific rotation that we're in'''
+#     cube_index *= 4478976
+#
+#     '''View the odd (rotation) corner indices then convert them from a base 3 to base 10 number'''
+#     corners = 6
+#     edges = 10
+#     for i in range(size):
+#         if i % 2 == 0: continue
+#         if np_isin(i, __corner_rot_indices):
+#             cube_index += state[i] * 3**corners
+#             corners -= 1
+#         else:
+#             cube_index += state[i] * 2**edges
+#             edges -= 1
+#
+#     return cube_index
+#
+#
+# @njit
+# def np_isin(element, array):
+#     for x in array:
+#         if element == x:
+#             return True
+#     return False
 
 
 @jit(nopython=True)
 def generate_pattern_database(state):
     queue = list()
-    queue.append((state, 0))
+    queue.append((state, np.uint8(0)))
 
     # 8 corners for 8 positions, 7 of which can have 3 unique rotations, 88179840 possibilities
-    all_corners = 88179840
-    pattern_lookup = np.empty(all_corners, dtype=np.uint8)
-    pattern_lookup[get_corner_index(state)] = 0
-    found_index = np.zeros(all_corners, dtype=np.uint8)
+    all_corners = np.uint32(88179840+1)
+    pattern_lookup = np.full(all_corners, -1, dtype=np.int8)
+    pattern_lookup[get_corner_index(state)] = np.int8(0)
     found_index_stack = np.full(all_corners, 100, dtype=np.uint8)
-    found_index[get_corner_index(state)] = 1
-    id_depth = 1
-    count = 1
+    id_depth = np.uint8(1)
+    count = np.uint32(1)
+    new_state = state
+    new_state_index = np.uint32(0)
+    new_state_depth = np.uint8(0)
+    next_state = state
+    depth = np.uint8(0)
     while count < all_corners:
 
         if len(queue) == 0:
-            id_depth += 1
+            id_depth += np.uint8(1)
             found_index_stack = np.full(all_corners, 100, dtype=np.uint8)
-            queue.append((state, 0))
+            queue.append((state, np.uint8(0)))
             print("Incrementing id-depth to", id_depth)
 
         next_state, depth = queue.pop()
@@ -270,16 +284,21 @@ def generate_pattern_database(state):
             for rotation in range(3):
                 new_state = rotate(np.copy(next_state), face, rotation)
                 new_state_index = get_corner_index(new_state)
-                new_state_depth = depth + 1
-                if new_state_depth == id_depth and found_index[new_state_index] == 0:
+                new_state_depth = depth + np.uint8(1)
+                if new_state_depth == id_depth and pattern_lookup[new_state_index] == np.int8(-1):
                     pattern_lookup[new_state_index] = new_state_depth
-                    found_index[new_state_index] = 1
-                    count += 1
+                    count += np.uint64(1)
                     if count % 100000 == 0 or count > 88100000:
                         print(count, new_state_depth, len(queue))
                 elif new_state_depth < id_depth and new_state_depth < found_index_stack[new_state_index]:
                     found_index_stack[new_state_index] = new_state_depth
                     queue.append((new_state, new_state_depth))
+
+    test_count = 0
+    for x in range(all_corners):
+        if pattern_lookup[x] == -1:
+            test_count += 1
+    assert (test_count == all_corners - count)
 
     return pattern_lookup
 
@@ -308,23 +327,27 @@ def get_cube():
 
 @njit
 def is_solved(cube):
-    return np.array_equal(cube, __goal)
+    for idx, val in enumerate(__goal):
+        if val != cube[idx]:
+            return False
+    return True
 
-
+@njit
 def generate_random_cube():
     cube = get_cube()
     for i in range(1000):
         face = random.randrange(6)
         rot = random.randrange(3)
-        rotate(cube, face, rot)
+        cube = rotate(cube, face, rot)
+    return cube
 
 
-def scramble(notation: str) -> List[Tuple[Face, Rotation]]:
+def scramble(notation: str) -> np.ndarray:
     start = get_cube()
     moves = notation.split()
     for move in moves:
         face, rotation = convert(move)
-        rotate(start, int(face), int(rotation))
+        start = rotate(start, int(face), int(rotation))
     return start
 
 

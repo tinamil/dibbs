@@ -295,7 +295,6 @@ class Rubiks:
     def get_corners(self):
         return self.state[Rubiks.__corner_indices].tobytes()
 
-
     @staticmethod
     @jit(nopython=True)
     def generate_pattern_database(initial_state):
