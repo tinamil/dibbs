@@ -34,15 +34,15 @@ from typing import List, Dict, Tuple
 #                 12--13---14
 
 
-import _khash_ffi
-from numba import cffi_support
+#import _khash_ffi
+#from numba import cffi_support
 
-cffi_support.register_module(_khash_ffi)
+#cffi_support.register_module(_khash_ffi)
 
-khash_init = _khash_ffi.lib.khash_int2int_init
-khash_get = _khash_ffi.lib.khash_int2int_get
-khash_set = _khash_ffi.lib.khash_int2int_set
-khash_destroy = _khash_ffi.lib.khash_int2int_destroy
+#khash_init = _khash_ffi.lib.khash_int2int_init
+#khash_get = _khash_ffi.lib.khash_int2int_get
+#khash_set = _khash_ffi.lib.khash_int2int_set
+#khash_destroy = _khash_ffi.lib.khash_int2int_destroy
 
 '''Given a cubie [0-19] and a rotation [0-17] being performed, returns the new position of that cubie'''
 __turn_position_lookup = np.array([[0, 0, 5, 2, 12, 0, 0, 0, 12, 5, 2, 0, 0, 0, 17, 7, 14, 0],
@@ -260,7 +260,7 @@ def generate_pattern_database(state):
     queue.append((state, np.uint8(0)))
 
     # 8 corners for 8 positions, 7 of which can have 3 unique rotations, 88179840 possibilities
-    all_corners = np.uint32(88179840+1)
+    all_corners = np.uint32(88179840)
     pattern_lookup = np.full(all_corners, -1, dtype=np.int8)
     pattern_lookup[get_corner_index(state)] = np.int8(0)
     found_index_stack = np.full(all_corners, 100, dtype=np.uint8)
@@ -298,19 +298,18 @@ def generate_pattern_database(state):
     for x in range(all_corners):
         if pattern_lookup[x] == -1:
             test_count += 1
-    assert (test_count == all_corners - count)
+    if test_count > 0:
+        print("Failed to identify all corners configurations! ", test_count)
 
     return pattern_lookup
 
 
 def load_pattern_database(file: str):
-    with open(f'{file}.pkl', 'rb') as db_file:
-        return pickle.load(db_file)
+    return np.load(file)
 
 
 def save_pattern_database(file: str, db):
-    with open(f'{file}.pkl', 'wb') as db_file:
-        pickle.dump(db, db_file, pickle.HIGHEST_PROTOCOL)
+    np.save(f'{file}.npy', db)
 
 
 __goal = np.array([0, 0, 1, 0, 2, 0, 3, 0,

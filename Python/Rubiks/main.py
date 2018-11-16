@@ -4,19 +4,19 @@ import argparse
 from typing import Tuple, List
 from queue import PriorityQueue
 import numpy as np
-import _khash_ffi
+#import _khash_ffi
 
-from numba import cffi_support
+#from numba import cffi_support
 
-cffi_support.register_module(_khash_ffi)
+#cffi_support.register_module(_khash_ffi)
 
-khash_init = _khash_ffi.lib.khash_int2int_init
-khash_get = _khash_ffi.lib.khash_int2int_get
-khash_set = _khash_ffi.lib.khash_int2int_set
-khash_destroy = _khash_ffi.lib.khash_int2int_destroy
+#khash_init = _khash_ffi.lib.khash_int2int_init
+#khash_get = _khash_ffi.lib.khash_int2int_get
+#khash_set = _khash_ffi.lib.khash_int2int_set
+#khash_destroy = _khash_ffi.lib.khash_int2int_destroy
 
 
-#@njit
+@njit
 def a_star(state, forward_db):
     queue = list()
     starting_state = state
@@ -53,6 +53,9 @@ def a_star(state, forward_db):
                 new_state_heuristic = forward_db[new_state_index]
                 new_state_cost = new_state_depth + new_state_heuristic
 
+                if new_state_cost > id_depth:
+                    continue
+
                 new_rots = np.empty(len(prev_rots) + 1, dtype=np.uint8)
                 for idx, val in enumerate(prev_rots):
                     new_rots[idx] = val
@@ -62,9 +65,6 @@ def a_star(state, forward_db):
 
                 if is_solved(new_state_base):
                     return new_faces, new_rots, count
-
-                if new_state_cost > id_depth:
-                    continue
 
                 queue.append((new_state_base, new_state_depth, new_faces, new_rots))
 
@@ -79,15 +79,15 @@ if __name__ == "__main__":
 
     #args = parser.parse_args()
     #app.execute(args.filename, args.search, args.save)
-    corner_db = generate_pattern_database(get_cube())
-    save_pattern_database('database', corner_db)
+    #corner_db = generate_pattern_database(get_cube())
+    #save_pattern_database('database', corner_db)
 
 
     #generate_pattern_database.inspect_types()
 
-    #corner_db = load_pattern_database('database')
+    corner_db = load_pattern_database('database.npy')
 
-    with open('official_scramble.txt') as f:
+    with open('test_file.txt') as f:
         output = f.read()
         print(output)
         cube = scramble(output)
