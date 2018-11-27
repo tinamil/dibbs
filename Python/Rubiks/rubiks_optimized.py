@@ -34,15 +34,15 @@ from typing import List, Dict, Tuple
 #                 12--13---14
 
 
-#import _khash_ffi
-#from numba import cffi_support
+import _khash_ffi
+from numba import cffi_support
 
-#cffi_support.register_module(_khash_ffi)
+cffi_support.register_module(_khash_ffi)
 
-#khash_init = _khash_ffi.lib.khash_int2int_init
-#khash_get = _khash_ffi.lib.khash_int2int_get
-#khash_set = _khash_ffi.lib.khash_int2int_set
-#khash_destroy = _khash_ffi.lib.khash_int2int_destroy
+khash_init = _khash_ffi.lib.khash_int2int_init
+khash_get = _khash_ffi.lib.khash_int2int_get
+khash_set = _khash_ffi.lib.khash_int2int_set
+khash_destroy = _khash_ffi.lib.khash_int2int_destroy
 
 '''Given a cubie [0-19] and a rotation [0-17] being performed, returns the new position of that cubie'''
 __turn_position_lookup = np.array([[0, 0, 5, 2, 12, 0, 0, 0, 12, 5, 2, 0, 0, 0, 17, 7, 14, 0],
@@ -105,12 +105,15 @@ __corner_booleans = np.array([True, True, False, False, True, True, False, False
 __corner_pos_indices = np.array([0, 4, 10, 14, 24, 28, 34, 38], dtype=np.uint8)
 __corner_rot_indices = np.array([1, 5, 11, 15, 25, 29, 35, 39], dtype=np.uint8)
 
+__edge_pos_indices = np.array([2, 6, 8, 12, 16, 18], dtype=np.uint8) #, 20, 22, 26, 30, 32, 36
+__edge_rot_indices = __edge_pos_indices + 1
+
 __factorial_lookup = np.array([
     1, 1, 2, 6, 24, 120, 720, 5040, 40320,
     362880, 3628800, 39916800, 479001600,
     6227020800, 87178291200, 1307674368000,
     20922789888000, 355687428096000, 6402373705728000,
-    121645100408832000, 2432902008176640000], dtype='int64')
+    121645100408832000, 2432902008176640000], dtype=np.uint64)
 
 
 @njit
@@ -182,7 +185,7 @@ def get_corner_index(state):
     corners = state[__corner_pos_indices]
 
     '''Count the number of inversions in the corner table per element'''
-    inversions = np.zeros(8, dtype=np.uint8)
+    inversions = np.zeros(7, dtype=np.uint8)
     for i in range(7):
         for j in range(i + 1, 8):
             if corners[i] > corners[j]:
@@ -253,17 +256,54 @@ def get_corner_index(state):
 #             return True
 #     return False
 
+@njit
+def get_edge_index(state):
+    """
+    #Edge index = perm_number * 2^x + orientation number
+    perm_number = (n-(i+1))!/(n-r)! * #unused_digits
+    Where i is the index of the number in the smaller set, n is the size of the set to choose from and r is the size
+    of the smaller set and number of preceding digits are the number of digits preceding the current digit in the
+    original set that have yet to be used. -https://www.doc.ic.ac.uk/teaching/distinguished-projects/2015/l.hoang.pdf
+    :param state:
+    :return:
+    """
+    full_size = 12 # Total number of edges, always 12 in a 3x3x3 Rubik's Cube
+    edges = state[__edge_pos_indices]
+    size = len(edges)
+    '''Count the number of inversions in the corner table per element'''
+    permute_number = np.zeros(size, dtype=np.uint8)
+    for i in range(size):
+        permute_number[i] = edges[i]
+        for j in range(0, i):
+            if edges[j] < edges[i]:
+                permute_number[i] -= 1
+
+    edge_index = np.uint64(0)
+    for i in range(size):
+        edge_index += permute_number[i] * __factorial_lookup[full_size - i + 1] / __factorial_lookup[full_size - size]
+
+    '''Index into the specific edge rotation that we're in'''
+    edge_index *= np.uint64(2**size)
+
+    '''View the odd (rotation) edge indices then convert them from a base 2 to base 10 number'''
+    edges = state[__edge_rot_indices]
+    for i in range(size):
+        edge_index += edges[i] * 1 << (size - i)
+
+    return edge_index
+
 
 @jit(nopython=True)
-def generate_pattern_database(state):
+def generate_corners_pattern_database(state, max_depth):
+    print("Generating corners db")
     queue = list()
     queue.append((state, np.uint8(0)))
 
     # 8 corners for 8 positions, 7 of which can have 3 unique rotations, 88179840 possibilities
     all_corners = np.uint32(88179840)
-    pattern_lookup = np.full(all_corners, -1, dtype=np.int8)
+    pattern_lookup = np.full(all_corners, max_depth, dtype=np.int8)
     pattern_lookup[get_corner_index(state)] = np.int8(0)
-    found_index_stack = np.full(all_corners, 100, dtype=np.uint8)
+    found_index_stack = np.full(all_corners, max_depth, dtype=np.uint8)
     id_depth = np.uint8(1)
     count = np.uint32(1)
     new_state = state
@@ -271,11 +311,11 @@ def generate_pattern_database(state):
     new_state_depth = np.uint8(0)
     next_state = state
     depth = np.uint8(0)
-    while count < all_corners:
+    while count < all_corners and id_depth < max_depth:
 
         if len(queue) == 0:
             id_depth += np.uint8(1)
-            found_index_stack = np.full(all_corners, 100, dtype=np.uint8)
+            found_index_stack = np.full(all_corners, max_depth, dtype=np.uint8)
             queue.append((state, np.uint8(0)))
             print("Incrementing id-depth to", id_depth)
 
@@ -285,7 +325,7 @@ def generate_pattern_database(state):
                 new_state = rotate(np.copy(next_state), face, rotation)
                 new_state_index = get_corner_index(new_state)
                 new_state_depth = depth + np.uint8(1)
-                if new_state_depth == id_depth and pattern_lookup[new_state_index] == np.int8(-1):
+                if new_state_depth == id_depth and pattern_lookup[new_state_index] == max_depth:
                     pattern_lookup[new_state_index] = new_state_depth
                     count += np.uint64(1)
                     if count % 100000 == 0 or count > 88100000:
@@ -294,22 +334,90 @@ def generate_pattern_database(state):
                     found_index_stack[new_state_index] = new_state_depth
                     queue.append((new_state, new_state_depth))
 
-    test_count = 0
-    for x in range(all_corners):
-        if pattern_lookup[x] == -1:
-            test_count += 1
-    if test_count > 0:
-        print("Failed to identify all corners configurations! ", test_count)
-
     return pattern_lookup
 
 
+@njit
+def npr(n, r):
+    return __factorial_lookup[n] / __factorial_lookup[n-r]
+
+
+@njit
+def generate_edges_pattern_database(state, max_depth):
+    print("Generating edges db")
+    queue = list()
+    queue.append((state, np.uint8(0)))
+
+    # 12 permute x positions * 2^x rotations
+    all_edges = np.uint64(npr(12, len(__edge_pos_indices)) * 2**(len(__edge_pos_indices)))
+    print(all_edges)
+    pattern_lookup = khash_init()
+    new_state_index = get_edge_index(state)
+    khash_set(pattern_lookup, new_state_index, 0)
+    found_index_stack = khash_init()
+    id_depth = np.uint8(1)
+    count = np.uint64(1)
+    new_state = state
+    new_state_depth = np.uint8(0)
+    next_state = state
+    depth = np.uint8(0)
+    found_edge_configs = [new_state_index]
+    while count < all_edges and id_depth < max_depth:
+
+        if len(queue) == 0:
+            id_depth += np.uint8(1)
+            found_index_stack = khash_init()
+            queue.append((state, np.uint8(0)))
+            print("Incrementing id-depth to", id_depth)
+
+        next_state, depth = queue.pop()
+        for face in range(6):
+            for rotation in range(3):
+                new_state = rotate(np.copy(next_state), face, rotation)
+                new_state_index = get_edge_index(new_state)
+                new_state_depth = depth + np.uint8(1)
+                if new_state_depth == id_depth and khash_get(pattern_lookup, new_state_index, max_depth) == max_depth:
+                    khash_set(pattern_lookup, new_state_index, new_state_depth)
+                    found_edge_configs.append(new_state_index)
+                    count += np.uint64(1)
+                    if count % 100000 == 0:
+                        print(count, new_state_depth, len(queue))
+                elif new_state_depth < id_depth and new_state_depth < khash_get(found_index_stack, new_state_index, max_depth):
+                    khash_set(found_index_stack, new_state_index, new_state_depth)
+                    queue.append((new_state, new_state_depth))
+
+    return pattern_lookup, found_edge_configs
+
+
+def convert_khash_to_dict(db, indices, max_depth):
+    new_edge_db = dict()
+    for idx in indices:
+        new_edge_db[idx] = khash_get(db, idx, max_depth)
+    return new_edge_db
+
+
+def convert_dict_to_list(db):
+    new_db = []
+    for key, val in db.items():
+        new_db.append((key, val))
+    return new_db
+
+
 def load_pattern_database(file: str):
-    return np.load(file)
+    if file.endswith(".npy"):
+        return np.load(file)
+    else:
+        with open(f'{file}', 'rb') as f:
+            return pickle.load(f)
 
 
 def save_pattern_database(file: str, db):
-    np.save(f'{file}.npy', db)
+
+    if file.endswith(".npy"):
+        np.save(f'{file}', db)
+    else:
+        with open(f'{file}', 'wb') as f:
+            pickle.dump(db, f, pickle.DEFAULT_PROTOCOL)
 
 
 __goal = np.array([0, 0, 1, 0, 2, 0, 3, 0,
@@ -330,6 +438,7 @@ def is_solved(cube):
         if val != cube[idx]:
             return False
     return True
+
 
 @njit
 def generate_random_cube():
