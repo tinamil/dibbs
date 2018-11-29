@@ -15,11 +15,7 @@ khash_destroy = _khash_ffi.lib.khash_int2int_destroy
 
 
 @njit
-def a_star(state, corner_db, edge_list, edge_max_depth):
-    edge_db = khash_init()
-    for key, val in edge_list:
-        khash_set(edge_db, key, val)
-
+def a_star(state, corner_db, edge_6a, edge_6b):
     queue = list()
     starting_state = state
     queue.append((starting_state, 0, np.empty(0, dtype=np.uint8), np.empty(0, dtype=np.uint8)))
@@ -28,8 +24,9 @@ def a_star(state, corner_db, edge_list, edge_max_depth):
         return np.empty(0, dtype=np.uint8), np.empty(0, dtype=np.uint8), 0
 
     new_corner_index = get_corner_index(state)
-    new_edge_index = get_edge_index(state)
-    min_moves = max(khash_get(edge_db, new_edge_index, edge_max_depth), corner_db[new_corner_index])
+    new_edge_index_6a = get_edge_index(state, edge_pos_indices_6a, edge_rot_indices_6a)
+    new_edge_index_6b = get_edge_index(state, edge_pos_indices_6b, edge_rot_indices_6b)
+    min_moves = max(edge_6a[new_edge_index_6a], edge_6b[new_edge_index_6b], corner_db[new_corner_index])
     print("Minimum number of moves to solve: ", min_moves)
     id_depth = min_moves
     count = 0
@@ -53,16 +50,12 @@ def a_star(state, corner_db, edge_list, edge_max_depth):
                 new_state_base = rotate(next_state, face, rotation)
                 new_state_depth = depth + 1
                 new_corner_index = get_corner_index(new_state_base)
-                new_edge_index = get_edge_index(new_state_base)
-                new_state_heuristic = max(khash_get(edge_db, new_edge_index, edge_max_depth), corner_db[new_corner_index])
+                new_edge_index_6a = get_edge_index(state, edge_pos_indices_6a, edge_rot_indices_6a)
+                new_edge_index_6b = get_edge_index(state, edge_pos_indices_6b, edge_rot_indices_6b)
+                new_state_heuristic = max(edge_6a[new_edge_index_6a], edge_6b[new_edge_index_6b], corner_db[new_corner_index])
                 new_state_cost = new_state_depth + new_state_heuristic
 
                 if new_state_cost > id_depth:
-                    if is_solved(new_state_base):
-                        edge_h = khash_get(edge_db, new_edge_index, edge_max_depth)
-                        corner_h = corner_db[new_corner_index]
-                        print(new_edge_index, edge_h, corner_h, new_state_depth, new_state_base, "Failure to issolve")
-                        raise ValueError("Failed")
                     continue
 
                 new_rots = np.empty(len(prev_rots) + 1, dtype=np.uint8)
@@ -85,20 +78,27 @@ if __name__ == "__main__":
     corner_max_depth = 10
 
     start = time.perf_counter()
-    if mode == 0:
-        khash_db, indices = generate_edges_pattern_database(get_cube(), edge_max_depth)
-        khash_db = cffi_support.ffi.cast('void *', khash_db)
-        edge_db = convert_khash_to_dict(khash_db, indices, edge_max_depth)
-        save_pattern_database('edge_db.pkl', edge_db)
+    print("Starting at ", time.ctime())
 
-    elif mode == 1:
+    if mode == 0:
+        edge_db_6a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
+        save_pattern_database('edge_db_6b.npy', edge_db_6a)
+        del edge_db_6a
+        #edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
+        #save_pattern_database('edge_db_6b.npy', edge_db_6b)
+        #del edge_db_6b
+        #edge_db_10 = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_10, edge_rot_indices_10)
+        #save_pattern_database('edge_db_10.npy', edge_db_10)
+        #del edge_db_10
+
+    elif mode == 2:
         corner_db = generate_corners_pattern_database(get_cube(), corner_max_depth)
         save_pattern_database('corner_db.npy', corner_db)
 
     else:
         corner_db = load_pattern_database('corner_db.npy')
-        dict_edge_db = load_pattern_database('edge_db.pkl')
-        edge_khash_db = convert_dict_to_list(dict_edge_db)
+        dict_edge_db_a = load_pattern_database('edge_db_6a.npy')
+        dict_edge_db_b = load_pattern_database('edge_db_6b.npy')
 
         with open('test_file.txt') as f:
             output = f.read()
@@ -106,7 +106,7 @@ if __name__ == "__main__":
             cube = scramble(output)
             print(cube)
 
-        faces, rotations, searched = a_star(cube, corner_db, edge_khash_db, edge_max_depth)
+        faces, rotations, searched = a_star(cube, corner_db, dict_edge_db_a, dict_edge_db_b)
 
         size = len(faces)
         print("Moves required to solve:")

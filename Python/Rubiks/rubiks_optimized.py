@@ -34,15 +34,15 @@ from typing import List, Dict, Tuple
 #                 12--13---14
 
 
-import _khash_ffi
-from numba import cffi_support
-
-cffi_support.register_module(_khash_ffi)
-
-khash_init = _khash_ffi.lib.khash_int2int_init
-khash_get = _khash_ffi.lib.khash_int2int_get
-khash_set = _khash_ffi.lib.khash_int2int_set
-khash_destroy = _khash_ffi.lib.khash_int2int_destroy
+# import _khash_ffi
+# from numba import cffi_support
+#
+# cffi_support.register_module(_khash_ffi)
+#
+# khash_init = _khash_ffi.lib.khash_int2int_init
+# khash_get = _khash_ffi.lib.khash_int2int_get
+# khash_set = _khash_ffi.lib.khash_int2int_set
+# khash_destroy = _khash_ffi.lib.khash_int2int_destroy
 
 '''Given a cubie [0-19] and a rotation [0-17] being performed, returns the new position of that cubie'''
 __turn_position_lookup = np.array([[0, 0, 5, 2, 12, 0, 0, 0, 12, 5, 2, 0, 0, 0, 17, 7, 14, 0],
@@ -103,10 +103,15 @@ __corner_booleans = np.array([True, True, False, False, True, True, False, False
                               False, False, True, True, False, False, True, True])
 
 __corner_pos_indices = np.array([0, 4, 10, 14, 24, 28, 34, 38], dtype=np.uint8)
-__corner_rot_indices = np.array([1, 5, 11, 15, 25, 29, 35, 39], dtype=np.uint8)
+__corner_rot_indices = __corner_pos_indices + 1
 
-__edge_pos_indices = np.array([2, 6, 8, 12, 16, 18], dtype=np.uint8) #, 20, 22, 26, 30, 32, 36
-__edge_rot_indices = __edge_pos_indices + 1
+edge_pos_indices_6a = np.array([2, 6, 8, 12, 16, 18], dtype=np.uint8)
+edge_rot_indices_6a = edge_pos_indices_6a + 1
+edge_pos_indices_6b = np.array([20, 22, 26, 30, 32, 36], dtype=np.uint8)
+edge_rot_indices_6b = edge_pos_indices_6b + 1
+edge_pos_indices_10 = np.array([2, 6, 8, 12, 16, 18, 20, 22], dtype=np.uint8)
+edge_rot_indices_10 = edge_pos_indices_10 + 1
+__edge_translations = np.array([0, 0, 0, 1, 2, 0, 3, 0, 4, 5, 6, 7, 0, 8, 0, 9, 10, 0, 11, 0], dtype=np.uint8)
 
 __factorial_lookup = np.array([
     1, 1, 2, 6, 24, 120, 720, 5040, 40320,
@@ -215,85 +220,7 @@ def get_corner_index(state):
     return corner_index
 
 
-# @jit(nopython=True)
-# def get_cube_index(state):
-#     '''Count the number of inversions'''
-#     size = 19
-#     inversions = np.zeros(size, dtype=np.uint8)
-#     for i in range(size):
-#         if i % 2 == 1: continue
-#         for j in range(i + 2, size+1):
-#             if j % 2 == 1: continue
-#             if state[i] > state[j]:
-#                 inversions[i//2] += 1
-#
-#     cube_index = 0
-#     for i in range(size):
-#         cube_index += inversions[i] * fast_factorial(size-i)
-#
-#     '''Index into the specific rotation that we're in'''
-#     cube_index *= 4478976
-#
-#     '''View the odd (rotation) corner indices then convert them from a base 3 to base 10 number'''
-#     corners = 6
-#     edges = 10
-#     for i in range(size):
-#         if i % 2 == 0: continue
-#         if np_isin(i, __corner_rot_indices):
-#             cube_index += state[i] * 3**corners
-#             corners -= 1
-#         else:
-#             cube_index += state[i] * 2**edges
-#             edges -= 1
-#
-#     return cube_index
-#
-#
-# @njit
-# def np_isin(element, array):
-#     for x in array:
-#         if element == x:
-#             return True
-#     return False
-
 @njit
-def get_edge_index(state):
-    """
-    #Edge index = perm_number * 2^x + orientation number
-    perm_number = (n-(i+1))!/(n-r)! * #unused_digits
-    Where i is the index of the number in the smaller set, n is the size of the set to choose from and r is the size
-    of the smaller set and number of preceding digits are the number of digits preceding the current digit in the
-    original set that have yet to be used. -https://www.doc.ic.ac.uk/teaching/distinguished-projects/2015/l.hoang.pdf
-    :param state:
-    :return:
-    """
-    full_size = 12 # Total number of edges, always 12 in a 3x3x3 Rubik's Cube
-    edges = state[__edge_pos_indices]
-    size = len(edges)
-    '''Count the number of inversions in the corner table per element'''
-    permute_number = np.zeros(size, dtype=np.uint8)
-    for i in range(size):
-        permute_number[i] = edges[i]
-        for j in range(0, i):
-            if edges[j] < edges[i]:
-                permute_number[i] -= 1
-
-    edge_index = np.uint64(0)
-    for i in range(size):
-        edge_index += permute_number[i] * __factorial_lookup[full_size - i + 1] / __factorial_lookup[full_size - size]
-
-    '''Index into the specific edge rotation that we're in'''
-    edge_index *= np.uint64(2**size)
-
-    '''View the odd (rotation) edge indices then convert them from a base 2 to base 10 number'''
-    edges = state[__edge_rot_indices]
-    for i in range(size):
-        edge_index += edges[i] * 1 << (size - i)
-
-    return edge_index
-
-
-@jit(nopython=True)
 def generate_corners_pattern_database(state, max_depth):
     print("Generating corners db")
     queue = list()
@@ -338,55 +265,100 @@ def generate_corners_pattern_database(state, max_depth):
 
 
 @njit
+def get_edge_index(state, edge_pos_indices: np.ndarray, edge_rot_indices: np.ndarray) -> np.uint64:
+    """
+    #Edge index = perm_number * 2^x + orientation number
+    perm_number = (n-(i+1))!/(n-r)! * #unused_digits
+    Where i is the index of the number in the smaller set, n is the size of the set to choose from and r is the size
+    of the smaller set and number of preceding digits are the number of digits preceding the current digit in the
+    original set that have yet to be used. -https://www.doc.ic.ac.uk/teaching/distinguished-projects/2015/l.hoang.pdf
+    """
+    full_size = 12  # Total number of edges, always 12 in a 3x3x3 Rubik's Cube
+    edges = __edge_translations[state[edge_pos_indices]]
+    size = len(edges)
+    '''Count the number of inversions in the corner table per element'''
+    permute_number = np.zeros(size, dtype=np.uint8)
+    for i in range(size):
+        permute_number[i] = edges[i]
+        for j in range(0, i):
+            if edges[j] < edges[i]:
+                permute_number[i] -= 1
+
+    edge_index = np.uint64(0)
+    small_size = __factorial_lookup[full_size - size]
+    for i in range(size):
+        edge_index += permute_number[i] * (__factorial_lookup[full_size - i - 1] // small_size)
+
+    '''Index into the specific edge rotation that we're in'''
+    edge_index *= np.uint64(2**size)
+
+    '''View the odd (rotation) edge indices then convert them from a base 2 to base 10 number'''
+    edges = state[edge_rot_indices]
+    for i in range(size):
+        edge_index += np.uint64(edges[i] * 1 << (size - i))
+
+    return edge_index
+
+
+@njit
 def npr(n, r):
     return __factorial_lookup[n] / __factorial_lookup[n-r]
 
 
 @njit
-def generate_edges_pattern_database(state, max_depth):
+def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot_indices):
     print("Generating edges db")
     queue = list()
-    queue.append((state, np.uint8(0)))
+    queue.append((state, np.uint8(0), -1))
 
     # 12 permute x positions * 2^x rotations
-    all_edges = np.uint64(npr(12, len(__edge_pos_indices)) * 2**(len(__edge_pos_indices)))
+    all_edges = np.uint64(npr(12, len(edge_pos_indices)) * 2**(len(edge_pos_indices)))
     print(all_edges)
-    pattern_lookup = khash_init()
-    new_state_index = get_edge_index(state)
-    khash_set(pattern_lookup, new_state_index, 0)
-    found_index_stack = khash_init()
+    pattern_lookup = np.full(all_edges, max_depth, dtype=np.int8)
+    new_state_index = get_edge_index(state, edge_pos_indices, edge_rot_indices)
+    pattern_lookup[new_state_index] = 0
+    found_index_stack = np.full(all_edges, max_depth, dtype=np.uint8)
     id_depth = np.uint8(1)
     count = np.uint64(1)
     new_state = state
     new_state_depth = np.uint8(0)
     next_state = state
     depth = np.uint8(0)
-    found_edge_configs = [new_state_index]
     while count < all_edges and id_depth < max_depth:
 
         if len(queue) == 0:
             id_depth += np.uint8(1)
-            found_index_stack = khash_init()
-            queue.append((state, np.uint8(0)))
+            found_index_stack = np.full(all_edges, max_depth, dtype=np.uint8)
+            queue.append((state, np.uint8(0), -1))
             print("Incrementing id-depth to", id_depth)
 
-        next_state, depth = queue.pop()
+        next_state, depth, last_face = queue.pop()
         for face in range(6):
+
+            # if last_face == face:
+            #     continue
+            # if last_face == Face.back and face == Face.front:
+            #     continue
+            # if last_face == Face.right and face == Face.left:
+            #     continue
+            # if last_face == Face.down and face == Face.up:
+            #     continue
+
             for rotation in range(3):
+
                 new_state = rotate(np.copy(next_state), face, rotation)
-                new_state_index = get_edge_index(new_state)
+                new_state_index = get_edge_index(new_state, edge_pos_indices, edge_rot_indices)
                 new_state_depth = depth + np.uint8(1)
-                if new_state_depth == id_depth and khash_get(pattern_lookup, new_state_index, max_depth) == max_depth:
-                    khash_set(pattern_lookup, new_state_index, new_state_depth)
-                    found_edge_configs.append(new_state_index)
+                if new_state_depth == id_depth and pattern_lookup[new_state_index] == max_depth:
+                    pattern_lookup[new_state_index] = new_state_depth
                     count += np.uint64(1)
                     if count % 100000 == 0:
                         print(count, new_state_depth, len(queue))
-                elif new_state_depth < id_depth and new_state_depth < khash_get(found_index_stack, new_state_index, max_depth):
-                    khash_set(found_index_stack, new_state_index, new_state_depth)
-                    queue.append((new_state, new_state_depth))
+                elif new_state_depth < id_depth and new_state_depth < found_index_stack[new_state_index]:
+                    found_index_stack[new_state_index] = new_state_depth
+                    queue.append((new_state, new_state_depth, face))
 
-    return pattern_lookup, found_edge_configs
+    return pattern_lookup
 
 
 def convert_khash_to_dict(db, indices, max_depth):
