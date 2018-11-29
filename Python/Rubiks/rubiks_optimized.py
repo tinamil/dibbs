@@ -335,14 +335,14 @@ def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot
         next_state, depth, last_face = queue.pop()
         for face in range(6):
 
-            # if last_face == face:
-            #     continue
-            # if last_face == Face.back and face == Face.front:
-            #     continue
-            # if last_face == Face.right and face == Face.left:
-            #     continue
-            # if last_face == Face.down and face == Face.up:
-            #     continue
+            if last_face == face:
+                continue
+            if last_face == Face.back and face == Face.front:
+                continue
+            if last_face == Face.right and face == Face.left:
+                continue
+            if last_face == Face.down and face == Face.up:
+                continue
 
             for rotation in range(3):
 
