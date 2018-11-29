@@ -163,16 +163,16 @@ def rotate(old_state: np.ndarray, face: int, rotation: int):
     # If half rotation then no change in rotations
     if rotation == Rotation.half:
         for i in range(0, 40, 2):
-            state[i] = __turn_position_lookup[state[i]][rotation_index]
+            state[i] = __turn_position_lookup[state[i], rotation_index]
     else:
         for i in range(0, 40, 2):
-            if __turn_lookup[state[i]][face]:
+            if __turn_lookup[state[i], face]:
                 if __corner_booleans[i]:
-                    state[i + 1] = __corner_rotation[face][state[i + 1]]
+                    state[i + 1] = __corner_rotation[face, state[i + 1]]
                 elif face == Face.left or face == Face.right:
                     state[i + 1] = 1 - state[i + 1]
 
-                state[i] = __turn_position_lookup[state[i]][rotation_index]
+                state[i] = __turn_position_lookup[state[i], rotation_index]
     return state
 
 
@@ -276,6 +276,7 @@ def get_edge_index(state, edge_pos_indices: np.ndarray, edge_rot_indices: np.nda
     full_size = 12  # Total number of edges, always 12 in a 3x3x3 Rubik's Cube
     edges = __edge_translations[state[edge_pos_indices]]
     size = len(edges)
+    rotation_size = size - 1
     '''Count the number of inversions in the corner table per element'''
     permute_number = np.zeros(size, dtype=np.uint8)
     for i in range(size):
@@ -290,12 +291,12 @@ def get_edge_index(state, edge_pos_indices: np.ndarray, edge_rot_indices: np.nda
         edge_index += permute_number[i] * (__factorial_lookup[full_size - i - 1] // small_size)
 
     '''Index into the specific edge rotation that we're in'''
-    edge_index *= np.uint64(2**size)
+    edge_index *= np.uint64(2**rotation_size)
 
     '''View the odd (rotation) edge indices then convert them from a base 2 to base 10 number'''
     edges = state[edge_rot_indices]
     for i in range(size):
-        edge_index += np.uint64(edges[i] * 1 << (size - i))
+        edge_index += np.uint64(edges[i] * 1 << (rotation_size - i))
 
     return edge_index
 
@@ -312,7 +313,7 @@ def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot
     queue.append((state, np.uint8(0), -1))
 
     # 12 permute x positions * 2^x rotations
-    all_edges = np.uint64(npr(12, len(edge_pos_indices)) * 2**(len(edge_pos_indices)))
+    all_edges = np.uint64(npr(12, len(edge_pos_indices)) * 2**(len(edge_pos_indices)-1))
     print(all_edges)
     pattern_lookup = np.full(all_edges, max_depth, dtype=np.int8)
     new_state_index = get_edge_index(state, edge_pos_indices, edge_rot_indices)
