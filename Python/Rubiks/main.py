@@ -84,12 +84,14 @@ if __name__ == "__main__":
         edge_db_6a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
         save_pattern_database('edge_db_6a.npy', edge_db_6a)
         del edge_db_6a
-        #edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
-        #save_pattern_database('edge_db_6b.npy', edge_db_6b)
-        #del edge_db_6b
-        #edge_db_10 = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_10, edge_rot_indices_10)
-        #save_pattern_database('edge_db_10.npy', edge_db_10)
-        #del edge_db_10
+
+        edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
+        save_pattern_database('edge_db_6b.npy', edge_db_6b)
+        del edge_db_6b
+
+        edge_db_10 = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_10, edge_rot_indices_10)
+        save_pattern_database('edge_db_10.npy', edge_db_10)
+        del edge_db_10
 
     elif mode == 2:
         corner_db = generate_corners_pattern_database(get_cube(), corner_max_depth)

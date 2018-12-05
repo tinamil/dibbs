@@ -274,15 +274,14 @@ def get_edge_index(state, edge_pos_indices: np.ndarray, edge_rot_indices: np.nda
     original set that have yet to be used. -https://www.doc.ic.ac.uk/teaching/distinguished-projects/2015/l.hoang.pdf
     """
     full_size = 12  # Total number of edges, always 12 in a 3x3x3 Rubik's Cube
-    edges = __edge_translations[state[edge_pos_indices]]
-    size = len(edges)
-    rotation_size = size - 1
+    edge_pos = __edge_translations[state[edge_pos_indices]]
+    size = len(edge_pos)
     '''Count the number of inversions in the corner table per element'''
     permute_number = np.zeros(size, dtype=np.uint8)
     for i in range(size):
-        permute_number[i] = edges[i]
+        permute_number[i] = edge_pos[i]
         for j in range(0, i):
-            if edges[j] < edges[i]:
+            if edge_pos[j] < edge_pos[i]:
                 permute_number[i] -= 1
 
     edge_index = np.uint64(0)
@@ -291,12 +290,12 @@ def get_edge_index(state, edge_pos_indices: np.ndarray, edge_rot_indices: np.nda
         edge_index += permute_number[i] * (__factorial_lookup[full_size - i - 1] // small_size)
 
     '''Index into the specific edge rotation that we're in'''
-    edge_index *= np.uint64(2**rotation_size)
+    edge_index *= np.uint64(2**size)
 
     '''View the odd (rotation) edge indices then convert them from a base 2 to base 10 number'''
-    edges = state[edge_rot_indices]
+    edge_rots = state[edge_rot_indices]
     for i in range(size):
-        edge_index += np.uint64(edges[i] * 1 << (rotation_size - i))
+        edge_index += np.uint64(edge_rots[i] * 1 << (size - i - 1))
 
     return edge_index
 
@@ -313,7 +312,7 @@ def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot
     queue.append((state, np.uint8(0), -1))
 
     # 12 permute x positions * 2^x rotations
-    all_edges = np.uint64(npr(12, len(edge_pos_indices)) * 2**(len(edge_pos_indices)-1))
+    all_edges = np.uint64(npr(12, len(edge_pos_indices)) * 2**(len(edge_pos_indices)))
     print(all_edges)
     pattern_lookup = np.full(all_edges, max_depth, dtype=np.int8)
     new_state_index = get_edge_index(state, edge_pos_indices, edge_rot_indices)
