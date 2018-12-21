@@ -350,14 +350,3 @@ class Rubiks:
     def load_pattern_database(file: str):
         with open(f'{file}.pkl', 'rb') as f:
             return pickle.load(f)
-
-
-if __name__ == "__main__":
-    start = time.perf_counter()
-    db = Rubiks.generate_pattern_database(Rubiks().state)
-    with open(f'database.pkl', 'wb') as f:
-        pickle.dump(db, f, pickle.HIGHEST_PROTOCOL)
-
-    print("Finished: ", time.perf_counter() - start)
-    #pattern_db = Rubiks.load_pattern_database('database')
-    pass
