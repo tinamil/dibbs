@@ -305,6 +305,10 @@ def npr(n, r):
     return __factorial_lookup[n] / __factorial_lookup[n-r]
 
 
+def inverse_rotation(rotation):
+    return 3 - rotation
+
+
 @njit
 def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot_indices):
     print("Generating edges db")

@@ -57,18 +57,19 @@ class NodeIterator:
         return self
 
 
-@njit
-def heuristic(state, corner_db, edge_10):
-    new_corner_index = ro.get_corner_index(state)
+def heuristic(node: Node, corner_db, edge_10):
+    new_corner_index = ro.get_corner_index(node.state)
     # new_edge_index_6a = get_edge_index(state, edge_pos_indices_6a, edge_rot_indices_6a)
     # new_edge_index_6b = get_edge_index(state, edge_pos_indices_6b, edge_rot_indices_6b)
-    new_edge_index_10 = ro.get_edge_index(state, ro.edge_pos_indices_10, ro.edge_rot_indices_10)
+    new_edge_index_10 = ro.get_edge_index(node.state, ro.edge_pos_indices_10, ro.edge_rot_indices_10)
     return max(corner_db[new_corner_index], edge_10[new_edge_index_10])
 
 
-@njit
-def backward_heuristic(state, corner_db, edge_10):
-    pass
+def backward_heuristic(node: Node, target_state: np.ndarray, corner_db, edge_10):
+    goal = target_state
+    for x in node:
+        goal = ro.rotate(goal, x.face, ro.inverse_rotation(x.rotation))
+    return heuristic(goal, corner_db, edge_10)
 
 
 def expand_forward(frontier: List[Node], other_frontier: List[Node], closed: Dict[Node, Node], other_closed: Dict[Node, Node], upper_bound: int):
@@ -102,12 +103,15 @@ def dibbs(start: np.ndarray, goal: np.ndarray, corner_db, edge_10):
     forward_fbar = defaultdict(lambda: math.inf)
     backward_fbar = defaultdict(lambda: math.inf)
 
+    start_node = Node(None, start, None, None, 0, heuristic, backward_heuristic)
+    goal_node = Node(None, goal, None, None, 0, backward_heuristic, heuristic)
+
     forward_costs[start.tobytes()] = 0
-    forward_fbar[start.tobytes()] = heuristic(start, corner_db, edge_10)
+    forward_fbar[start.tobytes()] = start_node.f_bar
     forward_fbar_min = 0
 
     backward_costs[goal.tobytes()] = 0
-    backward_fbar[goal.tobytes()] = backward_heuristic(goal, corner_db, edge_10)
+    backward_fbar[goal.tobytes()] = goal_node.f_bar
     backward_fbar_min = 0
 
     forward_frontier = [start]
