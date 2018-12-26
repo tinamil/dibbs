@@ -109,7 +109,7 @@ edge_pos_indices_6a = np.array([2, 6, 8, 12, 16, 18], dtype=np.uint8)
 edge_rot_indices_6a = edge_pos_indices_6a + 1
 edge_pos_indices_6b = np.array([20, 22, 26, 30, 32, 36], dtype=np.uint8)
 edge_rot_indices_6b = edge_pos_indices_6b + 1
-edge_pos_indices_10 = np.array([2, 6, 8, 12, 16, 18, 20, 22], dtype=np.uint8)
+edge_pos_indices_10 = np.array([2, 6, 8, 12, 16, 18, 20, 22, 26, 30], dtype=np.uint8)
 edge_rot_indices_10 = edge_pos_indices_10 + 1
 __edge_translations = np.array([0, 0, 0, 1, 2, 0, 3, 0, 4, 5, 6, 7, 0, 8, 0, 9, 10, 0, 11, 0], dtype=np.uint8)
 
@@ -276,7 +276,6 @@ def get_edge_index(state, edge_pos_indices: np.ndarray, edge_rot_indices: np.nda
     full_size = 12  # Total number of edges, always 12 in a 3x3x3 Rubik's Cube
     edge_pos = __edge_translations[state[edge_pos_indices]]
     size = len(edge_pos)
-    '''Count the number of inversions in the corner table per element'''
     permute_number = np.zeros(size, dtype=np.uint8)
     for i in range(size):
         permute_number[i] = edge_pos[i]
@@ -306,7 +305,7 @@ def npr(n, r):
 
 
 def inverse_rotation(rotation):
-    return 3 - rotation
+    return 2 - rotation
 
 
 @njit

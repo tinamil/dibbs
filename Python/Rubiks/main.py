@@ -1,6 +1,7 @@
 from rubiks_optimized import *
 import time
 import numpy as np
+import dibbs
 
 import _khash_ffi
 
@@ -23,7 +24,7 @@ def a_star(state, corner_db, edge_6a, edge_6b, edge_10):
     if is_solved(state):
         return np.empty(0, dtype=np.uint8), np.empty(0, dtype=np.uint8), 0
 
-    min_moves = heuristic(state, corner_db, edge_10)
+    min_moves = heuristic(state, corner_db, edge_6a, edge_6b, edge_10)
     print("Minimum number of moves to solve: ", min_moves)
     id_depth = min_moves
     count = 0
@@ -46,7 +47,7 @@ def a_star(state, corner_db, edge_6a, edge_6b, edge_10):
             for rotation in range(3):
                 new_state_base = rotate(next_state, face, rotation)
                 new_state_depth = depth + 1
-                new_state_heuristic = heuristic(new_state_base, corner_db, edge_10)
+                new_state_heuristic = heuristic(new_state_base, corner_db, edge_6a, edge_6b, edge_10)
                 new_state_cost = new_state_depth + new_state_heuristic
 
                 if new_state_cost > id_depth:
@@ -66,16 +67,17 @@ def a_star(state, corner_db, edge_6a, edge_6b, edge_10):
 
 
 @njit
-def heuristic(state, corner_db, edge_10):
+def heuristic(state, corner_db, edge_6a, edge_6b, edge_10):
     new_corner_index = get_corner_index(state)
-    # new_edge_index_6a = get_edge_index(state, edge_pos_indices_6a, edge_rot_indices_6a)
-    # new_edge_index_6b = get_edge_index(state, edge_pos_indices_6b, edge_rot_indices_6b)
-    new_edge_index_10 = get_edge_index(state, edge_pos_indices_10, edge_rot_indices_10)
-    return max(corner_db[new_corner_index], edge_10[new_edge_index_10])
+    new_edge_index_6a = get_edge_index(state, edge_pos_indices_6a, edge_rot_indices_6a)
+    new_edge_index_6b = get_edge_index(state, edge_pos_indices_6b, edge_rot_indices_6b)
+    #new_edge_index_10 = get_edge_index(state, edge_pos_indices_10, edge_rot_indices_10)
+    #return max(corner_db[new_corner_index], edge_10[new_edge_index_10])
+    return max(corner_db[new_corner_index], edge_6a[new_edge_index_6a], edge_6b[new_edge_index_6b])
 
 
 if __name__ == "__main__":
-    mode = 3
+    mode = 0
 
     edge_max_depth = 20
     corner_max_depth = 20
@@ -84,13 +86,13 @@ if __name__ == "__main__":
     print("Starting at ", time.ctime())
 
     if mode == 0:
-        edge_db_6a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
-        save_pattern_database('edge_db_6a.npy', edge_db_6a)
-        del edge_db_6a
+        #edge_db_6a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
+        #save_pattern_database('edge_db_6a.npy', edge_db_6a)
+        #del edge_db_6a
 
-        edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
-        save_pattern_database('edge_db_6b.npy', edge_db_6b)
-        del edge_db_6b
+        #edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
+        #save_pattern_database('edge_db_6b.npy', edge_db_6b)
+        #del edge_db_6b
 
         edge_db_10 = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_10, edge_rot_indices_10)
         save_pattern_database('edge_db_10.npy', edge_db_10)
@@ -104,7 +106,8 @@ if __name__ == "__main__":
         load_corner_db = load_pattern_database('corner_db.npy')
         dict_edge_db_a = load_pattern_database('edge_db_6a.npy')
         dict_edge_db_b = load_pattern_database('edge_db_6b.npy')
-        dict_edge_db_10 = load_pattern_database('edge_db_10.npy')
+        #dict_edge_db_10 = load_pattern_database('edge_db_10.npy')
+        dict_edge_db_10 = None
 
         with open('test_file.txt') as f:
             output = f.read()
@@ -113,6 +116,7 @@ if __name__ == "__main__":
             print(cube)
 
         faces, rotations, searched = a_star(cube, load_corner_db, dict_edge_db_a, dict_edge_db_b, dict_edge_db_10)
+        #faces, rotations, searched = dibbs.dibbs(cube, get_cube(), load_corner_db, dict_edge_db_a, dict_edge_db_b, dict_edge_db_10)
 
         size = len(faces)
         print("Moves required to solve:")
