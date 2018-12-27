@@ -16,7 +16,13 @@ class Node:
         self.cost = cost
         self.heuristic = heuristic_func(self)
         self.combined = self.cost + self.heuristic
-        self.f_bar = self.combined + self.cost - other_heuristic(self)
+        self.reverse_heuristic = other_heuristic(self)
+        if self.reverse_heuristic > self.cost:
+            print(self.reverse_heuristic, self.cost)
+            for x in self:
+                print(x.face, x.rotation)
+                exit(-1)
+        self.f_bar = self.combined + self.cost - self.reverse_heuristic
         self.reverse_parent = None
 
     def get_path(self) -> List[Tuple[int, int]]:
@@ -70,7 +76,8 @@ def backward_heuristic(node: Node, target_state: np.ndarray, corner_db, edge_6a,
     for x in node:
         if x.parent is not None:
             goal = ro.rotate(goal, x.face, ro.inverse_rotation(x.rotation))
-    return heuristic(goal, corner_db, edge_6a, edge_6b, edge_10)
+    back_h = heuristic(goal, corner_db, edge_6a, edge_6b, edge_10)
+    return back_h
 
 
 def expand_forward(frontier: List[Node], other_frontier: List[Node], closed: Dict[Node, Node],
@@ -107,7 +114,7 @@ def dibbs(start: np.ndarray, goal: np.ndarray, corner_db, edge_6a, edge_6b, edge
     backward_fbar = defaultdict(lambda: math.inf)
 
     forward_heuristic = lambda node: heuristic(node.state, corner_db, edge_6a, edge_6b, edge_10)
-    reverse_heuristic = lambda node: backward_heuristic(node, goal, corner_db, edge_6a, edge_6b, edge_10)
+    reverse_heuristic = lambda node: backward_heuristic(node, start, corner_db, edge_6a, edge_6b, edge_10)
 
     start_node = Node(None, start, None, None, 0, forward_heuristic, reverse_heuristic)
     goal_node = Node(None, goal, None, None, 0, reverse_heuristic, forward_heuristic)
@@ -127,7 +134,7 @@ def dibbs(start: np.ndarray, goal: np.ndarray, corner_db, edge_6a, edge_6b, edge
 
     upper_bound = math.inf
 
-    explore_forward = True
+    explore_forward = False
     best_node = None
     count = 0
     while upper_bound > (forward_fbar_min + backward_fbar_min) / 2:
@@ -141,6 +148,7 @@ def dibbs(start: np.ndarray, goal: np.ndarray, corner_db, edge_6a, edge_6b, edge
             backward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             backward_fbar_min = backward_frontier[len(backward_frontier) - 1].f_bar
         explore_forward = forward_fbar_min < backward_fbar_min
+        explore_forward = False
 
     path = best_node.get_path()
     reverse_path = best_node.reverse_parent.get_path()

@@ -316,7 +316,10 @@ def npr(n, r):
 
 
 def inverse_rotation(rotation):
-    return 2 - rotation
+    if rotation == 2:
+        return 2
+    else:
+        return 1 - rotation
 
 
 @njit
