@@ -15,7 +15,7 @@ khash_set = _khash_ffi.lib.khash_int2int_set
 khash_destroy = _khash_ffi.lib.khash_int2int_destroy
 
 
-@njit
+#@njit
 def a_star(state, corner_db, edge_6a, edge_6b, edge_10):
     queue = list()
     starting_state = state
@@ -77,7 +77,7 @@ def heuristic(state, corner_db, edge_6a, edge_6b, edge_10):
 
 
 if __name__ == "__main__":
-    mode = 0
+    mode = 3
 
     edge_max_depth = 20
     corner_max_depth = 20
@@ -93,9 +93,11 @@ if __name__ == "__main__":
         #edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
         #save_pattern_database('edge_db_6b.npy', edge_db_6b)
         #del edge_db_6b
-
-        edge_db_10 = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_10, edge_rot_indices_10)
-        save_pattern_database('edge_db_10.npy', edge_db_10)
+        mem_map = np.memmap('edge_db_10.npy', dtype=np.int8, mode='w+', shape=np.uint64(npr(12, len(edge_pos_indices_10)) * 2**(len(edge_pos_indices_10))))
+        #TODO: Eats 245 GB of RAM, needs intermittent flushed
+        mem_map[:] = edge_max_depth
+        edge_db_10 = generate_edges_memmap(get_cube(), edge_max_depth, edge_pos_indices_10, edge_rot_indices_10, mem_map)
+        #save_pattern_database('edge_db_10.npy', edge_db_10)
         del edge_db_10
 
     elif mode == 2:
@@ -115,13 +117,14 @@ if __name__ == "__main__":
             cube = scramble(output)
             print(cube)
 
-        faces, rotations, searched = a_star(cube, load_corner_db, dict_edge_db_a, dict_edge_db_b, dict_edge_db_10)
-        #faces, rotations, searched = dibbs.dibbs(cube, get_cube(), load_corner_db, dict_edge_db_a, dict_edge_db_b, dict_edge_db_10)
+        #faces, rotations, searched = a_star(cube, load_corner_db, dict_edge_db_a, dict_edge_db_b, dict_edge_db_10)
+        faces, rotations, searched = dibbs.dibbs(cube, get_cube(), load_corner_db, dict_edge_db_a, dict_edge_db_b, dict_edge_db_10)
 
         size = len(faces)
-        print("Moves required to solve:")
+        print(f"Moves required to solve ({size}):")
         for i in range(size - 1, -1, -1):
-            print(Face(faces[i]).name, Rotation(rotations[i]).name)
+            print(Face(faces[i]).__repr__() + Rotation(rotations[i]).__repr__())
+        print(f"Explored {searched} nodes")
 
     print("Finished", time.perf_counter() - start)
     pass

@@ -18,7 +18,7 @@ class Face(enum.IntEnum):
     back = 5
 
     def __repr__(self):
-        return self.name
+        return self.name.upper()[0]
 
 
 @enum.unique
@@ -26,6 +26,14 @@ class Rotation(enum.IntEnum):
     clockwise = 0
     counterclockwise = 1
     halfway = 2
+
+    def __repr__(self):
+        if Rotation.clockwise == self:
+            return ""
+        elif Rotation.counterclockwise == self:
+            return "'"
+        else:
+            return "2"
 
 
 @enum.unique

@@ -75,7 +75,7 @@ def backward_heuristic(node: Node, target_state: np.ndarray, corner_db, edge_6a,
 
 def expand_forward(frontier: List[Node], other_frontier: List[Node], closed: Dict[Node, Node],
                    other_closed: Dict[Node, Node], f_heuristic: Callable, r_heuristic: Callable,
-                   upper_bound: int):
+                   upper_bound: int, best_node: Node):
     next_value = frontier.pop()
     if next_value not in closed:
         for face in range(6):
@@ -97,7 +97,7 @@ def expand_forward(frontier: List[Node], other_frontier: List[Node], closed: Dic
                         best_node = node
                         best_node.reverse_parent = reverse_found
         closed[next_value] = next_value
-    return upper_bound
+    return upper_bound, best_node
 
 
 def dibbs(start: np.ndarray, goal: np.ndarray, corner_db, edge_6a, edge_6b, edge_10):
@@ -128,15 +128,39 @@ def dibbs(start: np.ndarray, goal: np.ndarray, corner_db, edge_6a, edge_6b, edge
     upper_bound = math.inf
 
     explore_forward = True
+    best_node = None
+    count = 0
     while upper_bound > (forward_fbar_min + backward_fbar_min) / 2:
+        count += 1
         if explore_forward:
-            upper_bound = expand_forward(forward_frontier, backward_frontier, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound)
+            upper_bound, best_node = expand_forward(forward_frontier, backward_frontier, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound, best_node)
             forward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             forward_fbar_min = forward_frontier[len(forward_frontier) - 1].f_bar
-            explore_forward = False
         else:
-            upper_bound = expand_forward(backward_frontier, forward_frontier, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound)
+            upper_bound, best_node = expand_forward(backward_frontier, forward_frontier, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound, best_node)
             backward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             backward_fbar_min = backward_frontier[len(backward_frontier) - 1].f_bar
-            explore_forward = True
+        explore_forward = forward_fbar_min < backward_fbar_min
+
+    path = best_node.get_path()
+    reverse_path = best_node.reverse_parent.get_path()
+
+    best_start_state = None
+    for x in best_node:
+        best_start_state = x.state
+
+    if np.array_equal(best_start_state, start):
+        path, reverse_path = reverse_path, path
+
+    path.extend(reversed(reverse_path))
+
+    faces = []
+    rotations = []
+
+    for face, rotation in path:
+        if face is not None:
+            faces.append(face)
+            rotations.append(rotation)
+
+    return faces, rotations, count
 

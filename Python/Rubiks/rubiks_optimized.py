@@ -137,12 +137,23 @@ class Face(enum.IntEnum):
     down = 4
     right = 5
 
+    def __repr__(self):
+        return self.name.upper()[0]
+
 
 @enum.unique
 class Rotation(enum.IntEnum):
     clockwise = 0
     counterclockwise = 1
     half = 2
+
+    def __repr__(self):
+        if Rotation.clockwise == self:
+            return ""
+        elif Rotation.counterclockwise == self:
+            return "'"
+        else:
+            return "2"
 
 
 @enum.unique
@@ -317,10 +328,10 @@ def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot
     # 12 permute x positions * 2^x rotations
     all_edges = np.uint64(npr(12, len(edge_pos_indices)) * 2**(len(edge_pos_indices)))
     print(all_edges)
-    pattern_lookup = np.full(all_edges, max_depth, dtype=np.int8)
+    pattern_lookup = np.full(shape=all_edges, fill_value=max_depth, dtype=np.int8)
     new_state_index = get_edge_index(state, edge_pos_indices, edge_rot_indices)
     pattern_lookup[new_state_index] = 0
-    found_index_stack = np.full(all_edges, max_depth, dtype=np.uint8)
+    found_index_stack = np.full(shape=all_edges, fill_value=max_depth, dtype=np.uint8)
     id_depth = np.uint8(1)
     count = np.uint64(1)
     new_state = state
@@ -331,7 +342,7 @@ def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot
 
         if len(queue) == 0:
             id_depth += np.uint8(1)
-            found_index_stack = np.full(all_edges, max_depth, dtype=np.uint8)
+            found_index_stack = np.full(shape=all_edges, fill_value=max_depth, dtype=np.uint8)
             queue.append((state, np.uint8(0), -1))
             print("Incrementing id-depth to", id_depth)
 
@@ -362,6 +373,63 @@ def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot
                     queue.append((new_state, new_state_depth, face))
 
     return pattern_lookup
+
+
+@njit
+def generate_edges_memmap(state, max_depth, edge_pos_indices, edge_rot_indices, pattern_lookup):
+    print("Generating edges db")
+    queue = list()
+    queue.append((state, np.uint8(0), -1))
+
+    # 12 permute x positions * 2^x rotations
+    all_edges = np.uint64(npr(12, len(edge_pos_indices)) * 2**(len(edge_pos_indices)))
+    print(all_edges)
+
+    new_state_index = get_edge_index(state, edge_pos_indices, edge_rot_indices)
+    pattern_lookup[new_state_index] = 0
+    #found_index_stack = np.full(shape=all_edges, fill_value=max_depth, dtype=np.uint8)
+    id_depth = np.uint8(1)
+    count = np.uint64(1)
+    new_state = state
+    new_state_depth = np.uint8(0)
+    next_state = state
+    depth = np.uint8(0)
+    while count < all_edges and id_depth < max_depth:
+
+        if len(queue) == 0:
+            id_depth += np.uint8(1)
+            #found_index_stack = np.full(shape=all_edges, fill_value=max_depth, dtype=np.uint8)
+            queue.append((state, np.uint8(0), -1))
+            print("Incrementing id-depth to", id_depth)
+
+        next_state, depth, last_face = queue.pop()
+        for face in range(6):
+
+            if last_face == face:
+                continue
+            if last_face == Face.back and face == Face.front:
+                continue
+            if last_face == Face.right and face == Face.left:
+                continue
+            if last_face == Face.down and face == Face.up:
+                continue
+
+            for rotation in range(3):
+
+                new_state = rotate(np.copy(next_state), face, rotation)
+                new_state_index = get_edge_index(new_state, edge_pos_indices, edge_rot_indices)
+                new_state_depth = depth + np.uint8(1)
+                if new_state_depth == id_depth and pattern_lookup[new_state_index] == max_depth:
+                    pattern_lookup[new_state_index] = new_state_depth
+                    count += np.uint64(1)
+                    if count % 10000 == 0:
+                        print(count, new_state_depth, len(queue))
+                elif new_state_depth < id_depth:# and new_state_depth < found_index_stack[new_state_index]:
+                    #found_index_stack[new_state_index] = new_state_depth
+                    queue.append((new_state, new_state_depth, face))
+
+    return pattern_lookup
+
 
 
 def convert_khash_to_dict(db, indices, max_depth):
