@@ -44,6 +44,11 @@ from typing import List, Dict, Tuple
 # khash_set = _khash_ffi.lib.khash_int2int_set
 # khash_destroy = _khash_ffi.lib.khash_int2int_destroy
 
+
+__corner_cubies = np.array([0, 2, 5, 7, 12, 14, 17, 19], dtype=np.uint8)
+__edge_cubies = np.array([1, 3, 4, 6, 8, 9, 10, 11, 13, 15, 16, 18], dtype=np.uint8)
+
+
 '''Given a cubie [0-19] and a rotation [0-17] being performed, returns the new position of that cubie'''
 __turn_position_lookup = np.array([[0, 0, 5, 2, 12, 0, 0, 0, 12, 5, 2, 0, 0, 0, 17, 7, 14, 0],
                                    [1, 1, 1, 4, 8, 1, 1, 1, 1, 3, 9, 1, 1, 1, 1, 6, 13, 1],
@@ -119,6 +124,13 @@ __factorial_lookup = np.array([
     6227020800, 87178291200, 1307674368000,
     20922789888000, 355687428096000, 6402373705728000,
     121645100408832000, 2432902008176640000], dtype=np.uint64)
+
+
+__goal = np.array([0, 0, 1, 0, 2, 0, 3, 0,
+                   4, 0, 5, 0, 6, 0, 7, 0,
+                   8, 0, 9, 0, 10, 0, 11, 0,
+                   12, 0, 13, 0, 14, 0, 15, 0,
+                   16, 0, 17, 0, 18, 0, 19, 0], dtype=np.uint8)
 
 
 @njit
@@ -316,6 +328,8 @@ def npr(n, r):
 
 
 def inverse_rotation(rotation):
+    if rotation is None:
+        return None
     if rotation == 2:
         return 2
     else:
@@ -466,13 +480,6 @@ def save_pattern_database(file: str, db):
             pickle.dump(db, f, pickle.DEFAULT_PROTOCOL)
 
 
-__goal = np.array([0, 0, 1, 0, 2, 0, 3, 0,
-                   4, 0, 5, 0, 6, 0, 7, 0,
-                   8, 0, 9, 0, 10, 0, 11, 0,
-                   12, 0, 13, 0, 14, 0, 15, 0,
-                   16, 0, 17, 0, 18, 0, 19, 0], dtype=np.uint8)
-
-
 @njit
 def get_cube():
     return np.copy(__goal)
@@ -483,6 +490,15 @@ def is_solved(cube):
     for idx, val in enumerate(__goal):
         if val != cube[idx]:
             return False
+    return True
+
+
+@njit
+def is_solved_cubie(cube, cubie, solution):
+    pos_index = cubie * 2
+    rot_index = pos_index + 1
+    if solution[pos_index] != cube[pos_index] or solution[rot_index] != cube[rot_index]:
+        return False
     return True
 
 
@@ -538,3 +554,44 @@ def convert(notation_move: str) -> Tuple[Face, Rotation]:
     else:
         raise ValueError("Length is not 1 or 2 characters to convert notation: " + str(notation_move))
 
+
+@njit
+def manhattan_heuristic(state: np.ndarray, solution: np.ndarray):
+    count = 0
+    for idx in __edge_cubies:
+        count += solve(state, idx, solution)
+    count /= 4  # 4 edge cubies can be moved in each rotation
+    return int(np.ceil(count))
+
+
+@njit
+def solve(state: np.ndarray, cubie: int, solution: np.ndarray):
+    queue = list()
+    starting_state = state
+    queue.append((starting_state, 0))
+
+    if is_solved_cubie(state, cubie, solution):
+        return 0
+
+    id_depth = 1
+    while True:
+
+        if len(queue) == 0:
+            id_depth += 1
+            queue.append((starting_state, 0))
+
+        next_state, depth = queue.pop()
+
+        for face in range(6):
+            for rotation in range(3):
+                new_state_base = rotate(next_state, face, rotation)
+                new_state_depth = depth + 1
+                new_state_cost = new_state_depth
+
+                if new_state_cost > id_depth:
+                    continue
+
+                if is_solved_cubie(new_state_base, cubie, solution):
+                    return new_state_depth
+
+                queue.append((new_state_base, new_state_depth))

@@ -14,9 +14,9 @@ class Node:
         self.face = face
         self.rotation = rotation
         self.cost = cost
-        self.heuristic = heuristic_func(self)
+        self.heuristic = heuristic_func(self.state)
         self.combined = self.cost + self.heuristic
-        self.reverse_heuristic = other_heuristic(self)
+        self.reverse_heuristic = other_heuristic(self.state)
         if self.reverse_heuristic > self.cost:
             print(self.reverse_heuristic, self.cost)
             for x in self:
@@ -63,11 +63,11 @@ class NodeIterator:
         return self
 
 
-def heuristic(node: np.ndarray, corner_db, edge_6a, edge_6b, edge_10):
-    new_corner_index = ro.get_corner_index(node)
-    new_edge_index_6a = ro.get_edge_index(node, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
-    new_edge_index_6b = ro.get_edge_index(node, ro.edge_pos_indices_6b, ro.edge_rot_indices_6b)
-    new_edge_index_10 = ro.get_edge_index(node, ro.edge_pos_indices_10, ro.edge_rot_indices_10)
+def heuristic(state: np.ndarray, corner_db, edge_6a, edge_6b, edge_10):
+    new_corner_index = ro.get_corner_index(state)
+    new_edge_index_6a = ro.get_edge_index(state, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
+    new_edge_index_6b = ro.get_edge_index(state, ro.edge_pos_indices_6b, ro.edge_rot_indices_6b)
+    new_edge_index_10 = ro.get_edge_index(state, ro.edge_pos_indices_10, ro.edge_rot_indices_10)
     return max(corner_db[new_corner_index], edge_6a[new_edge_index_6a], edge_6b[new_edge_index_6b])
 
 
@@ -80,9 +80,8 @@ def backward_heuristic(node: Node, target_state: np.ndarray, corner_db, edge_6a,
     return back_h
 
 
-def expand_forward(frontier: List[Node], other_frontier: List[Node], closed: Dict[Node, Node],
-                   other_closed: Dict[Node, Node], f_heuristic: Callable, r_heuristic: Callable,
-                   upper_bound: int, best_node: Node):
+def expand(frontier: List[Node], other_frontier: List[Node], closed: Dict[Node, Node], other_closed: Dict[Node, Node], f_heuristic: Callable, r_heuristic: Callable,
+           upper_bound: int, best_node: Node, count: int):
     next_value = frontier.pop()
     if next_value not in closed:
         for face in range(6):
@@ -95,6 +94,7 @@ def expand_forward(frontier: List[Node], other_frontier: List[Node], closed: Dic
                 if node not in closed:
                     frontier.append(node)
                     reverse_found = None
+                    count += 1
                     if node in other_closed:
                         reverse_found = other_closed[node]
                     elif node in other_frontier:
@@ -104,17 +104,14 @@ def expand_forward(frontier: List[Node], other_frontier: List[Node], closed: Dic
                         best_node = node
                         best_node.reverse_parent = reverse_found
         closed[next_value] = next_value
-    return upper_bound, best_node
+    return upper_bound, best_node, count
 
 
-def dibbs(start: np.ndarray, goal: np.ndarray, corner_db, edge_6a, edge_6b, edge_10):
+def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuristic):
     forward_costs = defaultdict(lambda: math.inf)
     backward_costs = defaultdict(lambda: math.inf)
     forward_fbar = defaultdict(lambda: math.inf)
     backward_fbar = defaultdict(lambda: math.inf)
-
-    forward_heuristic = lambda node: heuristic(node.state, corner_db, edge_6a, edge_6b, edge_10)
-    reverse_heuristic = lambda node: backward_heuristic(node, start, corner_db, edge_6a, edge_6b, edge_10)
 
     start_node = Node(None, start, None, None, 0, forward_heuristic, reverse_heuristic)
     goal_node = Node(None, goal, None, None, 0, reverse_heuristic, forward_heuristic)
@@ -138,17 +135,15 @@ def dibbs(start: np.ndarray, goal: np.ndarray, corner_db, edge_6a, edge_6b, edge
     best_node = None
     count = 0
     while upper_bound > (forward_fbar_min + backward_fbar_min) / 2:
-        count += 1
         if explore_forward:
-            upper_bound, best_node = expand_forward(forward_frontier, backward_frontier, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound, best_node)
+            upper_bound, best_node, count = expand(forward_frontier, backward_frontier, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound, best_node, count)
             forward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             forward_fbar_min = forward_frontier[len(forward_frontier) - 1].f_bar
         else:
-            upper_bound, best_node = expand_forward(backward_frontier, forward_frontier, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound, best_node)
+            upper_bound, best_node, count = expand(backward_frontier, forward_frontier, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound, best_node, count)
             backward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             backward_fbar_min = backward_frontier[len(backward_frontier) - 1].f_bar
         explore_forward = forward_fbar_min < backward_fbar_min
-        explore_forward = False
 
     path = best_node.get_path()
     reverse_path = best_node.reverse_parent.get_path()
@@ -160,6 +155,7 @@ def dibbs(start: np.ndarray, goal: np.ndarray, corner_db, edge_6a, edge_6b, edge
     if np.array_equal(best_start_state, start):
         path, reverse_path = reverse_path, path
 
+    path = [(face, ro.inverse_rotation(rotation)) for face, rotation in path]
     path.extend(reversed(reverse_path))
 
     faces = []
