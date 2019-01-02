@@ -103,6 +103,7 @@ def expand(frontier: List[Node], other_frontier: List[Node], closed: Dict[Node, 
                         upper_bound = node.cost + reverse_found.cost
                         best_node = node
                         best_node.reverse_parent = reverse_found
+                        print("New upper bound: ", upper_bound)
         closed[next_value] = next_value
     return upper_bound, best_node, count
 
@@ -134,15 +135,22 @@ def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuris
     explore_forward = False
     best_node = None
     count = 0
+    best_fbar = -math.inf
     while upper_bound > (forward_fbar_min + backward_fbar_min) / 2:
         if explore_forward:
             upper_bound, best_node, count = expand(forward_frontier, backward_frontier, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound, best_node, count)
             forward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             forward_fbar_min = forward_frontier[len(forward_frontier) - 1].f_bar
+            if forward_fbar_min > best_fbar:
+                best_fbar = forward_fbar_min
+                print(best_fbar)
         else:
             upper_bound, best_node, count = expand(backward_frontier, forward_frontier, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound, best_node, count)
             backward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             backward_fbar_min = backward_frontier[len(backward_frontier) - 1].f_bar
+            if backward_fbar_min > best_fbar:
+                best_fbar = backward_fbar_min
+                print(best_fbar)
         explore_forward = forward_fbar_min < backward_fbar_min
 
     path = best_node.get_path()

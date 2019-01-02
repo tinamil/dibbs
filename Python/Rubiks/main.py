@@ -1,5 +1,6 @@
 from rubiks_optimized import is_solved, manhattan_heuristic, __goal, rotate, get_corner_index, get_edge_index, edge_pos_indices_6a, edge_pos_indices_6b, edge_rot_indices_6a, edge_rot_indices_6b, \
-    Face, Rotation, generate_edges_memmap, get_cube, generate_corners_pattern_database, load_pattern_database, scramble, save_pattern_database, npr, edge_pos_indices_10, edge_rot_indices_10
+    Face, Rotation, generate_edges_memmap, get_cube, generate_corners_pattern_database, load_pattern_database, scramble, save_pattern_database, npr, edge_pos_indices_10, edge_rot_indices_10, \
+    generate_edges_pattern_database
 import time
 import numpy as np
 import dibbs
@@ -91,15 +92,26 @@ def pattern_database_lookup(state, corner_db, edge_6a, edge_6b, edge_10):
     return max(corner_db[new_corner_index], edge_6a[new_edge_index_6a], edge_6b[new_edge_index_6b])
 
 
-load_corner_db = None
-dict_edge_db_6a = None
-dict_edge_db_6b = None
-dict_edge_db_10 = None
+goal_corner_db = None
+goal_edge_db_6a = None
+goal_edge_db_6b = None
+goal_edge_db_10 = None
 
 
 @njit
 def forward_pattern_database_heuristic(state):
-    return pattern_database_lookup(state, load_corner_db, dict_edge_db_6a, dict_edge_db_6b, dict_edge_db_10)
+    return pattern_database_lookup(state, goal_corner_db, goal_edge_db_6a, goal_edge_db_6b, goal_edge_db_10)
+
+
+start_corner_db = None
+start_edge_db_6a = None
+start_edge_db_6b = None
+start_edge_db_10 = None
+
+
+@njit
+def reverse_pattern_database_heuristic(state):
+    return pattern_database_lookup(state, start_corner_db, start_edge_db_6a, start_edge_db_6b, start_edge_db_10)
 
 
 @njit
@@ -141,23 +153,23 @@ class Mode(enum.Enum):
 
 if __name__ == "__main__":
     mode = Mode.search
-    heuristic_choice = HeuristicType.zero
+    heuristic_choice = HeuristicType.pattern
     algorithm_choice = AlgorithmType.dibbs
 
-    edge_max_depth = 20
-    corner_max_depth = 20
+    edge_max_depth = 10
+    corner_max_depth = 10
 
     start = time.perf_counter()
     print("Starting at ", time.ctime())
 
     if mode == Mode.generate_edges:
-        #edge_db_6a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
-        #save_pattern_database('edge_db_6a.npy', edge_db_6a)
-        #del edge_db_6a
+        edge_db_6a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
+        save_pattern_database('edge_db_6a.npy', edge_db_6a)
+        del edge_db_6a
 
-        #edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
-        #save_pattern_database('edge_db_6b.npy', edge_db_6b)
-        #del edge_db_6b
+        edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
+        save_pattern_database('edge_db_6b.npy', edge_db_6b)
+        del edge_db_6b
         mem_map = np.memmap('edge_db_10.npy', dtype=np.int8, mode='w+', shape=np.uint64(npr(12, len(edge_pos_indices_10)) * 2**(len(edge_pos_indices_10))))
         #TODO: Eats 245 GB of RAM, needs intermittent flushed
         mem_map[:] = edge_max_depth
@@ -170,17 +182,38 @@ if __name__ == "__main__":
         save_pattern_database('corner_db.npy', load_corner_db)
 
     elif mode == Mode.search:
-        load_corner_db = load_pattern_database('corner_db.npy')
-        dict_edge_db_6a = load_pattern_database('edge_db_6a.npy')
-        dict_edge_db_6b = load_pattern_database('edge_db_6b.npy')
-        #dict_edge_db_10 = load_pattern_database('edge_db_10.npy')
-        dict_edge_db_10 = None
+        goal_corner_db = load_pattern_database('corner_db.npy')
+        goal_edge_db_6a = load_pattern_database('edge_db_6a.npy')
+        goal_edge_db_6b = load_pattern_database('edge_db_6b.npy')
+        #goal_edge_db_10 = load_pattern_database('edge_db_10.npy')
+        goal_edge_db_10 = None
 
         with open('test_file.txt') as f:
             output = f.read()
             print(output)
             start_state = scramble(output)
             print(start_state)
+
+        if heuristic_choice == HeuristicType.pattern:
+            try:
+                start_corner_db = load_pattern_database('_start_corner_db.npy')
+            except IOError:
+                start_corner_db = generate_corners_pattern_database(start_state, corner_max_depth)
+                save_pattern_database('_start_corner_db.npy', start_corner_db)
+
+            try:
+                start_edge_db_6a = load_pattern_database('_start_edge_db_6a.npy')
+            except IOError:
+                start_edge_db_6a = generate_edges_pattern_database(start_state, edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
+                save_pattern_database('_start_edge_db_6a.npy', start_edge_db_6a)
+
+            try:
+                start_edge_db_6b = load_pattern_database('_start_edge_db_6b.npy')
+            except IOError:
+                start_edge_db_6b = generate_edges_pattern_database(start_state, edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
+                save_pattern_database('_start_edge_db_6b.npy', start_edge_db_6b)
+
+            start_edge_db_10 = None
 
         if algorithm_choice == AlgorithmType.astar:
             print("A*")
@@ -197,7 +230,7 @@ if __name__ == "__main__":
             if heuristic_choice == HeuristicType.man:
                 faces, rotations, searched = dibbs.dibbs(start_state, get_cube(), forward_manhattan_heuristic, backward_manhattan_heuristic)
             elif heuristic_choice == HeuristicType.pattern:
-                faces, rotations, searched = dibbs.dibbs(start_state, get_cube(), forward_pattern_database_heuristic, backward_pattern_database_heuristic)
+                faces, rotations, searched = dibbs.dibbs(start_state, get_cube(), forward_pattern_database_heuristic, reverse_pattern_database_heuristic)
             elif heuristic_choice == HeuristicType.zero:
                 faces, rotations, searched = dibbs.dibbs(start_state, get_cube(), zero_heuristic, zero_heuristic)
             else:
