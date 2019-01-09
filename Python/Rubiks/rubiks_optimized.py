@@ -140,6 +140,11 @@ def fast_factorial(n):
     return __factorial_lookup[n]
 
 
+@njit
+def skip_rotations(last_face: int, face: int):
+    return last_face == face or (last_face == 3 and face == 0) or (last_face == 5 and face == 2) or (last_face == 4 and face == 1)
+
+
 @enum.unique
 class Face(enum.IntEnum):
     front = 0
@@ -179,7 +184,7 @@ class Color(enum.IntEnum):
     blank = -1
 
 
-@njit()
+@njit
 def rotate(old_state: np.ndarray, face: int, rotation: int):
     state = np.copy(old_state)
     rotation_index = 6 * rotation + face
@@ -199,7 +204,123 @@ def rotate(old_state: np.ndarray, face: int, rotation: int):
     return state
 
 
-@jit(nopython=True)
+def random_generation():
+    valid = False
+    while not valid:
+        corners = np.random.permutation([0, 2, 5, 7, 12, 14, 17, 19])
+        corner_rotations = np.random.randint(0, 3, size=8)
+
+        edges = np.random.permutation([1, 3, 4, 6, 8, 9, 10, 11, 13, 15, 16, 18])
+        edge_rotations = np.random.randint(0, 2, size=12)
+
+        state = np.empty(40, dtype=np.uint8)
+
+        state[0] = corners[0]
+        state[1] = corner_rotations[0]
+
+        state[2] = edges[0]
+        state[3] = edge_rotations[0]
+
+        state[4] = corners[1]
+        state[5] = corner_rotations[1]
+
+        state[6] = edges[1]
+        state[7] = edge_rotations[1]
+
+        state[8] = edges[2]
+        state[9] = edge_rotations[2]
+
+        state[10] = corners[2]
+        state[11] = corner_rotations[2]
+
+        state[12] = edges[3]
+        state[13] = edge_rotations[3]
+
+        state[14] = corners[3]
+        state[15] = corner_rotations[3]
+
+        state[16] = edges[4]
+        state[17] = edge_rotations[4]
+
+        state[18] = edges[5]
+        state[19] = edge_rotations[5]
+
+        state[20] = edges[6]
+        state[21] = edge_rotations[6]
+
+        state[22] = edges[7]
+        state[23] = edge_rotations[7]
+
+        state[24] = corners[4]
+        state[25] = corner_rotations[4]
+
+        state[26] = edges[8]
+        state[27] = edge_rotations[8]
+
+        state[28] = corners[5]
+        state[29] = corner_rotations[5]
+
+        state[30] = edges[9]
+        state[31] = edge_rotations[9]
+
+        state[32] = edges[10]
+        state[33] = edge_rotations[10]
+
+        state[34] = corners[6]
+        state[35] = corner_rotations[6]
+
+        state[36] = edges[11]
+        state[37] = edge_rotations[11]
+
+        state[38] = corners[7]
+        state[39] = corner_rotations[7]
+
+        valid = True
+
+        permutation_parity = count_inversions(state[::2]) % 2
+        if permutation_parity != 0:
+            valid = False
+            continue
+
+        corner_parity = sum(corner_rotations) % 3
+        if corner_parity != 0:
+            valid = False
+            continue
+
+        edge_parity = sum(edge_rotations) % 2
+        if edge_parity != 0:
+            valid = False
+            continue
+
+    return state
+
+
+def count_inversions(a):
+    total = 0
+    counts = [0] * len(a)
+    rank = {v: i for i, v in enumerate(sorted(a))}
+    for u in reversed(a):
+        i = rank[u]
+        total += sum(counts[:i])
+        counts[i] += 1
+    return total
+
+
+def random_scramble(length):
+    state = get_cube()
+    last_face = -1
+    for _ in range(length):
+        face = np.random.randint(0, 6)
+        while skip_rotations(last_face, face):
+            face = np.random.randint(0, 6)
+        last_face = face
+        rotation = np.random.randint(0, 3)
+        print(Face(face).__repr__() + Rotation(rotation).__repr__())
+        state = rotate(state, face, rotation)
+    return state
+
+
+@njit
 def get_corner_index(state):
     '''
     Gets the unique index of the corners of this cube.
@@ -366,13 +487,7 @@ def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot
         next_state, depth, last_face = queue.pop()
         for face in range(6):
 
-            if last_face == face:
-                continue
-            if last_face == Face.back and face == Face.front:
-                continue
-            if last_face == Face.right and face == Face.left:
-                continue
-            if last_face == Face.down and face == Face.up:
+            if skip_rotations(last_face, face):
                 continue
 
             for rotation in range(3):
@@ -422,13 +537,7 @@ def generate_edges_memmap(state, max_depth, edge_pos_indices, edge_rot_indices, 
         next_state, depth, last_face = queue.pop()
         for face in range(6):
 
-            if last_face == face:
-                continue
-            if last_face == Face.back and face == Face.front:
-                continue
-            if last_face == Face.right and face == Face.left:
-                continue
-            if last_face == Face.down and face == Face.up:
+            if skip_rotations(last_face, face):
                 continue
 
             for rotation in range(3):
@@ -446,7 +555,6 @@ def generate_edges_memmap(state, max_depth, edge_pos_indices, edge_rot_indices, 
                     queue.append((new_state, new_state_depth, face))
 
     return pattern_lookup
-
 
 
 def convert_khash_to_dict(db, indices, max_depth):
@@ -595,3 +703,65 @@ def solve(state: np.ndarray, cubie: int, solution: np.ndarray):
                     return new_state_depth
 
                 queue.append((new_state_base, new_state_depth))
+
+
+@njit
+def a_star(state, heuristic_func):
+    queue = list()
+    starting_state = state
+    queue.append((starting_state, 0, np.empty(0, dtype=np.uint8), np.empty(0, dtype=np.uint8)))
+
+    if is_solved(state):
+        return np.empty(0, dtype=np.uint8), np.empty(0, dtype=np.uint8), 0
+
+    min_moves = heuristic_func(state)
+    print("Minimum number of moves to solve: ", min_moves)
+    id_depth = min_moves
+    count = 0
+    while True:
+
+        if len(queue) == 0:
+            id_depth += 1
+            queue.append((starting_state, 0, np.empty(0, dtype=np.uint8), np.empty(0, dtype=np.uint8)))
+            print("Incrementing id-depth to", id_depth)
+
+        next_state, depth, prev_faces, prev_rots = queue.pop()
+        for face in range(6):
+
+            if len(prev_faces) > 0 and skip_rotations(prev_faces[-1], face):
+                continue
+
+            new_faces = np.empty(len(prev_faces) + 1, dtype=np.uint8)
+            for idx, val in enumerate(prev_faces):
+                new_faces[idx] = val
+            new_faces[-1] = face
+
+            for rotation in range(3):
+                new_state_base = rotate(next_state, face, rotation)
+                new_state_depth = depth + 1
+                new_state_heuristic = heuristic_func(new_state_base)
+                new_state_cost = new_state_depth + new_state_heuristic
+
+                count += 1
+
+                if new_state_cost > id_depth:
+                    continue
+
+                new_rots = np.empty(len(prev_rots) + 1, dtype=np.uint8)
+                for idx, val in enumerate(prev_rots):
+                    new_rots[idx] = val
+                new_rots[len(prev_rots)] = rotation
+
+                if is_solved(new_state_base):
+                    flip(new_faces)
+                    flip(new_rots)
+                    return new_faces, new_rots, count
+
+                queue.append((new_state_base, new_state_depth, new_faces, new_rots))
+
+
+@njit
+def flip(array):
+    count = len(array) - 1
+    for idx in range((count+1) // 2):
+        array[idx], array[count - idx] = array[count - idx], array[idx]

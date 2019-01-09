@@ -85,16 +85,20 @@ def expand(frontier: List[Node], other_frontier: List[Node], closed: Dict[Node, 
     next_value = frontier.pop()
     if next_value not in closed:
         for face in range(6):
+
+            if next_value.face is not None and ro.skip_rotations(next_value.face, face):
+                continue
+
             for rotation in range(3):
                 new_state = ro.rotate(next_value.state, face, rotation)
                 node = Node(next_value, new_state, face, rotation, next_value.cost + 1, f_heuristic, r_heuristic)
+                count += 1
                 if node in closed and node.f_bar < closed[node].f_bar:
                     closed.pop(node)
 
                 if node not in closed:
                     frontier.append(node)
                     reverse_found = None
-                    count += 1
                     if node in other_closed:
                         reverse_found = other_closed[node]
                     elif node in other_frontier:
@@ -140,14 +144,14 @@ def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuris
         if explore_forward:
             upper_bound, best_node, count = expand(forward_frontier, backward_frontier, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound, best_node, count)
             forward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
-            forward_fbar_min = forward_frontier[len(forward_frontier) - 1].f_bar
+            forward_fbar_min = forward_frontier[-1].f_bar
             if forward_fbar_min > best_fbar:
                 best_fbar = forward_fbar_min
                 print(best_fbar)
         else:
             upper_bound, best_node, count = expand(backward_frontier, forward_frontier, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound, best_node, count)
             backward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
-            backward_fbar_min = backward_frontier[len(backward_frontier) - 1].f_bar
+            backward_fbar_min = backward_frontier[-1].f_bar
             if backward_fbar_min > best_fbar:
                 best_fbar = backward_fbar_min
                 print(best_fbar)
