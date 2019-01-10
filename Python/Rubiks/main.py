@@ -87,96 +87,96 @@ def search(mode, heuristic_choice, algorithm_choice, start_state):
 
     start = time.perf_counter()
     print("Starting at ", time.ctime())
+    try:
+        if mode == Mode.generate_edges:
+            edge_db_6a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
+            save_pattern_database('edge_db_6a.npy', edge_db_6a)
+            del edge_db_6a
 
-    if mode == Mode.generate_edges:
-        edge_db_6a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
-        save_pattern_database('edge_db_6a.npy', edge_db_6a)
-        del edge_db_6a
+            edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
+            ro.save_pattern_database('edge_db_6b.npy', edge_db_6b)
+            del edge_db_6b
+            mem_map = np.memmap('edge_db_10.npy', dtype=np.int8, mode='w+', shape=np.uint64(npr(12, len(ro.edge_pos_indices_10)) * 2 ** (len(ro.edge_pos_indices_10))))
+            # TODO: Eats 245 GB of RAM, needs intermittent flushed
+            mem_map[:] = edge_max_depth
+            edge_db_10 = ro.generate_edges_memmap(ro.get_cube(), edge_max_depth, ro.edge_pos_indices_10, ro.edge_rot_indices_10, mem_map)
+            # save_pattern_database('edge_db_10.npy', edge_db_10)
+            del edge_db_10
 
-        edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
-        ro.save_pattern_database('edge_db_6b.npy', edge_db_6b)
-        del edge_db_6b
-        mem_map = np.memmap('edge_db_10.npy', dtype=np.int8, mode='w+', shape=np.uint64(npr(12, len(ro.edge_pos_indices_10)) * 2 ** (len(ro.edge_pos_indices_10))))
-        # TODO: Eats 245 GB of RAM, needs intermittent flushed
-        mem_map[:] = edge_max_depth
-        edge_db_10 = ro.generate_edges_memmap(ro.get_cube(), edge_max_depth, ro.edge_pos_indices_10, ro.edge_rot_indices_10, mem_map)
-        # save_pattern_database('edge_db_10.npy', edge_db_10)
-        del edge_db_10
+        elif mode == Mode.generate_corners:
+            load_corner_db = ro.generate_corners_pattern_database(ro.get_cube(), corner_max_depth)
+            ro.save_pattern_database('corner_db.npy', load_corner_db)
 
-    elif mode == Mode.generate_corners:
-        load_corner_db = ro.generate_corners_pattern_database(ro.get_cube(), corner_max_depth)
-        ro.save_pattern_database('corner_db.npy', load_corner_db)
+        elif mode == Mode.search:
+            goal_corner_db = ro.load_pattern_database('corner_db.npy')
+            goal_edge_db_6a = ro.load_pattern_database('edge_db_6a.npy')
+            goal_edge_db_6b = ro.load_pattern_database('edge_db_6b.npy')
+            # goal_edge_db_10 = load_pattern_database('edge_db_10.npy')
+            goal_edge_db_10 = None
 
-    elif mode == Mode.search:
-        goal_corner_db = ro.load_pattern_database('corner_db.npy')
-        goal_edge_db_6a = ro.load_pattern_database('edge_db_6a.npy')
-        goal_edge_db_6b = ro.load_pattern_database('edge_db_6b.npy')
-        # goal_edge_db_10 = load_pattern_database('edge_db_10.npy')
-        goal_edge_db_10 = None
+            if heuristic_choice == HeuristicType.pattern:
+                try:
+                    start_corner_db = ro.load_pattern_database('_start_corner_db.npy')
+                except IOError:
+                    start_corner_db = ro.generate_corners_pattern_database(start_state, corner_max_depth)
+                    ro.save_pattern_database('_start_corner_db.npy', start_corner_db)
 
-        if heuristic_choice == HeuristicType.pattern:
-            try:
-                start_corner_db = ro.load_pattern_database('_start_corner_db.npy')
-            except IOError:
-                start_corner_db = ro.generate_corners_pattern_database(start_state, corner_max_depth)
-                ro.save_pattern_database('_start_corner_db.npy', start_corner_db)
+                try:
+                    start_edge_db_6a = ro.load_pattern_database('_start_edge_db_6a.npy')
+                except IOError:
+                    start_edge_db_6a = ro.generate_edges_pattern_database(start_state, edge_max_depth, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
+                    ro.save_pattern_database('_start_edge_db_6a.npy', start_edge_db_6a)
 
-            try:
-                start_edge_db_6a = ro.load_pattern_database('_start_edge_db_6a.npy')
-            except IOError:
-                start_edge_db_6a = ro.generate_edges_pattern_database(start_state, edge_max_depth, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
-                ro.save_pattern_database('_start_edge_db_6a.npy', start_edge_db_6a)
+                try:
+                    start_edge_db_6b = ro.load_pattern_database('_start_edge_db_6b.npy')
+                except IOError:
+                    start_edge_db_6b = ro.generate_edges_pattern_database(start_state, edge_max_depth, ro.edge_pos_indices_6b, ro.edge_rot_indices_6b)
+                    ro.save_pattern_database('_start_edge_db_6b.npy', start_edge_db_6b)
 
-            try:
-                start_edge_db_6b = ro.load_pattern_database('_start_edge_db_6b.npy')
-            except IOError:
-                start_edge_db_6b = ro.generate_edges_pattern_database(start_state, edge_max_depth, ro.edge_pos_indices_6b, ro.edge_rot_indices_6b)
-                ro.save_pattern_database('_start_edge_db_6b.npy', start_edge_db_6b)
+                start_edge_db_10 = None
 
-            start_edge_db_10 = None
+            if algorithm_choice == AlgorithmType.astar:
+                print("A*")
+                if heuristic_choice == HeuristicType.man:
+                    faces, rotations, searched = ro.a_star(start_state, forward_manhattan_heuristic)
+                elif heuristic_choice == HeuristicType.pattern:
+                    faces, rotations, searched = ro.a_star(start_state, forward_pattern_database_heuristic)
+                elif heuristic_choice == HeuristicType.zero:
+                    faces, rotations, searched = ro.a_star(start_state, zero_heuristic)
+                else:
+                    raise Exception("Failed to identify type of heuristic")
 
-        if algorithm_choice == AlgorithmType.astar:
-            print("A*")
-            if heuristic_choice == HeuristicType.man:
-                faces, rotations, searched = ro.a_star(start_state, forward_manhattan_heuristic)
-            elif heuristic_choice == HeuristicType.pattern:
-                faces, rotations, searched = ro.a_star(start_state, forward_pattern_database_heuristic)
-            elif heuristic_choice == HeuristicType.zero:
-                faces, rotations, searched = ro.a_star(start_state, zero_heuristic)
+            elif algorithm_choice == AlgorithmType.dibbs:
+                print("DIBBS")
+                if heuristic_choice == HeuristicType.man:
+                    backward_manhattan_heuristic = lambda state: manhattan_heuristic(state, start_state)
+                    faces, rotations, searched = dibbs.dibbs(start_state, ro.get_cube(), forward_manhattan_heuristic, backward_manhattan_heuristic)
+                elif heuristic_choice == HeuristicType.pattern:
+                    faces, rotations, searched = dibbs.dibbs(start_state, ro.get_cube(), forward_pattern_database_heuristic, reverse_pattern_database_heuristic)
+                elif heuristic_choice == HeuristicType.zero:
+                    faces, rotations, searched = dibbs.dibbs(start_state, ro.get_cube(), zero_heuristic, zero_heuristic)
+                else:
+                    raise Exception("Failed to identify type of heuristic")
+
             else:
-                raise Exception("Failed to identify type of heuristic")
+                raise Exception("Failed to identify type of algorithm")
 
-        elif algorithm_choice == AlgorithmType.dibbs:
-            print("DIBBS")
-            if heuristic_choice == HeuristicType.man:
-                backward_manhattan_heuristic = lambda state: manhattan_heuristic(state, start_state)
-                faces, rotations, searched = dibbs.dibbs(start_state, ro.get_cube(), forward_manhattan_heuristic, backward_manhattan_heuristic)
-            elif heuristic_choice == HeuristicType.pattern:
-                faces, rotations, searched = dibbs.dibbs(start_state, ro.get_cube(), forward_pattern_database_heuristic, reverse_pattern_database_heuristic)
-            elif heuristic_choice == HeuristicType.zero:
-                faces, rotations, searched = dibbs.dibbs(start_state, ro.get_cube(), zero_heuristic, zero_heuristic)
-            else:
-                raise Exception("Failed to identify type of heuristic")
-
-        else:
-            raise Exception("Failed to identify type of algorithm")
-
-        size = len(faces)
-        print(f"Moves required to solve ({size}):")
-        for i in range(size - 1, -1, -1):
-            print(ro.Face(faces[i]).__repr__() + ro.Rotation(rotations[i]).__repr__())
-        print(f"Explored {searched} nodes")
-
-    print("Finished", time.perf_counter() - start)
-    return size, searched
+            size = len(faces)
+            print(f"Moves required to solve ({size}):")
+            for i in range(size - 1, -1, -1):
+                print(ro.Face(faces[i]).__repr__() + ro.Rotation(rotations[i]).__repr__())
+            print(f"Explored {searched} nodes")
+            return size, searched
+    finally:
+        print("Finished", time.perf_counter() - start)
 
 
 def load_cube(file: str):
     with open(file) as f:
         output = f.read()
         print(output)
-        start_state = ro.scramble(output)
-        return start_state
+        state = ro.scramble(output)
+        return state
 
 
 if __name__ == "__main__":
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     mode = Mode.search
     heuristic_choice = HeuristicType.man
     algorithm_choice = AlgorithmType.dibbs
-    solution_length = 7
+    solution_length = 8
 
     while len(dibbs_results) < 100:
         start_state = ro.random_scramble(solution_length)
