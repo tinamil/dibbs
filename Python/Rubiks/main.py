@@ -7,6 +7,7 @@ import numpy as np
 import dibbs
 from numba import njit
 import enum
+import mm
 
 import _khash_ffi
 
@@ -72,6 +73,7 @@ class HeuristicType(enum.Enum):
 class AlgorithmType(enum.Enum):
     astar = enum.auto()
     dibbs = enum.auto()
+    mm = enum.auto()
 
 
 @enum.unique
@@ -114,6 +116,19 @@ def search(mode, heuristic_choice, algorithm_choice, start_state):
             # goal_edge_db_10 = load_pattern_database('edge_db_10.npy')
             goal_edge_db_10 = None
 
+
+            if algorithm_choice == AlgorithmType.astar:
+                print("A*")
+                algorithm = ro.a_star
+            elif algorithm_choice == AlgorithmType.dibbs:
+                print("DIBBS")
+                algorithm = dibbs.dibbs
+            elif algorithm_choice == AlgorithmType.mm:
+                print("MM")
+                algorithm = mm.mm
+            else:
+                raise Exception("Failed to identify type of heuristic")
+
             if heuristic_choice == HeuristicType.pattern:
                 try:
                     start_corner_db = ro.load_pattern_database('_start_corner_db.npy')
@@ -135,31 +150,16 @@ def search(mode, heuristic_choice, algorithm_choice, start_state):
 
                 start_edge_db_10 = None
 
-            if algorithm_choice == AlgorithmType.astar:
-                print("A*")
-                if heuristic_choice == HeuristicType.man:
-                    faces, rotations, searched = ro.a_star(start_state, forward_manhattan_heuristic)
-                elif heuristic_choice == HeuristicType.pattern:
-                    faces, rotations, searched = ro.a_star(start_state, forward_pattern_database_heuristic)
-                elif heuristic_choice == HeuristicType.zero:
-                    faces, rotations, searched = ro.a_star(start_state, zero_heuristic)
-                else:
-                    raise Exception("Failed to identify type of heuristic")
-
-            elif algorithm_choice == AlgorithmType.dibbs:
-                print("DIBBS")
-                if heuristic_choice == HeuristicType.man:
-                    backward_manhattan_heuristic = lambda state: manhattan_heuristic(state, start_state)
-                    faces, rotations, searched = dibbs.dibbs(start_state, ro.get_cube(), forward_manhattan_heuristic, backward_manhattan_heuristic)
-                elif heuristic_choice == HeuristicType.pattern:
-                    faces, rotations, searched = dibbs.dibbs(start_state, ro.get_cube(), forward_pattern_database_heuristic, reverse_pattern_database_heuristic)
-                elif heuristic_choice == HeuristicType.zero:
-                    faces, rotations, searched = dibbs.dibbs(start_state, ro.get_cube(), zero_heuristic, zero_heuristic)
-                else:
-                    raise Exception("Failed to identify type of heuristic")
-
+            if heuristic_choice == HeuristicType.man:
+                backward_manhattan_heuristic = lambda state: manhattan_heuristic(state, start_state)
+                faces, rotations, searched = algorithm(start_state, ro.get_cube(), forward_manhattan_heuristic, backward_manhattan_heuristic)
+            elif heuristic_choice == HeuristicType.pattern:
+                faces, rotations, searched = algorithm(start_state, ro.get_cube(), forward_pattern_database_heuristic, reverse_pattern_database_heuristic)
+            elif heuristic_choice == HeuristicType.zero:
+                faces, rotations, searched = algorithm(start_state, ro.get_cube(), zero_heuristic, zero_heuristic)
             else:
-                raise Exception("Failed to identify type of algorithm")
+                raise Exception("Failed to identify type of heuristic")
+
 
             size = len(faces)
             print(f"Moves required to solve ({size}):")
@@ -179,14 +179,9 @@ def load_cube(file: str):
         return state
 
 
-if __name__ == "__main__":
+def explore_search(solution_length):
     dibbs_results = []
     astar_results = []
-
-    mode = Mode.search
-    heuristic_choice = HeuristicType.man
-    algorithm_choice = AlgorithmType.dibbs
-    solution_length = 8
 
     while len(dibbs_results) < 100:
         start_state = ro.random_scramble(solution_length)
@@ -199,3 +194,14 @@ if __name__ == "__main__":
     print("DIBBS:", dibbs_results)
     print("A*:", astar_results)
     print("DIBBS:", np.mean(dibbs_results), "A*:", np.mean(astar_results))
+
+
+if __name__ == "__main__":
+    file = 'test_file.txt'
+    mode = Mode.search
+    heuristic_choice = HeuristicType.man
+    algorithm_choice = AlgorithmType.mm
+    solution_length = 8
+
+    #search(mode, heuristic_choice, algorithm_choice, load_cube(file))
+    explore_search(7)
