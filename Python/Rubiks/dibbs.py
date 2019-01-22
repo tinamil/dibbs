@@ -95,7 +95,8 @@ def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuris
             if backward_fbar_min > best_fbar:
                 best_fbar = backward_fbar_min
                 print(best_fbar)
-        explore_forward = forward_fbar_min < backward_fbar_min
+        #explore_forward = forward_fbar_min < backward_fbar_min
+        explore_forward = len(forward_frontier) < len(backward_frontier)
 
     path = best_node.get_path()
     reverse_path = best_node.reverse_parent.get_path()

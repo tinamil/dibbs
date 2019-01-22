@@ -709,7 +709,6 @@ def a_star_with_backward_args(start_state, goal_state, forward_heuristic, revers
     return a_star(start_state, forward_heuristic)
 
 
-@njit
 def a_star(state, heuristic_func):
     queue = list()
     starting_state = state
