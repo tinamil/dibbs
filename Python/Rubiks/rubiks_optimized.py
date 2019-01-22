@@ -705,8 +705,12 @@ def solve(state: np.ndarray, cubie: int, solution: np.ndarray):
                 queue.append((new_state_base, new_state_depth))
 
 
+def a_star_with_backward_args(start_state, goal_state, forward_heuristic, reverse_heuristic):
+    return a_star(start_state, forward_heuristic)
+
+
 @njit
-def a_star(state, _, heuristic_func, _):
+def a_star(state, heuristic_func):
     queue = list()
     starting_state = state
     queue.append((starting_state, 0, np.empty(0, dtype=np.uint8), np.empty(0, dtype=np.uint8)))

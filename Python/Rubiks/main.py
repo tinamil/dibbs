@@ -119,7 +119,7 @@ def search(mode, heuristic_choice, algorithm_choice, start_state):
 
             if algorithm_choice == AlgorithmType.astar:
                 print("A*")
-                algorithm = ro.a_star
+                algorithm = ro.a_star_with_backward_args
             elif algorithm_choice == AlgorithmType.dibbs:
                 print("DIBBS")
                 algorithm = dibbs.dibbs
@@ -166,7 +166,7 @@ def search(mode, heuristic_choice, algorithm_choice, start_state):
             for i in range(size - 1, -1, -1):
                 print(ro.Face(faces[i]).__repr__() + ro.Rotation(rotations[i]).__repr__())
             print(f"Explored {searched} nodes")
-            return size, searched
+            return size, searched, time.perf_counter() - start
     finally:
         print("Finished", time.perf_counter() - start)
 
@@ -179,29 +179,46 @@ def load_cube(file: str):
         return state
 
 
-def explore_search(solution_length):
+def explore_search(solution_length, iterations=100):
     dibbs_results = []
     astar_results = []
+    mm_results = []
+    dibbs_time = []
+    astar_time = []
+    mm_time = []
 
-    while len(dibbs_results) < 100:
+    while len(dibbs_results) < iterations:
         start_state = ro.random_scramble(solution_length)
-        size, searched = search(mode, heuristic_choice, AlgorithmType.dibbs, start_state)
+        size, searched, time_taken = search(mode, heuristic_choice, AlgorithmType.astar, start_state)
         if size == solution_length:
-            dibbs_results.append(searched)
-            size, searched = search(mode, heuristic_choice, AlgorithmType.astar, start_state)
             astar_results.append(searched)
+            astar_time.append(time_taken)
+            size, searched, time_taken = search(mode, heuristic_choice, AlgorithmType.dibbs, start_state)
+            assert (size == solution_length)
+            dibbs_results.append(searched)
+            dibbs_time.append(time_taken)
+            size, searched, time_taken = search(mode, heuristic_choice, AlgorithmType.mm, start_state)
+            assert(size == solution_length)
+            mm_results.append(searched)
+            mm_time.append(time_taken)
 
     print("DIBBS:", dibbs_results)
+    print(dibbs_time)
     print("A*:", astar_results)
-    print("DIBBS:", np.mean(dibbs_results), "A*:", np.mean(astar_results))
+    print(astar_time)
+    print("MM:", mm_results)
+    print(mm_time)
+    print("DIBBS:", np.mean(dibbs_results), "A*:", np.mean(astar_results), "MM:", np.mean(mm_results))
+    print("TIME: DIBBS:", np.mean(dibbs_time), "A*:", np.mean(astar_time), "MM:", np.mean(mm_time))
 
 
 if __name__ == "__main__":
     file = 'test_file.txt'
     mode = Mode.search
     heuristic_choice = HeuristicType.man
-    algorithm_choice = AlgorithmType.mm
-    solution_length = 8
+    algorithm_choice = AlgorithmType.astar
+    solution_length = 7
+    iterations = 30
 
-    #search(mode, heuristic_choice, algorithm_choice, load_cube(file))
-    explore_search(7)
+    search(mode, heuristic_choice, algorithm_choice, load_cube(file))
+    explore_search(solution_length, iterations)

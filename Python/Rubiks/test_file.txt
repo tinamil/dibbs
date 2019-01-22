@@ -1,1 +1,1 @@
-F B R2 B' R' F R2
+B2 L F2 U'
