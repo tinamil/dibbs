@@ -79,24 +79,45 @@ def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuris
     explore_forward = False
     best_node = None
     count = 0
-    best_fbar = -math.inf
+    f_combined = -math.inf
+    b_combined = -math.inf
+    best_f_fbar = -math.inf
+    best_b_fbar = -math.inf
+    f_cost = -math.inf
+    b_cost = -math.inf
+    expansions = 0
     while upper_bound > (forward_fbar_min + backward_fbar_min) / 2:
+        expansions += 1
+        if expansions % 1000 == 0:
+            print(expansions)
         if explore_forward:
             upper_bound, best_node, count = expand(forward_frontier, backward_frontier, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound, best_node, count)
-            forward_frontier.sort(key=lambda x: (x.f_bar, x.cost), reverse=True)
+            forward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             forward_fbar_min = forward_frontier[-1].f_bar
-            if forward_fbar_min > best_fbar:
-                best_fbar = forward_fbar_min
-                print(best_fbar, forward_frontier[-1].cost)
+            if forward_frontier[-1].cost > f_cost:
+                f_cost = forward_frontier[-1].cost
+                print("Forward cost: ", f_cost)
+            if forward_fbar_min > best_f_fbar:
+                best_f_fbar = forward_fbar_min
+                print("Forward fbar:", best_f_fbar)
+            if forward_frontier[-1].combined > f_combined:
+                f_combined = forward_frontier[-1].combined
+                print("Forward combined: ", f_combined)
         else:
             upper_bound, best_node, count = expand(backward_frontier, forward_frontier, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound, best_node, count)
-            backward_frontier.sort(key=lambda x: (x.f_bar, x.cost), reverse=True)
+            backward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
             backward_fbar_min = backward_frontier[-1].f_bar
-            if backward_fbar_min > best_fbar:
-                best_fbar = backward_fbar_min
-                print(best_fbar)
-        #explore_forward = forward_fbar_min < backward_fbar_min
-        explore_forward = len(forward_frontier) < len(backward_frontier)
+            if backward_frontier[-1].cost > b_cost:
+                b_cost = backward_frontier[-1].cost
+                print("Backward cost: ", b_cost)
+            if backward_fbar_min > best_b_fbar:
+                best_b_fbar = backward_fbar_min
+                print("Backward fbar:", best_b_fbar)
+            if backward_frontier[-1].combined > b_combined:
+                b_combined = backward_frontier[-1].combined
+                print("Backward combined: ", b_combined)
+        explore_forward = forward_fbar_min < backward_fbar_min
+        #explore_forward = len(forward_frontier) < len(backward_frontier)
         #explore_forward = forward_frontier[-1].cost < backward_frontier[-1].cost
 
     path = best_node.get_path()

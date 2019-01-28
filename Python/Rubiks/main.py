@@ -1,5 +1,6 @@
 from rubiks_optimized import get_corner_index, get_edge_index, edge_pos_indices_6a, edge_pos_indices_6b, edge_rot_indices_6a, edge_rot_indices_6b, __goal, manhattan_heuristic, get_cube, \
-    generate_edges_pattern_database, npr, save_pattern_database, edge_pos_indices_8a, edge_pos_indices_8b, edge_rot_indices_8a, edge_rot_indices_8b
+    generate_edges_pattern_database, npr, save_pattern_database, edge_pos_indices_8a, edge_pos_indices_8b, edge_rot_indices_8a, edge_rot_indices_8b, corner_max_depth, edge_6a_max_depth, \
+    edge_8a_max_depth
 
 import rubiks_optimized as ro
 import time
@@ -26,7 +27,7 @@ khash_destroy = _khash_ffi.lib.khash_int2int_destroy
 def pattern_database_lookup(state, corner_db, edges, pos, rot):
     new_corner_index = get_corner_index(state)
     best = corner_db[new_corner_index]
-    for i in len(edges):
+    for i in range(len(edges)):
         new_edge_index = get_edge_index(state, pos[i], rot[i])
         best = max(best, edges[i][new_edge_index])
     return best
@@ -65,7 +66,7 @@ class Mode(enum.Enum):
 
 def search(mode):
     edge_max_depth = 20
-    corner_max_depth = 20
+    corner_max_depth = 11
 
     start = time.perf_counter()
     print("Starting at ", time.ctime())
@@ -102,9 +103,6 @@ def search(mode):
 
 
 def asymmetric_search(mode, forward_heuristic_choice, backward_heuristic_choice, algorithm_choice, start_state):
-    edge_max_depth = 20
-    corner_max_depth = 20
-
     start = time.perf_counter()
     print("Starting at ", time.ctime())
     try:
@@ -112,8 +110,11 @@ def asymmetric_search(mode, forward_heuristic_choice, backward_heuristic_choice,
             goal_edge_db_6a = ro.load_pattern_database('edge_db_6a.npy')
             goal_edge_db_6b = ro.load_pattern_database('edge_db_6b.npy')
 
-            goal_edge_db_8a = ro.load_pattern_database('edge_db_8a.npy')
-            goal_edge_db_8b = ro.load_pattern_database('edge_db_8b.npy')
+            try:
+                goal_edge_db_8a = ro.load_pattern_database('edge_db_8a.npy')
+                goal_edge_db_8b = ro.load_pattern_database('edge_db_8b.npy')
+            except IOError:
+                print("Failed to load edge 8 dbs")
 
             if algorithm_choice == AlgorithmType.astar:
                 print("A*")
@@ -143,14 +144,14 @@ def asymmetric_search(mode, forward_heuristic_choice, backward_heuristic_choice,
                     try:
                         start_edge_db_6a = ro.load_pattern_database(start_edge_db_6a_name)
                     except IOError:
-                        start_edge_db_6a = ro.generate_edges_pattern_database(start_state, edge_max_depth, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
+                        start_edge_db_6a = ro.generate_edges_pattern_database(start_state, edge_6a_max_depth, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
                         ro.save_pattern_database(start_edge_db_6a_name, start_edge_db_6a)
 
                     start_edge_db_6b_name = start_filename + '_start_edge_db_6b.npy'
                     try:
                         start_edge_db_6b = ro.load_pattern_database(start_edge_db_6b_name)
                     except IOError:
-                        start_edge_db_6b = ro.generate_edges_pattern_database(start_state, edge_max_depth, ro.edge_pos_indices_6b, ro.edge_rot_indices_6b)
+                        start_edge_db_6b = ro.generate_edges_pattern_database(start_state, edge_6a_max_depth, ro.edge_pos_indices_6b, ro.edge_rot_indices_6b)
                         ro.save_pattern_database(start_edge_db_6b_name, start_edge_db_6b)
 
                 elif backward_heuristic_choice == HeuristicType.pattern888:
@@ -158,14 +159,14 @@ def asymmetric_search(mode, forward_heuristic_choice, backward_heuristic_choice,
                     try:
                         start_edge_db_8a = ro.load_pattern_database(start_edge_db_8a_name)
                     except IOError:
-                        start_edge_db_8a = ro.generate_edges_pattern_database(start_state, edge_max_depth, ro.edge_pos_indices_8a, ro.edge_rot_indices_8a)
+                        start_edge_db_8a = ro.generate_edges_pattern_database(start_state, edge_8a_max_depth, ro.edge_pos_indices_8a, ro.edge_rot_indices_8a)
                         ro.save_pattern_database(start_edge_db_8a_name, start_edge_db_8a)
 
                     start_edge_db_8b_name = start_filename + '_start_edge_db_8b.npy'
                     try:
                         start_edge_db_8b = ro.load_pattern_database(start_edge_db_8b_name)
                     except IOError:
-                        start_edge_db_8b = ro.generate_edges_pattern_database(start_state, edge_max_depth, ro.edge_pos_indices_8b, ro.edge_rot_indices_8b)
+                        start_edge_db_8b = ro.generate_edges_pattern_database(start_state, edge_8a_max_depth, ro.edge_pos_indices_8b, ro.edge_rot_indices_8b)
                         ro.save_pattern_database(start_edge_db_8b_name, start_edge_db_8b)
 
             if forward_heuristic_choice == HeuristicType.man:
@@ -258,9 +259,9 @@ if __name__ == "__main__":
     forward_heuristic_choice = HeuristicType.pattern1997
     reverse_heuristic_choice = HeuristicType.pattern1997
     algorithm_choice = AlgorithmType.astar
-    solution_length = 100
+    solution_length = 14
     iterations = 100
 
-    search(Mode.generate_edges)
+    #search(Mode.generate_edges)
     #asymmetric_search(mode, forward_heuristic_choice, reverse_heuristic_choice, algorithm_choice, load_cube(file))
-    #explore_search(forward_heuristic_choice, reverse_heuristic_choice, solution_length, iterations)
+    explore_search(forward_heuristic_choice, reverse_heuristic_choice, solution_length, True, iterations)
