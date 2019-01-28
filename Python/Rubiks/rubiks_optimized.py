@@ -111,8 +111,8 @@ __corner_pos_indices = np.array([0, 4, 10, 14, 24, 28, 34, 38], dtype=np.uint8)
 __corner_rot_indices = __corner_pos_indices + 1
 
 corner_max_depth = 11
-edge_6a_max_depth = 10
-edge_8a_max_depth = 11
+edge_6_max_depth = 10
+edge_8_max_depth = 11
 
 edge_pos_indices_6a = np.array([2, 6, 8, 12, 16, 18], dtype=np.uint8)
 edge_rot_indices_6a = edge_pos_indices_6a + 1

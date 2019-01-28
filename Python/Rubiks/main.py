@@ -1,6 +1,6 @@
 from rubiks_optimized import get_corner_index, get_edge_index, edge_pos_indices_6a, edge_pos_indices_6b, edge_rot_indices_6a, edge_rot_indices_6b, __goal, manhattan_heuristic, get_cube, \
-    generate_edges_pattern_database, npr, save_pattern_database, edge_pos_indices_8a, edge_pos_indices_8b, edge_rot_indices_8a, edge_rot_indices_8b, corner_max_depth, edge_6a_max_depth, \
-    edge_8a_max_depth
+    generate_edges_pattern_database, npr, save_pattern_database, edge_pos_indices_8a, edge_pos_indices_8b, edge_rot_indices_8a, edge_rot_indices_8b, corner_max_depth, edge_6_max_depth, \
+    edge_8_max_depth
 
 import rubiks_optimized as ro
 import time
@@ -65,26 +65,23 @@ class Mode(enum.Enum):
 
 
 def search(mode):
-    edge_max_depth = 20
-    corner_max_depth = 11
-
     start = time.perf_counter()
     print("Starting at ", time.ctime())
     try:
         if mode == Mode.generate_edges:
-            # edge_db_6a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
+            # edge_db_6a = generate_edges_pattern_database(get_cube(), edge_6_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
             # save_pattern_database('edge_db_6a.npy', edge_db_6a)
             # del edge_db_6a
             #
-            # edge_db_6b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
+            # edge_db_6b = generate_edges_pattern_database(get_cube(), edge_6_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
             # ro.save_pattern_database('edge_db_6b.npy', edge_db_6b)
             # del edge_db_6b
 
-            edge_db_8a = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_8a, edge_rot_indices_8a)
+            edge_db_8a = generate_edges_pattern_database(get_cube(), edge_8_max_depth, edge_pos_indices_8a, edge_rot_indices_8a)
             ro.save_pattern_database('edge_db_8a.npy', edge_db_8a)
             del edge_db_8a
 
-            edge_db_8b = generate_edges_pattern_database(get_cube(), edge_max_depth, edge_pos_indices_8b, edge_rot_indices_8b)
+            edge_db_8b = generate_edges_pattern_database(get_cube(), edge_8_max_depth, edge_pos_indices_8b, edge_rot_indices_8b)
             ro.save_pattern_database('edge_db_8b.npy', edge_db_8b)
             del edge_db_8b
             # mem_map = np.memmap('edge_db_10.npy', dtype=np.int8, mode='w+', shape=np.uint64(npr(12, len(ro.edge_pos_indices_10)) * 2 ** (len(ro.edge_pos_indices_10))))
@@ -144,14 +141,14 @@ def asymmetric_search(mode, forward_heuristic_choice, backward_heuristic_choice,
                     try:
                         start_edge_db_6a = ro.load_pattern_database(start_edge_db_6a_name)
                     except IOError:
-                        start_edge_db_6a = ro.generate_edges_pattern_database(start_state, edge_6a_max_depth, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
+                        start_edge_db_6a = ro.generate_edges_pattern_database(start_state, edge_6_max_depth, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
                         ro.save_pattern_database(start_edge_db_6a_name, start_edge_db_6a)
 
                     start_edge_db_6b_name = start_filename + '_start_edge_db_6b.npy'
                     try:
                         start_edge_db_6b = ro.load_pattern_database(start_edge_db_6b_name)
                     except IOError:
-                        start_edge_db_6b = ro.generate_edges_pattern_database(start_state, edge_6a_max_depth, ro.edge_pos_indices_6b, ro.edge_rot_indices_6b)
+                        start_edge_db_6b = ro.generate_edges_pattern_database(start_state, edge_6_max_depth, ro.edge_pos_indices_6b, ro.edge_rot_indices_6b)
                         ro.save_pattern_database(start_edge_db_6b_name, start_edge_db_6b)
 
                 elif backward_heuristic_choice == HeuristicType.pattern888:
@@ -159,14 +156,14 @@ def asymmetric_search(mode, forward_heuristic_choice, backward_heuristic_choice,
                     try:
                         start_edge_db_8a = ro.load_pattern_database(start_edge_db_8a_name)
                     except IOError:
-                        start_edge_db_8a = ro.generate_edges_pattern_database(start_state, edge_8a_max_depth, ro.edge_pos_indices_8a, ro.edge_rot_indices_8a)
+                        start_edge_db_8a = ro.generate_edges_pattern_database(start_state, edge_8_max_depth, ro.edge_pos_indices_8a, ro.edge_rot_indices_8a)
                         ro.save_pattern_database(start_edge_db_8a_name, start_edge_db_8a)
 
                     start_edge_db_8b_name = start_filename + '_start_edge_db_8b.npy'
                     try:
                         start_edge_db_8b = ro.load_pattern_database(start_edge_db_8b_name)
                     except IOError:
-                        start_edge_db_8b = ro.generate_edges_pattern_database(start_state, edge_8a_max_depth, ro.edge_pos_indices_8b, ro.edge_rot_indices_8b)
+                        start_edge_db_8b = ro.generate_edges_pattern_database(start_state, edge_8_max_depth, ro.edge_pos_indices_8b, ro.edge_rot_indices_8b)
                         ro.save_pattern_database(start_edge_db_8b_name, start_edge_db_8b)
 
             if forward_heuristic_choice == HeuristicType.man:
