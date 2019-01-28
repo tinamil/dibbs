@@ -114,8 +114,11 @@ edge_pos_indices_6a = np.array([2, 6, 8, 12, 16, 18], dtype=np.uint8)
 edge_rot_indices_6a = edge_pos_indices_6a + 1
 edge_pos_indices_6b = np.array([20, 22, 26, 30, 32, 36], dtype=np.uint8)
 edge_rot_indices_6b = edge_pos_indices_6b + 1
-edge_pos_indices_10 = np.array([2, 6, 8, 12, 16, 18, 20, 22, 26, 30], dtype=np.uint8)
-edge_rot_indices_10 = edge_pos_indices_10 + 1
+edge_pos_indices_8a = np.array([2, 6, 8, 12, 16, 18, 20, 22], dtype=np.uint8)
+edge_rot_indices_8a = edge_pos_indices_8a + 1
+edge_pos_indices_8b = np.array([16, 18, 20, 22, 26, 30, 32, 36], dtype=np.uint8)
+edge_rot_indices_8b = edge_pos_indices_8b + 1
+
 __edge_translations = np.array([0, 0, 0, 1, 2, 0, 3, 0, 4, 5, 6, 7, 0, 8, 0, 9, 10, 0, 11, 0], dtype=np.uint8)
 
 __factorial_lookup = np.array([
@@ -572,11 +575,15 @@ def convert_dict_to_list(db):
 
 
 def load_pattern_database(file: str):
-    if file.endswith(".npy"):
-        return np.load(file)
-    else:
-        with open(f'{file}', 'rb') as f:
-            return pickle.load(f)
+    try:
+        if file.endswith(".npy"):
+            return np.load(file)
+        else:
+            with open(f'{file}', 'rb') as f:
+                return pickle.load(f)
+    except IOError as e:
+        print(e)
+        return None
 
 
 def save_pattern_database(file: str, db):
