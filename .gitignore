@@ -149,4 +149,4 @@ dmypy.json
 .vscode/
 *.exp
 
-*_db_*.npy
+*_db*.npy
