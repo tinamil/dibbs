@@ -9,6 +9,7 @@ from node import Node
 import heapq
 import pprofile
 
+
 # def backward_heuristic(node: Node, target_state: np.ndarray, corner_db, edge_6a, edge_6b, edge_10):
 #     goal = target_state
 #     for x in node:
@@ -18,43 +19,40 @@ import pprofile
 #     return back_h
 
 
-def expand(frontier: List[Node], frontier_set: Dict[Node, Node], other_set: Dict[Node, Node], closed: Dict[Node, Node], other_closed: Dict[Node, Node], f_heuristic: Callable, r_heuristic: Callable,
+def expand(frontier: List[Node], frontier_set: Dict[Node, Tuple[Node, int]], other_set: Dict[Node, Tuple[Node, int]], f_heuristic: Callable, r_heuristic: Callable,
            upper_bound: int, best_node: Node, count: int):
     next_value = heapq.heappop(frontier)
-    frontier_set.pop(next_value)
-    if next_value not in closed:
-        for face in range(6):
+    tmp_next_val, node_count = frontier_set.pop(next_value)
+    if node_count > 1:
+        frontier_set[tmp_next_val] = tmp_next_val, node_count - 1
+    for face in range(6):
 
-            if next_value.face is not None and ro.skip_rotations(next_value.face, face):
-                continue
+        if next_value.face is not None and ro.skip_rotations(next_value.face, face):
+            continue
 
-            for rotation in range(3):
-                new_state = ro.rotate(next_value.state, face, rotation)
-                node = Node(next_value, new_state, face, rotation, next_value.cost + 1, f_heuristic, r_heuristic)
-                count += 1
+        for rotation in range(3):
+            new_state = ro.rotate(next_value.state, face, rotation)
+            node = Node(next_value, new_state, face, rotation, next_value.cost + 1, f_heuristic, r_heuristic)
+            count += 1
 
-                if node in closed and node.f_bar < closed[node].f_bar:
-                    closed.pop(node)
+            heapq.heappush(frontier, node)
+            if node in frontier_set:
+                tmp_next_val, node_count = frontier_set[node]
+                if node.f_bar < tmp_next_val.f_bar:
+                    frontier_set[node] = node, node_count + 1
+                else:
+                    frontier_set[tmp_next_val] = tmp_next_val, node_count + 1
+            else:
+                frontier_set[node] = node, 1
+            reverse_found = None
+            if node in other_set:
+                reverse_found, node_count = other_set[node]
+            if reverse_found is not None and node.cost + reverse_found.cost < upper_bound:
+                upper_bound = node.cost + reverse_found.cost
+                best_node = node
+                best_node.reverse_parent = reverse_found
+                print("New upper bound: ", upper_bound)
 
-                if node not in closed:
-                    if node in frontier_set and frontier_set[node].f_bar > node.f_bar:
-                        frontier_set.pop(node)
-                        frontier.remove(node)
-                    elif node in frontier_set and frontier_set[node].f_bar <= node.f_bar:
-                        continue
-                    heapq.heappush(frontier, node)
-                    frontier_set[node] = node
-                    reverse_found = None
-                    if node in other_closed:
-                        reverse_found = other_closed[node]
-                    elif node in other_set:
-                        reverse_found = other_set[node]
-                    if reverse_found is not None and node.cost + reverse_found.cost < upper_bound:
-                        upper_bound = node.cost + reverse_found.cost
-                        best_node = node
-                        best_node.reverse_parent = reverse_found
-                        print("New upper bound: ", upper_bound)
-        closed[next_value] = next_value
     return upper_bound, best_node, count
 
 
@@ -72,11 +70,9 @@ def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuris
     backward_fbar_min = 0
 
     forward_frontier = [start_node]
-    forward_set = {start_node: start_node}
+    forward_set = {start_node: (start_node, 1)}
     backward_frontier = [goal_node]
-    backward_set = {goal_node: goal_node}
-    forward_closed = dict()
-    backward_closed = dict()
+    backward_set = {goal_node: (goal_node, 1)}
 
     upper_bound = math.inf
 
@@ -89,13 +85,9 @@ def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuris
     best_b_fbar = -math.inf
     f_cost = -math.inf
     b_cost = -math.inf
-    expansions = 0
-    while upper_bound > (forward_fbar_min + backward_fbar_min) / 2 and expansions < 2000:
-        expansions += 1
-        if expansions % 1000 == 0:
-            print(expansions)
+    while upper_bound > (forward_fbar_min + backward_fbar_min) / 2:
         if explore_forward:
-            upper_bound, best_node, count = expand(forward_frontier, forward_set, backward_set, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound, best_node, count)
+            upper_bound, best_node, count = expand(forward_frontier, forward_set, backward_set, forward_heuristic, reverse_heuristic, upper_bound, best_node, count)
             forward_fbar_min = forward_frontier[0].f_bar
             if forward_frontier[0].cost > f_cost:
                 f_cost = forward_frontier[0].cost
@@ -107,7 +99,7 @@ def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuris
                 f_combined = forward_frontier[0].combined
                 print("Forward combined: ", f_combined)
         else:
-            upper_bound, best_node, count = expand(backward_frontier, backward_set, forward_set, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound, best_node, count)
+            upper_bound, best_node, count = expand(backward_frontier, backward_set, forward_set, reverse_heuristic, forward_heuristic, upper_bound, best_node, count)
             backward_fbar_min = backward_frontier[0].f_bar
             if backward_frontier[0].cost > b_cost:
                 b_cost = backward_frontier[0].cost
