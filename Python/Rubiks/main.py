@@ -11,16 +11,16 @@ import enum
 import mm
 import os
 
-import _khash_ffi
+#import _khash_ffi
 
 from numba import cffi_support
 
-cffi_support.register_module(_khash_ffi)
-
-khash_init = _khash_ffi.lib.khash_int2int_init
-khash_get = _khash_ffi.lib.khash_int2int_get
-khash_set = _khash_ffi.lib.khash_int2int_set
-khash_destroy = _khash_ffi.lib.khash_int2int_destroy
+# cffi_support.register_module(_khash_ffi)
+#
+# khash_init = _khash_ffi.lib.khash_int2int_init
+# khash_get = _khash_ffi.lib.khash_int2int_get
+# khash_set = _khash_ffi.lib.khash_int2int_set
+# khash_destroy = _khash_ffi.lib.khash_int2int_destroy
 
 
 @njit
@@ -99,7 +99,7 @@ def search(mode):
         print("Finished", time.perf_counter() - start)
 
 
-def asymmetric_search(mode, forward_heuristic_choice, backward_heuristic_choice, algorithm_choice, start_state):
+def asymmetric_search(forward_heuristic_choice, backward_heuristic_choice, algorithm_choice, start_state):
     start = time.perf_counter()
     print("Starting at ", time.ctime())
     try:
@@ -227,18 +227,19 @@ def explore_search(heuristic_choice, reverse_heuristic, solution_length, force_l
     np.random.seed(0)
     while len(dibbs_results) < iterations:
         start_state = ro.random_scramble(solution_length)
-        size, searched, time_taken = asymmetric_search(Mode.search, heuristic_choice, reverse_heuristic, AlgorithmType.astar, start_state)
-        if force_length or size == solution_length:
-            astar_results.append(searched)
-            astar_time.append(time_taken)
-            size, searched, time_taken = asymmetric_search(Mode.search, heuristic_choice, reverse_heuristic, AlgorithmType.dibbs, start_state)
-            assert (force_length or size == solution_length)
-            dibbs_results.append(searched)
-            dibbs_time.append(time_taken)
-            size, searched, time_taken = asymmetric_search(Mode.search, heuristic_choice, reverse_heuristic, AlgorithmType.mm, start_state)
-            assert(force_length or size == solution_length)
-            mm_results.append(searched)
-            mm_time.append(time_taken)
+        #size, searched, time_taken = asymmetric_search(heuristic_choice, reverse_heuristic, AlgorithmType.astar, start_state)
+        #if force_length or size == solution_length:
+        #    astar_results.append(searched)
+        #    astar_time.append(time_taken)
+        size, searched, time_taken = asymmetric_search(heuristic_choice, reverse_heuristic, AlgorithmType.dibbs, start_state)
+        assert (force_length or size == solution_length)
+        dibbs_results.append(searched)
+        dibbs_time.append(time_taken)
+        return None
+        size, searched, time_taken = asymmetric_search(heuristic_choice, reverse_heuristic, AlgorithmType.mm, start_state)
+        assert(force_length or size == solution_length)
+        mm_results.append(searched)
+        mm_time.append(time_taken)
 
     print("DIBBS:", dibbs_results)
     print(dibbs_time)
@@ -255,10 +256,10 @@ if __name__ == "__main__":
     mode = Mode.search
     forward_heuristic_choice = HeuristicType.pattern1997
     reverse_heuristic_choice = HeuristicType.pattern1997
-    algorithm_choice = AlgorithmType.astar
+    algorithm_choice = AlgorithmType.dibbs
     solution_length = 14
     iterations = 100
 
     #search(Mode.generate_edges)
-    #asymmetric_search(mode, forward_heuristic_choice, reverse_heuristic_choice, algorithm_choice, load_cube(file))
+    #asymmetric_search(HeuristicType.pattern1997, HeuristicType.zero, algorithm_choice, load_cube(file))
     explore_search(forward_heuristic_choice, reverse_heuristic_choice, solution_length, True, iterations)

@@ -33,8 +33,8 @@ class Node:
         return path
 
     def __eq__(self, other: Node) -> bool:
-        for idx, val in enumerate(other.state):
-            if val != self.state[idx]:
+        for idx in range(other.state.shape[0]):
+            if other.state[idx] != self.state[idx]:
                 return False
         return True
 
@@ -44,6 +44,9 @@ class Node:
     def __iter__(self):
         """Define an iterator (for _ in Node) will iterate back through to the parent"""
         return NodeIterator(self)
+
+    def __lt__(self, other):
+        return self.f_bar < other.f_bar
 
 
 class NodeIterator:

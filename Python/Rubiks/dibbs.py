@@ -6,27 +6,22 @@ from typing import Optional, Callable, Tuple, List, Dict, Set
 import math
 import rubiks_optimized as ro
 from node import Node
+import heapq
+import pprofile
 
-def heuristic(state: np.ndarray, corner_db, edge_6a, edge_6b, edge_10):
-    new_corner_index = ro.get_corner_index(state)
-    new_edge_index_6a = ro.get_edge_index(state, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
-    new_edge_index_6b = ro.get_edge_index(state, ro.edge_pos_indices_6b, ro.edge_rot_indices_6b)
-    new_edge_index_10 = ro.get_edge_index(state, ro.edge_pos_indices_10, ro.edge_rot_indices_10)
-    return max(corner_db[new_corner_index], edge_6a[new_edge_index_6a], edge_6b[new_edge_index_6b])
-
-
-def backward_heuristic(node: Node, target_state: np.ndarray, corner_db, edge_6a, edge_6b, edge_10):
-    goal = target_state
-    for x in node:
-        if x.parent is not None:
-            goal = ro.rotate(goal, x.face, ro.inverse_rotation(x.rotation))
-    back_h = heuristic(goal, corner_db, edge_6a, edge_6b, edge_10)
-    return back_h
+# def backward_heuristic(node: Node, target_state: np.ndarray, corner_db, edge_6a, edge_6b, edge_10):
+#     goal = target_state
+#     for x in node:
+#         if x.parent is not None:
+#             goal = ro.rotate(goal, x.face, ro.inverse_rotation(x.rotation))
+#     back_h = heuristic(goal, corner_db, edge_6a, edge_6b, edge_10)
+#     return back_h
 
 
-def expand(frontier: List[Node], other_frontier: List[Node], closed: Dict[Node, Node], other_closed: Dict[Node, Node], f_heuristic: Callable, r_heuristic: Callable,
+def expand(frontier: List[Node], frontier_set: Dict[Node, Node], other_set: Dict[Node, Node], closed: Dict[Node, Node], other_closed: Dict[Node, Node], f_heuristic: Callable, r_heuristic: Callable,
            upper_bound: int, best_node: Node, count: int):
-    next_value = frontier.pop()
+    next_value = heapq.heappop(frontier)
+    frontier_set.pop(next_value)
     if next_value not in closed:
         for face in range(6):
 
@@ -37,16 +32,23 @@ def expand(frontier: List[Node], other_frontier: List[Node], closed: Dict[Node, 
                 new_state = ro.rotate(next_value.state, face, rotation)
                 node = Node(next_value, new_state, face, rotation, next_value.cost + 1, f_heuristic, r_heuristic)
                 count += 1
+
                 if node in closed and node.f_bar < closed[node].f_bar:
                     closed.pop(node)
 
                 if node not in closed:
-                    frontier.append(node)
+                    if node in frontier_set and frontier_set[node].f_bar > node.f_bar:
+                        frontier_set.pop(node)
+                        frontier.remove(node)
+                    elif node in frontier_set and frontier_set[node].f_bar <= node.f_bar:
+                        continue
+                    heapq.heappush(frontier, node)
+                    frontier_set[node] = node
                     reverse_found = None
                     if node in other_closed:
                         reverse_found = other_closed[node]
-                    elif node in other_frontier:
-                        reverse_found = other_frontier[other_frontier.index(node)]
+                    elif node in other_set:
+                        reverse_found = other_set[node]
                     if reverse_found is not None and node.cost + reverse_found.cost < upper_bound:
                         upper_bound = node.cost + reverse_found.cost
                         best_node = node
@@ -70,7 +72,9 @@ def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuris
     backward_fbar_min = 0
 
     forward_frontier = [start_node]
+    forward_set = {start_node: start_node}
     backward_frontier = [goal_node]
+    backward_set = {goal_node: goal_node}
     forward_closed = dict()
     backward_closed = dict()
 
@@ -86,35 +90,33 @@ def dibbs(start: np.ndarray, goal: np.ndarray, forward_heuristic, reverse_heuris
     f_cost = -math.inf
     b_cost = -math.inf
     expansions = 0
-    while upper_bound > (forward_fbar_min + backward_fbar_min) / 2:
+    while upper_bound > (forward_fbar_min + backward_fbar_min) / 2 and expansions < 2000:
         expansions += 1
         if expansions % 1000 == 0:
             print(expansions)
         if explore_forward:
-            upper_bound, best_node, count = expand(forward_frontier, backward_frontier, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound, best_node, count)
-            forward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
-            forward_fbar_min = forward_frontier[-1].f_bar
-            if forward_frontier[-1].cost > f_cost:
-                f_cost = forward_frontier[-1].cost
+            upper_bound, best_node, count = expand(forward_frontier, forward_set, backward_set, forward_closed, backward_closed, forward_heuristic, reverse_heuristic, upper_bound, best_node, count)
+            forward_fbar_min = forward_frontier[0].f_bar
+            if forward_frontier[0].cost > f_cost:
+                f_cost = forward_frontier[0].cost
                 print("Forward cost: ", f_cost)
             if forward_fbar_min > best_f_fbar:
                 best_f_fbar = forward_fbar_min
                 print("Forward fbar:", best_f_fbar)
-            if forward_frontier[-1].combined > f_combined:
-                f_combined = forward_frontier[-1].combined
+            if forward_frontier[0].combined > f_combined:
+                f_combined = forward_frontier[0].combined
                 print("Forward combined: ", f_combined)
         else:
-            upper_bound, best_node, count = expand(backward_frontier, forward_frontier, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound, best_node, count)
-            backward_frontier.sort(key=lambda x: x.f_bar, reverse=True)
-            backward_fbar_min = backward_frontier[-1].f_bar
-            if backward_frontier[-1].cost > b_cost:
-                b_cost = backward_frontier[-1].cost
+            upper_bound, best_node, count = expand(backward_frontier, backward_set, forward_set, backward_closed, forward_closed, reverse_heuristic, forward_heuristic, upper_bound, best_node, count)
+            backward_fbar_min = backward_frontier[0].f_bar
+            if backward_frontier[0].cost > b_cost:
+                b_cost = backward_frontier[0].cost
                 print("Backward cost: ", b_cost)
             if backward_fbar_min > best_b_fbar:
                 best_b_fbar = backward_fbar_min
                 print("Backward fbar:", best_b_fbar)
-            if backward_frontier[-1].combined > b_combined:
-                b_combined = backward_frontier[-1].combined
+            if backward_frontier[0].combined > b_combined:
+                b_combined = backward_frontier[0].combined
                 print("Backward combined: ", b_combined)
         explore_forward = forward_fbar_min < backward_fbar_min
         #explore_forward = len(forward_frontier) < len(backward_frontier)

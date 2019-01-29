@@ -196,7 +196,7 @@ def rotate(old_state: np.ndarray, face: int, rotation: int):
     state = np.copy(old_state)
     rotation_index = 6 * rotation + face
     # If half rotation then no change in rotations
-    if rotation == Rotation.half:
+    if rotation == 2: # Half rotation
         for i in range(0, 40, 2):
             state[i] = __turn_position_lookup[state[i], rotation_index]
     else:
@@ -204,7 +204,7 @@ def rotate(old_state: np.ndarray, face: int, rotation: int):
             if __turn_lookup[state[i], face]:
                 if __corner_booleans[i]:
                     state[i + 1] = __corner_rotation[face, state[i + 1]]
-                elif face == Face.left or face == Face.right:
+                elif face == 2 or face == 5: # Face left and right
                     state[i + 1] = 1 - state[i + 1]
 
                 state[i] = __turn_position_lookup[state[i], rotation_index]
