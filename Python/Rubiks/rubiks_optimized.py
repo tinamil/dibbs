@@ -112,7 +112,7 @@ __corner_rot_indices = __corner_pos_indices + 1
 
 corner_max_depth = 11
 edge_6_max_depth = 10
-edge_8_max_depth = 11
+edge_8_max_depth = 12
 
 edge_pos_indices_6a = np.array([2, 6, 8, 12, 16, 18], dtype=np.uint8)
 edge_rot_indices_6a = edge_pos_indices_6a + 1
