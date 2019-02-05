@@ -227,19 +227,18 @@ def explore_search(heuristic_choice, reverse_heuristic, solution_length, force_l
     np.random.seed(0)
     while len(dibbs_results) < iterations:
         start_state = ro.random_scramble(solution_length)
-        #size, searched, time_taken = asymmetric_search(heuristic_choice, reverse_heuristic, AlgorithmType.astar, start_state)
-        #if force_length or size == solution_length:
-        #    astar_results.append(searched)
-        #    astar_time.append(time_taken)
-        size, searched, time_taken = asymmetric_search(heuristic_choice, reverse_heuristic, AlgorithmType.dibbs, start_state)
-        assert (force_length or size == solution_length)
-        dibbs_results.append(searched)
-        dibbs_time.append(time_taken)
-        return None
-        size, searched, time_taken = asymmetric_search(heuristic_choice, reverse_heuristic, AlgorithmType.mm, start_state)
-        assert(force_length or size == solution_length)
-        mm_results.append(searched)
-        mm_time.append(time_taken)
+        size, searched, time_taken = asymmetric_search(heuristic_choice, reverse_heuristic, AlgorithmType.astar, start_state)
+        if not force_length or size == solution_length:
+            astar_results.append(searched)
+            astar_time.append(time_taken)
+            size, searched, time_taken = asymmetric_search(heuristic_choice, reverse_heuristic, AlgorithmType.dibbs, start_state)
+            assert (not force_length or size == solution_length)
+            dibbs_results.append(searched)
+            dibbs_time.append(time_taken)
+            size, searched, time_taken = asymmetric_search(heuristic_choice, reverse_heuristic, AlgorithmType.mm, start_state)
+            assert(not force_length or size == solution_length)
+            mm_results.append(searched)
+            mm_time.append(time_taken)
 
     print("DIBBS:", dibbs_results)
     print(dibbs_time)
