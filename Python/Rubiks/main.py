@@ -69,13 +69,13 @@ def search(mode):
     print("Starting at ", time.ctime())
     try:
         if mode == Mode.generate_edges:
-            # edge_db_6a = generate_edges_pattern_database(get_cube(), edge_6_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
-            # save_pattern_database('edge_db_6a.npy', edge_db_6a)
-            # del edge_db_6a
-            #
-            # edge_db_6b = generate_edges_pattern_database(get_cube(), edge_6_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
-            # ro.save_pattern_database('edge_db_6b.npy', edge_db_6b)
-            # del edge_db_6b
+            edge_db_6a = generate_edges_pattern_database(get_cube(), edge_6_max_depth, edge_pos_indices_6a, edge_rot_indices_6a)
+            save_pattern_database('edge_db_6a.npy', edge_db_6a)
+            del edge_db_6a
+
+            edge_db_6b = generate_edges_pattern_database(get_cube(), edge_6_max_depth, edge_pos_indices_6b, edge_rot_indices_6b)
+            ro.save_pattern_database('edge_db_6b.npy', edge_db_6b)
+            del edge_db_6b
 
             edge_db_8a = generate_edges_pattern_database(get_cube(), edge_8_max_depth, edge_pos_indices_8a, edge_rot_indices_8a)
             ro.save_pattern_database('edge_db_8a.npy', edge_db_8a)
@@ -254,12 +254,12 @@ def explore_search(heuristic_choice, reverse_heuristic, solution_length, force_l
 if __name__ == "__main__":
     file = 'test_file.txt'
     mode = Mode.search
-    forward_heuristic_choice = HeuristicType.pattern1997
+    forward_heuristic_choice = HeuristicType.pattern888
     reverse_heuristic_choice = HeuristicType.pattern1997
-    algorithm_choice = AlgorithmType.dibbs
+    algorithm_choice = AlgorithmType.astar
     solution_length = 14
     iterations = 100
 
     #search(Mode.generate_edges)
-    #asymmetric_search(HeuristicType.pattern1997, HeuristicType.zero, algorithm_choice, load_cube(file))
-    explore_search(forward_heuristic_choice, reverse_heuristic_choice, solution_length, True, iterations)
+    asymmetric_search(HeuristicType.pattern888, HeuristicType.zero, algorithm_choice, load_cube(file))
+    #explore_search(forward_heuristic_choice, reverse_heuristic_choice, solution_length, True, iterations)
