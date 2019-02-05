@@ -150,3 +150,6 @@ dmypy.json
 *.exp
 
 *_db*.npy
+
+*.cbp
+*.layout
