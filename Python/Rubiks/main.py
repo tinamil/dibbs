@@ -197,7 +197,8 @@ def asymmetric_search(forward_heuristic_choice, backward_heuristic_choice, algor
             else:
                 raise Exception("Failed to identify type of backward heuristic")
 
-            faces, rotations, searched = algorithm(start_state, ro.get_cube(), forward_heuristic, backward_heuristic)
+            #faces, rotations, searched = algorithm(start_state, ro.get_cube(), forward_heuristic, backward_heuristic)
+            faces, rotations, searched = ro.a_star(start_state, goal_corner_db, goal_edge_db_8a, goal_edge_db_8b)
 
             size = len(faces)
             print(f"Moves required to solve ({size}):")
