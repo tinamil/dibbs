@@ -153,3 +153,4 @@ dmypy.json
 
 *.cbp
 *.layout
+*.depend
