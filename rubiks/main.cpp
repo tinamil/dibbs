@@ -1,48 +1,72 @@
 #include <iostream>
 #include <stack>
+#include <vector>
 #include "rubiks.h"
+#include "npy.hpp"
 
 using namespace std;
 
-void a_star (const uint8_t state[]);
+void a_star (const uint8_t state[], const std::vector<char> &corner_db, const std::vector<char> &edge_8a, const std::vector<char> &edge_8b);
 int main()
 {
-  cout << "Hello world!" << endl;
+  std::vector<uint64_t> shape { 1 };
+  std::vector<char> corner_db, edge_8a, edge_8b;
+  npy::LoadArrayFromNumpy<char>("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\corner_db.npy", shape, corner_db);
+
+  shape.clear();
+  shape.push_back(1);
+  npy::LoadArrayFromNumpy<char>("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\edge_db_8a.npy", shape, edge_8a);
+
+  shape.clear();
+  shape.push_back(1);
+  npy::LoadArrayFromNumpy<char>("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\edge_db_8b.npy", shape, edge_8b);
+
   const uint8_t start_state[] =
   {
     2,  2,  8,  1, 17, 1,  9,  0, 15,  0,  7,  1, 18,  1, 14,  0,  3,  0, 13,  1,  1,  0, 10,  0,
     12,  0,  6,  1,  5,  1,  4,  1, 11,  0,  0,  2, 16,  1, 19,  1
   };
-  a_star (start_state);
+
+  a_star (start_state, corner_db, edge_8a, edge_8b);
   return 0;
 }
 
 struct Node
 {
-  const Node* parent;
   const uint8_t* state;
   uint8_t depth;
-  uint8_t face;
-  uint8_t rotation;
+  uint8_t* faces;
+  uint8_t* rotations;
 
   Node (Node* _parent, const uint8_t _state[], uint8_t _depth, uint8_t _face, uint8_t _rotation)
   {
-    parent = _parent;
     state = _state;
     depth = _depth;
-    face = _face;
-    rotation = _rotation;
+
+    faces = new uint8_t[depth];
+    rotations = new uint8_t[depth];
+
+    if(_parent != NULL)
+    {
+      memcpy(faces, _parent->faces, depth-1);
+      memcpy(rotations, _parent->rotations, depth-1);
+      faces[depth-1] = _face;
+      rotations[depth-1] = _rotation;
+    }
+  }
+
+  ~Node()
+  {
+    delete[] state;
+    delete[] faces;
+    delete[] rotations;
   }
 };
 
-uint8_t heuristic_func (const uint8_t state[])
-{
-  return 0;
-}
-
 using namespace Rubiks;
-void a_star (const uint8_t state[])
+void a_star (const uint8_t state[], const std::vector<char> &corner_db, const std::vector<char> &edge_8a, const std::vector<char> &edge_8b)
 {
+
   std::stack<Node*> state_stack;
 
   if (is_solved (state) )
@@ -51,46 +75,55 @@ void a_star (const uint8_t state[])
     return;
   }
 
-  Node* n = new Node (NULL, state, 0, 0, 0);
-  state_stack.push (n);
-  int id_depth = heuristic_func (state);
+  uint8_t* new_state = new uint8_t[40];
+  memcpy (new_state, state, 40);
+  state_stack.push (new Node (NULL, new_state, 0, 0, 0));
+  int id_depth = pattern_database_lookup(new_state, corner_db, edge_8a, edge_8b);
   cout << "Minimum number of moves to solve: " << id_depth << endl;
   int count = 0;
-  while (true)
+  Node* next_node;
+  while (count < 1e8)
   {
-
     if (state_stack.empty() )
     {
       id_depth += 1;
-      state_stack.push (new Node (NULL, state, 0, 0, 0) );
+      new_state = new uint8_t[40];
+      memcpy (new_state, state, 40);
+      state_stack.push (new Node (NULL, new_state, 0, 0, 0) );
       cout << "Incrementing id-depth to " << id_depth << endl;
     }
 
-    Node* next_node = state_stack.top();
+    next_node = state_stack.top();
     state_stack.pop();
 
     for (uint8_t face = 0; face < 6; ++face)
     {
 
-      if (next_node->depth > 0 && skip_rotations (next_node->face, face) )
+      if (next_node->depth > 0 && skip_rotations (next_node->faces[next_node->depth-1], face) )
       {
         continue;
       }
 
       for (uint8_t rotation = 0; rotation < 3; ++rotation)
       {
-        uint8_t* new_state = new uint8_t[40];
+        new_state = new uint8_t[40];
         memcpy (new_state, next_node->state, 40);
         rotate (new_state, face, rotation);
 
 
-        uint8_t new_state_heuristic = heuristic_func (new_state);
+        uint8_t new_state_heuristic = pattern_database_lookup(new_state, corner_db, edge_8a, edge_8b);
         uint8_t new_state_cost = next_node->depth + 1 + new_state_heuristic;
 
         count += 1;
 
+        if(count % 1000000 == 0)
+        {
+          cout << count << endl;
+        }
+
         if (new_state_cost > id_depth)
         {
+          delete[] new_state;
           continue;
         }
 
@@ -99,11 +132,13 @@ void a_star (const uint8_t state[])
           //flip(new_faces);
           //flip(new_rots);
           cout << "Solved IDA*: " << id_depth << " Count = " << count << endl;
+          return;
           //return new_faces, new_rots, count
         }
         state_stack.push (new Node (next_node, new_state, next_node->depth + 1, face, rotation) );
       }
     }
-    delete[] next_node;
+    delete next_node;
+
   }
 }

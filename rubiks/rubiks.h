@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 #include <cstring>
+#include <algorithm>
+#include <vector>
 
 namespace Rubiks
 {
@@ -9,7 +11,9 @@ const uint8_t __corner_cubies[] = {0, 2, 5, 7, 12, 14, 17, 19};
 
 const uint8_t __edge_cubies[] = {1, 3, 4, 6, 8, 9, 10, 11, 13, 15, 16, 18};
 
-const uint8_t __turn_position_lookup[][18] = {{0, 0, 5, 2, 12, 0, 0, 0, 12, 5, 2, 0, 0, 0, 17, 7, 14, 0},
+const uint8_t __turn_position_lookup[][18] =
+{
+  {0, 0, 5, 2, 12, 0, 0, 0, 12, 5, 2, 0, 0, 0, 17, 7, 14, 0},
   {1, 1, 1, 4, 8, 1, 1, 1, 1, 3, 9, 1, 1, 1, 1, 6, 13, 1},
   {2, 2, 2, 7, 0, 14, 2, 2, 2, 0, 14, 7, 2, 2, 2, 5, 12, 19},
   {3, 3, 10, 1, 3, 3, 3, 3, 8, 6, 3, 3, 3, 3, 15, 4, 3, 3},
@@ -31,7 +35,9 @@ const uint8_t __turn_position_lookup[][18] = {{0, 0, 5, 2, 12, 0, 0, 0, 12, 5, 2
   {14, 17, 19, 19, 19, 7, 17, 7, 19, 19, 19, 14, 12, 5, 19, 19, 19, 2}
 };
 
-const bool __turn_lookup[][6] = {{false, false, true, true, true, false},
+const bool __turn_lookup[][6] =
+{
+  {false, false, true, true, true, false},
   {false, false, false, true, true, false},
   {false, false, false, true, true, true},
   {false, false, true, true, false, false},
@@ -111,10 +117,12 @@ inline uint64_t fast_factorial (uint8_t n)
 inline bool skip_rotations (uint8_t last_face, uint8_t face)
 {
   return last_face == face || (last_face == 3 && face == 0) ||
-        (last_face == 5 && face == 2) || (last_face == 4 && face == 1);
+         (last_face == 5 && face == 2) || (last_face == 4 && face == 1);
 }
 
 extern void rotate (uint8_t state[], uint8_t face, uint8_t rotation);
-extern uint32_t get_corner_index (uint8_t state[]);
+extern uint32_t get_corner_index (const uint8_t state[]);
+extern uint64_t get_edge_index(const uint8_t state[], int size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[]);
 extern bool is_solved(const uint8_t state[]);
+extern uint8_t pattern_database_lookup(const uint8_t state[], const std::vector<char> &corner_db, const std::vector<char> &edge_a, const std::vector<char> &edge_b);
 }

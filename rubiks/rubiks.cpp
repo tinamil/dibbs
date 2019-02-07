@@ -31,7 +31,7 @@ void Rubiks::rotate (uint8_t state[], const uint8_t face, const uint8_t rotation
 }
 
 
-uint32_t Rubiks::get_corner_index (uint8_t state[])
+uint32_t Rubiks::get_corner_index (const uint8_t state[])
 {
   /*
   Gets the unique index of the corners of this cube.
@@ -89,6 +89,43 @@ uint32_t Rubiks::get_corner_index (uint8_t state[])
   return corner_index;
 }
 
+uint64_t Rubiks::get_edge_index(const uint8_t state[], int size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[])
+{
+  const uint8_t full_size = 12;
+  uint8_t edge_pos[size];
+  for (uint8_t i = 0; i < size; ++i)
+  {
+    edge_pos[i] = __edge_translations[state[edge_pos_indices[i]]];
+  }
+
+  uint8_t permute_number[size];
+  for(int i = 0; i < size; ++i)
+  {
+    permute_number[i] = edge_pos[i];
+    for(int j = 0; j < i; ++j)
+    {
+      if(edge_pos[j] < edge_pos[i])
+      {
+        permute_number[i] -= 1;
+      }
+    }
+  }
+  uint64_t edge_index = 0;
+  uint64_t small_size = __factorial_lookup[full_size - size];
+  for(int i = 0; i < size; ++i)
+  {
+    edge_index += permute_number[i] * (__factorial_lookup[full_size - i - 1] / small_size);
+  }
+
+  edge_index *= 1 << size;
+
+  for (uint8_t i = 0; i < size; ++i)
+  {
+    edge_index += state[edge_rot_indices[i]] * 1 << (size - i - 1);
+  }
+  return edge_index;
+}
+
 bool Rubiks::is_solved (const uint8_t cube[])
 {
   for (uint8_t i = 0; i < sizeof __goal; ++i)
@@ -99,4 +136,20 @@ bool Rubiks::is_solved (const uint8_t cube[])
     }
   }
   return true;
+}
+
+uint8_t Rubiks::pattern_database_lookup(const uint8_t state[], const std::vector<char> &corner_db, const std::vector<char> &edge_a, const std::vector<char> &edge_b)
+{
+  uint8_t best = corner_db[get_corner_index(state)];
+  char val = edge_a[get_edge_index(state, sizeof edge_pos_indices_8a, edge_pos_indices_8a, edge_rot_indices_8a)];
+  if(val > best)
+  {
+    best = val;
+  }
+  val = edge_b[get_edge_index(state, sizeof edge_pos_indices_8b, edge_pos_indices_8b, edge_rot_indices_8b)];
+  if(val > best)
+  {
+    best = val;
+  }
+  return best;
 }
