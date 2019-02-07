@@ -43,55 +43,36 @@ uint32_t Rubiks::get_corner_index (const uint8_t state[])
   */
 
   //Select all of the even (position) corner indices
-
+  const static int inversions[] = {5040, 720, 120, 24, 6, 2, 1};
+  const static int base3[] = {729, 243, 81, 27, 9, 3, 1};
   uint8_t corners[sizeof __corner_pos_indices];
   for (uint8_t i = 0; i < sizeof __corner_pos_indices; ++i)
   {
     corners[i] = state[__corner_pos_indices[i]];
   }
-
-  //Count the number of inversions in the corner table per element
-  uint8_t inversions[7] = {};
+  uint32_t corner_index = 0;
   for (uint8_t i = 0; i < 7; ++i)
   {
     for (uint8_t j = i + 1; j < 8; ++j)
     {
       if (corners[i] > corners[j])
       {
-        inversions[i] += 1;
+        corner_index += inversions[i];
       }
     }
   }
-
-  uint32_t corner_index = inversions[0] * 5040 ;
-  corner_index += inversions[1] * 720 ;
-  corner_index += inversions[2] * 120  ;
-  corner_index += inversions[3] * 24  ;
-  corner_index += inversions[4] * 6 ;
-  corner_index += inversions[5] * 2  ;
-  corner_index += inversions[6]  ;
-
-  //Index into the specific corner rotation that we're in
   corner_index *= 2187;
 
-  //View the odd (rotation) corner indices then convert them from a base 3 to base 10 number
   for (uint8_t i = 0; i < sizeof __corner_rot_indices; ++i)
   {
-    corners[i] = state[__corner_rot_indices[i]];
+    corner_index += state[__corner_rot_indices[i]] * base3[i];
   }
-  corner_index += corners[0] * 729;
-  corner_index += corners[1] * 243;
-  corner_index += corners[2] * 81;
-  corner_index += corners[3] * 27;
-  corner_index += corners[4] * 9;
-  corner_index += corners[5] * 3;
-  corner_index += corners[6] ;
   return corner_index;
 }
 
 uint64_t Rubiks::get_edge_index(const uint8_t state[], int size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[])
 {
-  const uint8_t full_size = 12;
+  uint64_t edge_index = 0;
   uint8_t edge_pos[size];
   for (uint8_t i = 0; i < size; ++i)
   {
@@ -110,11 +91,10 @@ uint64_t Rubiks::get_edge_index(const uint8_t state[], int size, const uint8_t e
       }
     }
   }
-  uint64_t edge_index = 0;
-  uint64_t small_size = __factorial_lookup[full_size - size];
+
   for(int i = 0; i < size; ++i)
   {
-    edge_index += permute_number[i] * (__factorial_lookup[full_size - i - 1] / small_size);
+    edge_index += permute_number[i] * __factorial_division_lookup[size-1][i];
   }
 
   edge_index *= 1 << size;
@@ -138,15 +118,32 @@ bool Rubiks::is_solved (const uint8_t cube[])
   return true;
 }
 
-uint8_t Rubiks::pattern_database_lookup(const uint8_t state[], const std::vector<char> &corner_db, const std::vector<char> &edge_a, const std::vector<char> &edge_b)
+uint8_t Rubiks::pattern_database_lookup(const uint8_t state[])
 {
+  static bool initialized = false;
+  static std::vector<char> corner_db, edge_8a, edge_8b;
+
+  if(initialized == false)
+  {
+    initialized = true;
+    std::vector<uint64_t> shape { 1 };
+    npy::LoadArrayFromNumpy<char>("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\corner_db.npy", shape, corner_db);
+
+    shape.clear();
+    shape.push_back(1);
+    npy::LoadArrayFromNumpy<char>("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\edge_db_8a.npy", shape, edge_8a);
+
+    shape.clear();
+    shape.push_back(1);
+    npy::LoadArrayFromNumpy<char>("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\edge_db_8b.npy", shape, edge_8b);
+  }
   uint8_t best = corner_db[get_corner_index(state)];
-  char val = edge_a[get_edge_index(state, sizeof edge_pos_indices_8a, edge_pos_indices_8a, edge_rot_indices_8a)];
+  char val = edge_8a[get_edge_index(state, sizeof edge_pos_indices_8a, edge_pos_indices_8a, edge_rot_indices_8a)];
   if(val > best)
   {
     best = val;
   }
-  val = edge_b[get_edge_index(state, sizeof edge_pos_indices_8b, edge_pos_indices_8b, edge_rot_indices_8b)];
+  val = edge_8b[get_edge_index(state, sizeof edge_pos_indices_8b, edge_pos_indices_8b, edge_rot_indices_8b)];
   if(val > best)
   {
     best = val;

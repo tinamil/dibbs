@@ -2,32 +2,19 @@
 #include <stack>
 #include <vector>
 #include "rubiks.h"
-#include "npy.hpp"
 
 using namespace std;
 
-void a_star (const uint8_t state[], const std::vector<char> &corner_db, const std::vector<char> &edge_8a, const std::vector<char> &edge_8b);
+void a_star (const uint8_t state[]);
 int main()
 {
-  std::vector<uint64_t> shape { 1 };
-  std::vector<char> corner_db, edge_8a, edge_8b;
-  npy::LoadArrayFromNumpy<char>("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\corner_db.npy", shape, corner_db);
-
-  shape.clear();
-  shape.push_back(1);
-  npy::LoadArrayFromNumpy<char>("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\edge_db_8a.npy", shape, edge_8a);
-
-  shape.clear();
-  shape.push_back(1);
-  npy::LoadArrayFromNumpy<char>("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\edge_db_8b.npy", shape, edge_8b);
-
   const uint8_t start_state[] =
   {
     2,  2,  8,  1, 17, 1,  9,  0, 15,  0,  7,  1, 18,  1, 14,  0,  3,  0, 13,  1,  1,  0, 10,  0,
     12,  0,  6,  1,  5,  1,  4,  1, 11,  0,  0,  2, 16,  1, 19,  1
   };
 
-  a_star (start_state, corner_db, edge_8a, edge_8b);
+  a_star (start_state);
   return 0;
 }
 
@@ -64,7 +51,7 @@ struct Node
 };
 
 using namespace Rubiks;
-void a_star (const uint8_t state[], const std::vector<char> &corner_db, const std::vector<char> &edge_8a, const std::vector<char> &edge_8b)
+void a_star (const uint8_t state[])
 {
 
   std::stack<Node*> state_stack;
@@ -78,7 +65,7 @@ void a_star (const uint8_t state[], const std::vector<char> &corner_db, const st
   uint8_t* new_state = new uint8_t[40];
   memcpy (new_state, state, 40);
   state_stack.push (new Node (NULL, new_state, 0, 0, 0));
-  int id_depth = pattern_database_lookup(new_state, corner_db, edge_8a, edge_8b);
+  int id_depth = pattern_database_lookup(new_state);
   cout << "Minimum number of moves to solve: " << id_depth << endl;
   int count = 0;
   Node* next_node;
@@ -111,7 +98,7 @@ void a_star (const uint8_t state[], const std::vector<char> &corner_db, const st
         rotate (new_state, face, rotation);
 
 
-        uint8_t new_state_heuristic = pattern_database_lookup(new_state, corner_db, edge_8a, edge_8b);
+        uint8_t new_state_heuristic = pattern_database_lookup(new_state);
         uint8_t new_state_cost = next_node->depth + 1 + new_state_heuristic;
 
         count += 1;

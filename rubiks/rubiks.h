@@ -3,6 +3,7 @@
 #include <cstring>
 #include <algorithm>
 #include <vector>
+#include "npy.hpp"
 
 namespace Rubiks
 {
@@ -101,6 +102,21 @@ const uint64_t __factorial_lookup[] =
   121645100408832000, 2432902008176640000
 };
 
+//__factorial_lookup[full_size - i - 1] / __factorial_lookup[full_size - size];
+const uint32_t __factorial_division_lookup[][10] =
+{
+  { 1 },
+  { 11, 1 },
+  { 110, 10, 1 },
+  { 990, 90, 9, 1 },
+  { 7920, 720, 72, 8, 1},
+  { 55440, 5040, 504, 56, 7, 1 },
+  { 332640, 30240, 3024, 336, 210, 42, 1 },
+  { 1663200, 151200, 15120, 1680, 210,  30,  5, 1 },
+  { 6652800, 604800, 60480, 6720, 840,  120,  20, 4, 1},
+  { 19958400, 1814400, 181440, 20160, 2520,  360, 60, 12, 3, 1 }
+};
+
 
 const uint8_t __goal[] = {0, 0, 1, 0, 2, 0, 3, 0,
                           4, 0, 5, 0, 6, 0, 7, 0,
@@ -124,5 +140,5 @@ extern void rotate (uint8_t state[], uint8_t face, uint8_t rotation);
 extern uint32_t get_corner_index (const uint8_t state[]);
 extern uint64_t get_edge_index(const uint8_t state[], int size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[]);
 extern bool is_solved(const uint8_t state[]);
-extern uint8_t pattern_database_lookup(const uint8_t state[], const std::vector<char> &corner_db, const std::vector<char> &edge_a, const std::vector<char> &edge_b);
+extern uint8_t pattern_database_lookup(const uint8_t state[]);
 }
