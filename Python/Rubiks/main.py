@@ -38,10 +38,6 @@ def forward_manhattan_heuristic(state):
     return manhattan_heuristic(state, __goal)
 
 
-def zero_heuristic(state):
-    return 0
-
-
 @enum.unique
 class HeuristicType(enum.Enum):
     man = enum.auto()
@@ -97,6 +93,21 @@ def search(mode):
 
     finally:
         print("Finished", time.perf_counter() - start)
+
+
+def build_forward_heuristic(forward_heuristic_choice, corner_db, edge_dbs, edge_pos_indices, edge_rot_indices):
+    if forward_heuristic_choice == HeuristicType.man:
+        forward_heuristic = forward_manhattan_heuristic
+    elif forward_heuristic_choice == HeuristicType.pattern1997:
+        forward_heuristic = lambda state: pattern_database_lookup(state, corner_db, edge_dbs, edge_pos_indices, edge_rot_indices)
+    elif forward_heuristic_choice == HeuristicType.pattern888:
+        forward_heuristic = lambda state: pattern_database_lookup(state, corner_db, edge_dbs, edge_pos_indices, edge_rot_indices)
+    elif forward_heuristic_choice == HeuristicType.zero:
+        forward_heuristic = lambda state: 0
+    else:
+        raise Exception("Failed to identify type of forward heuristic")
+
+    return forward_heuristic
 
 
 def asymmetric_search(forward_heuristic_choice, backward_heuristic_choice, algorithm_choice, start_state):
@@ -166,21 +177,10 @@ def asymmetric_search(forward_heuristic_choice, backward_heuristic_choice, algor
                         start_edge_db_8b = ro.generate_edges_pattern_database(start_state, edge_8_max_depth, ro.edge_pos_indices_8b, ro.edge_rot_indices_8b)
                         ro.save_pattern_database(start_edge_db_8b_name, start_edge_db_8b)
 
-            if forward_heuristic_choice == HeuristicType.man:
-                forward_heuristic = forward_manhattan_heuristic
-
-            elif forward_heuristic_choice == HeuristicType.pattern1997:
-                forward_heuristic = lambda state: pattern_database_lookup(state, goal_corner_db, (goal_edge_db_6a, goal_edge_db_6b),
-                                                                          (ro.edge_pos_indices_6a, ro.edge_pos_indices_6b),
-                                                                          (ro.edge_rot_indices_6a, ro.edge_rot_indices_6b))
-            elif forward_heuristic_choice == HeuristicType.pattern888:
-                forward_heuristic = lambda state: pattern_database_lookup(state, goal_corner_db, (goal_edge_db_8a, goal_edge_db_8b),
-                                                                          (ro.edge_pos_indices_8a, ro.edge_pos_indices_8b),
-                                                                          (ro.edge_rot_indices_8a, ro.edge_rot_indices_8b))
-            elif forward_heuristic_choice == HeuristicType.zero:
-                forward_heuristic = zero_heuristic
-            else:
-                raise Exception("Failed to identify type of forward heuristic")
+            forward_heuristic = build_forward_heuristic(forward_heuristic_choice, goal_corner_db,
+                                                        (goal_edge_db_6a, goal_edge_db_6b),
+                                                        (ro.edge_pos_indices_6a, ro.edge_pos_indices_6b),
+                                                        (ro.edge_rot_indices_6a, ro.edge_rot_indices_6b))
 
             if backward_heuristic_choice == HeuristicType.man:
                 backward_heuristic = lambda state: manhattan_heuristic(state, start_state)
@@ -193,12 +193,16 @@ def asymmetric_search(forward_heuristic_choice, backward_heuristic_choice, algor
                                                                            (ro.edge_pos_indices_8a, ro.edge_pos_indices_8b),
                                                                            (ro.edge_rot_indices_8a, ro.edge_rot_indices_8b))
             elif backward_heuristic_choice == HeuristicType.zero:
-                backward_heuristic = zero_heuristic
+                backward_heuristic = lambda state: 0
             else:
                 raise Exception("Failed to identify type of backward heuristic")
 
+            faces, rotations, searched = ro.a_star(start_state, (goal_corner_db,
+                                                   (goal_edge_db_8a, goal_edge_db_8b),
+                                                   (ro.edge_pos_indices_8a, ro.edge_pos_indices_8b),
+                                                   (ro.edge_rot_indices_8a, ro.edge_rot_indices_8b)))
             #faces, rotations, searched = algorithm(start_state, ro.get_cube(), forward_heuristic, backward_heuristic)
-            faces, rotations, searched = ro.a_star(start_state, goal_corner_db, goal_edge_db_8a, goal_edge_db_8b)
+            #faces, rotations, searched = ro.a_star(start_state, None)
 
             size = len(faces)
             print(f"Moves required to solve ({size}):")
@@ -255,11 +259,17 @@ if __name__ == "__main__":
     file = 'test_file.txt'
     mode = Mode.search
     forward_heuristic_choice = HeuristicType.pattern888
-    reverse_heuristic_choice = HeuristicType.pattern1997
+    reverse_heuristic_choice = HeuristicType.zero
     algorithm_choice = AlgorithmType.astar
     solution_length = 14
     iterations = 100
 
+    goal_corner_db = ro.load_pattern_database('corner_db.npy')
+    goal_edge_db_6a = ro.load_pattern_database('edge_db_6a.npy')
+    goal_edge_db_6b = ro.load_pattern_database('edge_db_6b.npy')
+    goal_edge_db_8a = ro.load_pattern_database('edge_db_8a.npy')
+    goal_edge_db_8b = ro.load_pattern_database('edge_db_8b.npy')
+
     #search(Mode.generate_edges)
-    asymmetric_search(HeuristicType.pattern888, HeuristicType.zero, algorithm_choice, load_cube(file))
+    asymmetric_search(forward_heuristic_choice, reverse_heuristic_choice, algorithm_choice, load_cube(file))
     #explore_search(forward_heuristic_choice, reverse_heuristic_choice, solution_length, True, iterations)
