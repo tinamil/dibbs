@@ -2,6 +2,7 @@
 #include <stack>
 #include <vector>
 #include "rubiks.h"
+#include "mr_rank.h"
 
 using namespace std;
 
@@ -15,6 +16,23 @@ int main()
   };
 
   a_star (start_state);
+//  int i;
+//  uint8_t tv[4];
+//  for (int r = 0; r < 24; ++r)
+//  {
+//    printf("%3d: ", r);
+//    mr::get_permutation(r, 4, tv);
+//
+//    for (i = 0; i < 4; ++i)
+//    {
+//      if (0 == i)
+//        printf("[ ");
+//      else
+//        printf(", ");
+//      printf("%d", tv[i]);
+//    }
+//    printf(" ] = %d\n", mr::get_rank(4, tv));
+//  }
   return 0;
 }
 
@@ -69,7 +87,7 @@ void a_star (const uint8_t state[])
   cout << "Minimum number of moves to solve: " << id_depth << endl;
   int count = 0;
   Node* next_node;
-  while (count < 5e7)
+  while (count < 1e8)
   {
     if (state_stack.empty() )
     {

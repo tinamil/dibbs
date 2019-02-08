@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 #include "npy.hpp"
+#include "mr_rank.h"
 
 namespace Rubiks
 {
@@ -91,7 +92,8 @@ const uint8_t edge_rot_indices_8a[] = {3, 7, 9, 13, 17, 19, 21, 23};
 const uint8_t edge_pos_indices_8b[] = {16, 18, 20, 22, 26, 30, 32, 36};
 const uint8_t edge_rot_indices_8b[] = {17, 19, 21, 23, 27, 31, 33, 37};
 
-const uint8_t __edge_translations[] = {0, 0, 0, 1, 2, 0, 3, 0, 4, 5, 6, 7, 0, 8, 0, 9, 10, 0, 11, 0};
+const uint8_t __cube_translations[] = {0, 0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 4, 8, 5, 9, 10, 6, 11, 7};
+
 
 const uint64_t __factorial_lookup[] =
 {

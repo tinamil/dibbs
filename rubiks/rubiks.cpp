@@ -33,37 +33,18 @@ void Rubiks::rotate (uint8_t state[], const uint8_t face, const uint8_t rotation
 
 uint32_t Rubiks::get_corner_index (const uint8_t state[])
 {
-  /*
-  Gets the unique index of the corners of this cube.
-  Finds the permutation of 8 corner cubies using a factorial number system by counting the number of inversions
-  per corner. https://en.wikipedia.org/wiki/Factorial_number_system
-
-  Each given permutation of corners has 2187 possible rotations of corners (3^7),
-  so multiply by 2187 and then calculate the rotation by assuming each rotation is a digit in base 3.
-  */
-
-  //Select all of the even (position) corner indices
-  const static int inversions[] = {5040, 720, 120, 24, 6, 2, 1};
   const static int base3[] = {729, 243, 81, 27, 9, 3, 1};
-  uint8_t corners[sizeof __corner_pos_indices];
-  for (uint8_t i = 0; i < sizeof __corner_pos_indices; ++i)
+  const static int size = sizeof __corner_pos_indices;
+  uint8_t corners[size];
+  for (uint8_t i = 0; i < size; ++i)
   {
-    corners[i] = state[__corner_pos_indices[i]];
+    corners[i] = __cube_translations[state[__corner_pos_indices[i]]];
   }
-  uint32_t corner_index = 0;
-  for (uint8_t i = 0; i < 7; ++i)
-  {
-    for (uint8_t j = i + 1; j < 8; ++j)
-    {
-      if (corners[i] > corners[j])
-      {
-        corner_index += inversions[i];
-      }
-    }
-  }
+
+  uint32_t corner_index = (uint32_t) mr::get_rank(size, corners);
   corner_index *= 2187;
 
-  for (uint8_t i = 0; i < sizeof __corner_rot_indices - 1; ++i)
+  for (uint8_t i = 0; i < size - 1; ++i)
   {
     corner_index += state[__corner_rot_indices[i]] * base3[i];
   }
@@ -72,31 +53,13 @@ uint32_t Rubiks::get_corner_index (const uint8_t state[])
 
 uint64_t Rubiks::get_edge_index(const uint8_t state[], int size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[])
 {
-  uint64_t edge_index = 0;
   uint8_t edge_pos[size];
   for (uint8_t i = 0; i < size; ++i)
   {
-    edge_pos[i] = __edge_translations[state[edge_pos_indices[i]]];
+    edge_pos[i] = __cube_translations[state[edge_pos_indices[i]]];
   }
 
-  uint8_t permute_number[size];
-  for(int i = 0; i < size; ++i)
-  {
-    permute_number[i] = edge_pos[i];
-    for(int j = 0; j < i; ++j)
-    {
-      if(edge_pos[j] < edge_pos[i])
-      {
-        permute_number[i] -= 1;
-      }
-    }
-  }
-
-  for(int i = 0; i < size; ++i)
-  {
-    edge_index += permute_number[i] * __factorial_division_lookup[size-1][i];
-  }
-
+  uint64_t edge_index = mr::get_rank(size, edge_pos);
   edge_index *= 1 << size;
 
   for (uint8_t i = 0; i < size; ++i)
