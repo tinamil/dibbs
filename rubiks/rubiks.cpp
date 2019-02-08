@@ -63,7 +63,7 @@ uint32_t Rubiks::get_corner_index (const uint8_t state[])
   }
   corner_index *= 2187;
 
-  for (uint8_t i = 0; i < sizeof __corner_rot_indices; ++i)
+  for (uint8_t i = 0; i < sizeof __corner_rot_indices - 1; ++i)
   {
     corner_index += state[__corner_rot_indices[i]] * base3[i];
   }

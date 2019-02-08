@@ -69,7 +69,7 @@ void a_star (const uint8_t state[])
   cout << "Minimum number of moves to solve: " << id_depth << endl;
   int count = 0;
   Node* next_node;
-  while (count < 1e8)
+  while (count < 5e7)
   {
     if (state_stack.empty() )
     {
