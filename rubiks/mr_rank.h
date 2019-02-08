@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define _MR_SWAP(a,b) do{t=(a);(a)=(b);(b)=t;}while(0)
 namespace mr
 {
 void _mr_unrank1(uint64_t rank, int n, uint8_t *vec);

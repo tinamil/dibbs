@@ -1,22 +1,31 @@
 #include "mr_rank.h"
 
 void mr::_mr_unrank1(uint64_t rank, int n, uint8_t *vec) {
-    uint64_t t, q, r;
+    uint64_t q, r;
     if (n < 1) return;
 
     q = rank / n;
     r = rank % n;
-    _MR_SWAP(vec[r], vec[n-1]);
+    uint8_t tmp = vec[r];
+    vec[r] = vec[n-1];
+    vec[n-1] = tmp;
     _mr_unrank1(q, n-1, vec);
 }
 
 uint64_t mr::_mr_rank1(int n, uint8_t *vec, uint8_t *inv) {
-    uint64_t s, t;
+    uint64_t s;
     if (n < 2) return 0;
 
     s = vec[n-1];
-    _MR_SWAP(vec[n-1], vec[inv[n-1]]);
-    _MR_SWAP(inv[s], inv[n-1]);
+
+    uint8_t tmp = vec[n-1];
+    vec[n-1] = vec[inv[n-1]];
+    vec[inv[n-1]] = tmp;
+
+    tmp = inv[s];
+    inv[s] = inv[n-1];
+    inv[n-1] = tmp;
+
     return s + n * _mr_rank1(n-1, vec, inv);
 }
 
