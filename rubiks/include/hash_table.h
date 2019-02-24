@@ -3,15 +3,14 @@
 #include <iomanip>
 #include <fstream>
 #include <cassert>
-#include "node.h"
+//#include "states.h"
+#include "bistates.h"
 
-#define  HASH_SIZE 400000043  // Must be a prime number.  Currently using linear
-//#define  HASH_SIZE 400000000  // Must be a prime number.  Currently using linear
+#define  HASH_SIZE 1000000007 // Must be a prime number.  Currently using linear
 // probing, but if quadratic probing is used, then
-// it must be a prime of the form 4j+3.  4000039=4*1000009+3  c=4*10000000+3
-// 400000043=4*100000010+3   1000000007 = 4*250000001+3
+// it must be a prime of the form 4j+3.  4000039=4*1000009+3  40000003=4*10000000+3   400000043=4*100000010+3   800000011=4*200000002+3   1000000007 = 4*250000001+3
 
-int randomi (int n, double *dseed);
+int randomi(int n, double *dseed);
 
 // The following classes and functions implement a min-max heap, which can be used for implementing a
 // distributed best bound first search.
@@ -26,9 +25,10 @@ int randomi (int n, double *dseed);
       If -1 is a valid state_index, then some other value must be used.
    4. n = # of entries stored in the hash table.
    5. This implements a very simple hash table where the hash record contains only a state_index.
-   6. Created 10/3/12 by modifying c:\sewell\research\statmatch\boss_cpp\hash_table.cpp, which was based on the hash tables in:
+   6. Created 7/21/17 by modifying c:\sewell\research\15puzzle\15puzzle_code2\hash_table.cpp, which was based on the hash tables in:
       a. c:\sewell\research\cdc\phase2\search06\search06.cpp (which was written as classes).
       b. c:\sewell\research\schedule\rtardy\bbr\memoroy.cpp.
+      c. c:\sewell\research\statmatch\boss_cpp\hash_table.cpp
 */
 
 /*************************************************************************************************/
@@ -55,46 +55,48 @@ public:
   Hash_table()
   {
     n = 0;
+    n_pancakes = 0;
     table = NULL;
-    hash_value = NULL;
+    hash_values = NULL;
   }
   ~Hash_table()
   {
     delete [] table;
-    for (int i = 0; i < N_LOCATIONS; i++)
-      delete [] hash_value[i];
-    delete [] hash_value;
+    for(int i = 1; i <= n_pancakes; i++)
+      delete [] hash_values[i];
+    delete [] hash_values;
   }
-  void  initialize()
+  void  initialize(int n_pancake)
   {
     table = new hash_record[HASH_SIZE];
-    if (table == NULL)
+    if(table == NULL)
     {
-      fprintf (stderr, "Out of space for hash table\n");
-      exit (1);
+      fprintf(stderr, "Out of space for hash table\n");
+      exit(1);
     }
     n = 0;
-    hash_value = new int*[N_LOCATIONS];
-    if (hash_value == NULL)
+    n_pancakes = n_pancake;
+    hash_values = new int*[n_pancakes + 1];
+    if(hash_values == NULL)
     {
-      fprintf (stderr, "Out of space for hash_value\n");
-      exit (1);
+      fprintf(stderr, "Out of space for hash_values\n");
+      exit(1);
     }
-    for (int i = 0; i < N_LOCATIONS; i++)
+    for(int i = 1; i <= n_pancakes; i++)
     {
-      hash_value[i] = new int[N_LOCATIONS];
-      if (hash_value[i] == NULL)
+      hash_values[i] = new int[n_pancakes + 1];
+      if(hash_values[i] == NULL)
       {
-        fprintf (stderr, "Out of space for hash_value\n");
-        exit (1);
+        fprintf(stderr, "Out of space for hash_values\n");
+        exit(1);
       }
     }
-    initialize_hash_value();
+    initialize_hash_values();
     //print_hash_values();
   };
   hash_record  operator[] (int i) const
   {
-    assert ( (0 <= i) && (i < HASH_SIZE) );
+    assert((0 <= i) && (i < HASH_SIZE));
     return table[i];
   }
   int   size()
@@ -112,32 +114,32 @@ public:
       table[i].clear();
     }
     n = 0;
+    n_pancakes = 0;
   }
-  int   hash_configuration (unsigned char  *tile_in_location);
-  int   update_hash_value (unsigned char *tile_in_location, unsigned char empty_location, unsigned char new_location, int index);
-  void  initialize_hash_value()
+  int   update_hash_value(unsigned char *seq, int i, int hash_value);
+  void  initialize_hash_values()
   {
     double   seed;
     seed = 3.1567;
-    for (int t = 0; t < N_LOCATIONS; t++)
+    for(int i = 1; i < n_pancakes; i++)
     {
-      for (int i = 0; i < N_LOCATIONS; i++)
+      for(int j = i+1; j <= n_pancakes; j++)
       {
-        hash_value[t][i] = randomi (HASH_SIZE, &seed);
+        hash_values[i][j] = randomi(HASH_SIZE, &seed);
+        hash_values[j][i] = hash_values[i][j];
       }
     }
   }
-  int   insert (int state_index, unsigned char *tile_in_location, int hash_index, states_array *states);
-  int   find (unsigned char *tile_in_location, int hash_value, int *hash_index, states_array *states);
-  int   insert_at_index (int state_index, int hash_index);
-  int   replace_at_index (int state_index, int hash_index);
+  int   insert_at_index(int state_index, int hash_index);
+  int   replace_at_index(int state_index, int hash_index);
   //void  print();
   void  print_hash_values();
-  int   find_bistate (unsigned char *tile_in_location, int hash_value, int *hash_index, bistates_array *bistates);
-  int   insert_bistate (int state_index, unsigned char *tile_in_location, int hash_index, bistates_array *bistates);
+  int   find_bistate(unsigned char *seq, int hash_value, int *hash_index, bistates_array *bistates);
+  int   insert_bistate(int state_index, unsigned char *seq, int hash_index, bistates_array *bistates);
 private:
   int            n;
-  int            **hash_value;     // hash_value[t][i] = random hash value associated with tile t assigned to location i: U[0,HASH_SIZE).
+  int            n_pancakes;
+  int            **hash_values;    // hash_values[i][j] =random hash value associated with pancake i being adjacent to pancake j in seq: U[0,HASH_SIZE).
   //hash_record    table[HASH_SIZE];
   hash_record    *table;           // Use dynamic allocation because the compiler does not permit a declared array with more than 2^31 bytes.
 };
