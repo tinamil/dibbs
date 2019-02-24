@@ -90,9 +90,18 @@ void Node::set_reverse (const Node* reverse)
   }
 }
 
+std::string Node::print_state(){
+    std::string result;
+    for(int i = 0; i < 40; ++i){
+        result.append(std::to_string(state[i]));
+        result.append(" ");
+    }
+    return result;
+}
+
 bool NodeCompare::operator() (const Node* a, const Node* b) const
 {
-  return a->f_bar >= b->f_bar;
+  return a->f_bar > b->f_bar;
 }
 
 size_t NodeHash::operator() (const Node* s) const

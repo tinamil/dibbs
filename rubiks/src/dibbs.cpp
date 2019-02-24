@@ -11,6 +11,10 @@ void expand (std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &fronti
   frontier.pop();
 
   auto node_index = frontier_set.find (next_node);
+  if (node_index == frontier_set.end())
+  {
+    std::cout << "NULL: " << next_node->print_state() << std::endl;
+  }
   frontier_set.erase (node_index);
 
   for (uint8_t face = 0; face < 6; ++face)
@@ -71,6 +75,7 @@ void search::dibbs (const uint8_t state[])
   std::priority_queue<Node*, std::vector<Node*>, NodeCompare> front_queue, back_queue;
   std::unordered_multiset<Node*, NodeHash, NodeEqual> front_set, back_set;
 
+
   uint64_t upper_bound = std::numeric_limits<uint64_t>::max();
   uint8_t r_heuristic = 0;
 
@@ -106,9 +111,23 @@ void search::dibbs (const uint8_t state[])
 
     count += 1;
 
-    if (count % 100000 == 0)
+    /*if (count % 3584 == 0)
     {
-      std::cout << unsigned(forward_fbar_min) << " " << unsigned(backward_fbar_min) << " ";
+      while (back_queue.empty() == false)
+      {
+        std::cout << back_queue.size() << std::endl;
+        Node* node = back_queue.top();
+        back_queue.pop();
+
+        auto id = back_set.find (node);
+        back_set.erase (id);
+      }
+      break;
+    }*/
+
+    if (count % 1 == 0)
+    {
+      std::cout << unsigned (forward_fbar_min) << " " << unsigned (backward_fbar_min) << " ";
       std::cout << count << "\n";
     }
 

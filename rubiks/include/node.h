@@ -31,6 +31,7 @@ struct Node
   uint8_t get_face() const;
   uint8_t get_rotation() const;
   void set_reverse (const Node* reverse);
+  std::string print_state();
 };
 
 struct NodeCompare
