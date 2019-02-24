@@ -270,6 +270,10 @@ if __name__ == "__main__":
     goal_edge_db_8a = ro.load_pattern_database('edge_db_8a.npy')
     goal_edge_db_8b = ro.load_pattern_database('edge_db_8b.npy')
 
+    new_state = ro.rotate(ro.__goal, 0, 0)
+    print(ro.get_corner_index(new_state))
+
+    ro.generate_edges_pattern_database(ro.__goal, 20, ro.edge_pos_indices_6a, ro.edge_rot_indices_6a)
     #search(Mode.generate_edges)
-    asymmetric_search(forward_heuristic_choice, reverse_heuristic_choice, algorithm_choice, load_cube(file))
+    #asymmetric_search(forward_heuristic_choice, reverse_heuristic_choice, algorithm_choice, load_cube(file))
     #explore_search(forward_heuristic_choice, reverse_heuristic_choice, solution_length, True, iterations)

@@ -1,8 +1,9 @@
 #pragma once
-#include <stdint.h>
+#include <cstdint>
 #include <cstring>
 #include <algorithm>
 #include <vector>
+#include <cmath>
 #include "npy.hpp"
 #include "mr_rank.h"
 
@@ -61,7 +62,9 @@ const bool __turn_lookup[][6] =
   {true, true, false, false, false, true}
 };
 
-const uint8_t __corner_rotation[][3] = {{0, 2, 1},
+const uint8_t __corner_rotation[][3] =
+{
+  {0, 2, 1},
   {1, 0, 2},
   {2, 1, 0},
   {0, 2, 1},
@@ -116,7 +119,7 @@ const uint32_t __factorial_division_lookup[][10] =
   { 332640, 30240, 3024, 336, 210, 42, 1 },
   { 1663200, 151200, 15120, 1680, 210,  30,  5, 1 },
   { 6652800, 604800, 60480, 6720, 840,  120,  20, 4, 1},
-  { 19958400, 1814400, 181440, 20160, 2520,  360, 60, 12, 3, 1 }
+  { 19958400, 1814400, 181440, 20160, 2520, 360, 60, 12, 3, 1 }
 };
 
 
@@ -127,11 +130,6 @@ const uint8_t __goal[] = {0, 0, 1, 0, 2, 0, 3, 0,
                           16, 0, 17, 0, 18, 0, 19, 0
                          };
 
-inline uint64_t fast_factorial (uint8_t n)
-{
-  return __factorial_lookup[n];
-}
-
 inline bool skip_rotations (uint8_t last_face, uint8_t face)
 {
   return last_face == face || (last_face == 3 && face == 0) ||
@@ -140,7 +138,22 @@ inline bool skip_rotations (uint8_t last_face, uint8_t face)
 
 extern void rotate (uint8_t state[], uint8_t face, uint8_t rotation);
 extern uint32_t get_corner_index (const uint8_t state[]);
-extern uint64_t get_edge_index(const uint8_t state[], int size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[]);
-extern bool is_solved(const uint8_t state[]);
-extern uint8_t pattern_database_lookup(const uint8_t state[]);
+extern uint64_t get_edge_index (const uint8_t state[], int size, const uint8_t edge_pos_indices[],
+                                const uint8_t edge_rot_indices[]);
+extern bool is_solved (const uint8_t state[]);
+extern uint8_t pattern_database_lookup (const uint8_t state[]);
+extern void generate_corners_pattern_database (std::string filename, const uint8_t state[], const uint8_t max_depth);
+extern void generate_edges_pattern_database (std::string filename, const uint8_t state[], const uint8_t max_depth, const uint8_t size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[]);
+extern void generate_all_dbs();
+struct RubiksIndex
+{
+  uint8_t* state;
+  const uint8_t depth;
+  const uint8_t last_face;
+  RubiksIndex (uint8_t* state, const uint8_t depth, const uint8_t last_face) : state (state), depth (depth), last_face(last_face) {}
+  ~RubiksIndex()
+  {
+    delete[] state;
+  }
+};
 }

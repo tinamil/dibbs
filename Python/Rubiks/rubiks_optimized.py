@@ -464,7 +464,7 @@ def inverse_rotation(rotation):
         return 1 - rotation
 
 
-@njit
+#@njit
 def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot_indices):
     print("Generating edges db")
     queue = list()
