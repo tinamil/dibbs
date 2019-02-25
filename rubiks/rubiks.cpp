@@ -134,11 +134,11 @@ uint8_t Rubiks::pattern_database_lookup (const uint8_t state[])
 
     shape.clear();
     shape.push_back (1);
-    npy::LoadArrayFromNumpy<char> ("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\edge_db_8a.npy", shape, edge_8a);
+    npy::LoadArrayFromNumpy<char> ("edge_db_8a.npy", shape, edge_8a);
 
     shape.clear();
     shape.push_back (1);
-    npy::LoadArrayFromNumpy<char> ("C:\\Users\\John\\git\\dibbs\\Python\\Rubiks\\edge_db_8b.npy", shape, edge_8b);
+    npy::LoadArrayFromNumpy<char> ("edge_db_8b.npy", shape, edge_8b);
   }
   uint8_t best = corner_db[get_corner_index (state)];
   uint8_t val = edge_8a[get_edge_index (state, 8, edge_pos_indices_8a, edge_rot_indices_8a)];
@@ -317,13 +317,13 @@ void Rubiks::generate_corners_pattern_database (std::string filename, const uint
 
 void Rubiks::generate_all_dbs()
 {
-  //generate_corners_pattern_database ("corner_db.npy", __goal, corner_max_depth);
-  generate_edges_pattern_database ("edge_db_6a.npy", __goal, 20, 6, edge_pos_indices_6a,
-                                   edge_rot_indices_6a);
-  generate_edges_pattern_database ("edge_db_6b.npy", __goal, 20, 6, edge_pos_indices_6b,
-                                   edge_rot_indices_6b);
-  generate_edges_pattern_database ("edge_db_8a.npy", __goal, edge_8_max_depth, 8, edge_pos_indices_8a,
-                                   edge_rot_indices_8a);
-  generate_edges_pattern_database ("edge_db_8b.npy", __goal, edge_8_max_depth, 8, edge_pos_indices_8b,
-                                   edge_rot_indices_8b);
+ // generate_corners_pattern_database ("corner_db.npy", __goal, corner_max_depth);
+//  generate_edges_pattern_database ("edge_db_6a.npy", __goal, 20, 6, edge_pos_indices_6a,
+//                                   edge_rot_indices_6a);
+//  generate_edges_pattern_database ("edge_db_6b.npy", __goal, 20, 6, edge_pos_indices_6b,
+//                                   edge_rot_indices_6b);
+//  generate_edges_pattern_database ("edge_db_8a.npy", __goal, edge_8_max_depth, 8, edge_pos_indices_8a,
+//                                   edge_rot_indices_8a);
+//  generate_edges_pattern_database ("edge_db_8b.npy", __goal, edge_8_max_depth, 8, edge_pos_indices_8b,
+//                                   edge_rot_indices_8b);
 }

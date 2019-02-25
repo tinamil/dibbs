@@ -13,10 +13,12 @@ void expand (std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &fronti
   auto node_index = frontier_set.find (next_node);
   if (node_index == frontier_set.end())
   {
-    std::cout << "NULL: " << next_node->print_state() << std::endl;
+    std::cout << frontier_set.size() << " " << frontier.size() << "NULL: " << next_node->print_state() << std::endl;
   }
-  frontier_set.erase (node_index);
-
+  else
+  {
+    frontier_set.erase (node_index);
+  }
   for (uint8_t face = 0; face < 6; ++face)
   {
     if (next_node->depth > 0 && Rubiks::skip_rotations (next_node->get_face(), face) )
@@ -28,6 +30,13 @@ void expand (std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &fronti
       new_state = new uint8_t[40];
       memcpy (new_state, next_node->state, 40);
       Rubiks::rotate (new_state, face, rotation);
+
+      static uint8_t test[] = {17, 0, 6, 0, 19, 0, 15, 0, 16, 0, 12, 0, 1, 0, 14, 0, 10, 0, 11, 0, 8, 0, 9, 0, 5, 0, 18, 0, 7, 0, 3, 0, 4, 0, 0, 0, 13, 0, 2, 0};
+
+      if(memcmp(new_state, test, 40) == 0)
+      {
+        std::cout << "Generated bad value!" << std::endl;
+      }
 
       uint8_t new_state_heuristic = Rubiks::pattern_database_lookup (new_state);
       uint8_t reverse_heuristic = 0; // TODO
@@ -62,6 +71,8 @@ void expand (std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &fronti
   delete next_node;
 }
 
+//TODO: Replace unordered multiset such that the best path Node is kept and only deleted after all nodes deleted from front_queue
+//TODO: Add closed set
 void search::dibbs (const uint8_t state[])
 {
   std::cout << "DIBBS" << std::endl;
@@ -125,7 +136,7 @@ void search::dibbs (const uint8_t state[])
       break;
     }*/
 
-    if (count % 1 == 0)
+    if (count % 100000 == 0)
     {
       std::cout << unsigned (forward_fbar_min) << " " << unsigned (backward_fbar_min) << " ";
       std::cout << count << "\n";
