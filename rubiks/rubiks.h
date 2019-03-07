@@ -94,8 +94,14 @@ const uint8_t edge_pos_indices_8a[] = {2, 6, 8, 12, 16, 18, 20, 22};
 const uint8_t edge_rot_indices_8a[] = {3, 7, 9, 13, 17, 19, 21, 23};
 const uint8_t edge_pos_indices_8b[] = {16, 18, 20, 22, 26, 30, 32, 36};
 const uint8_t edge_rot_indices_8b[] = {17, 19, 21, 23, 27, 31, 33, 37};
+const uint8_t edge_pos_indices_12[] = {2, 6, 8, 12, 16, 18, 20, 22, 26, 30, 32, 36};
+const uint8_t edge_rot_indices_12[] = {3, 7, 9, 13, 17, 19, 21, 23, 27, 31, 33, 37};
 
 const uint8_t __cube_translations[] = {0, 0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 4, 8, 5, 9, 10, 6, 11, 7};
+const uint8_t edges_6a[] = {0, 1, 2, 3, 4, 5};
+const uint8_t edges_6b[] = {6, 7, 8, 9, 10, 11};
+const uint8_t edges_8a[] = {0, 1, 2, 3, 4, 5, 6, 7};
+const uint8_t edges_8b[] = {6, 7, 8, 9, 10, 11};
 
 
 const uint64_t __factorial_lookup[] =
@@ -122,7 +128,6 @@ const uint32_t __factorial_division_lookup[][10] =
   { 19958400, 1814400, 181440, 20160, 2520, 360, 60, 12, 3, 1 }
 };
 
-
 const uint8_t __goal[] = {0, 0, 1, 0, 2, 0, 3, 0,
                           4, 0, 5, 0, 6, 0, 7, 0,
                           8, 0, 9, 0, 10, 0, 11, 0,
@@ -138,19 +143,21 @@ inline bool skip_rotations (uint8_t last_face, uint8_t face)
 
 extern void rotate (uint8_t state[], uint8_t face, uint8_t rotation);
 extern uint32_t get_corner_index (const uint8_t state[]);
-extern uint64_t get_edge_index (const uint8_t state[], int size, const uint8_t edge_pos_indices[],
+extern uint64_t get_edge_index (const uint8_t state[], int size, const uint8_t edges[],
                                 const uint8_t edge_rot_indices[]);
 extern bool is_solved (const uint8_t state[]);
 extern uint8_t pattern_database_lookup (const uint8_t state[]);
 extern void generate_corners_pattern_database (std::string filename, const uint8_t state[], const uint8_t max_depth);
-extern void generate_edges_pattern_database (std::string filename, const uint8_t state[], const uint8_t max_depth, const uint8_t size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[]);
+extern void generate_edges_pattern_database (std::string filename, const uint8_t state[], const uint8_t max_depth,
+    const uint8_t size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[]);
 extern void generate_all_dbs();
 struct RubiksIndex
 {
   uint8_t* state;
   const uint8_t depth;
   const uint8_t last_face;
-  RubiksIndex (uint8_t* state, const uint8_t depth, const uint8_t last_face) : state (state), depth (depth), last_face(last_face) {}
+  RubiksIndex (uint8_t* state, const uint8_t depth, const uint8_t last_face) : state (state), depth (depth),
+    last_face (last_face) {}
   ~RubiksIndex()
   {
     delete[] state;

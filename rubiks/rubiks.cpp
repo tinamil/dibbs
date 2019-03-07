@@ -72,32 +72,25 @@ uint64_t FactorialUpperK (int n, int k)
   return result[n][k];
 }
 
-uint64_t Rubiks::get_edge_index (const uint8_t state[], int size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[])
+uint64_t Rubiks::get_edge_index (const uint8_t state[], int size, const uint8_t edges[],
+                                 const uint8_t edge_rot_indices[])
 {
-
-  uint8_t edge_pos[size];
-  for (uint8_t i = 0; i < size; ++i)
+  uint8_t edge_pos[12];
+  for (uint8_t i = 0; i < 12; ++i)
   {
-    edge_pos[i] = __cube_translations[state[edge_pos_indices[i]]];
+    edge_pos[i] = __cube_translations[state[edge_pos_indices_12[i]]];
   }
-  uint8_t permute_number[size];
-  for (uint8_t i = 0 ; i < size; ++i)
+  int8_t puzzle[12] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+  uint8_t dual[12];
+  uint8_t newdual[12];
+  for (int x = 0; x < 12; x++)
+    dual[edge_pos[x]] = x;
+  for (int x = 0; x < size; x++)
   {
-    permute_number[i] = edge_pos[i];
-    for (uint8_t j = 0; j < i; ++j)
-    {
-      if ( edge_pos[j] < edge_pos[i])
-      {
-        permute_number[i] -= 1;
-      }
-    }
+    newdual[x] = dual[edges[x]];
+    puzzle[dual[edges[x]]] = x;
   }
-  //uint64_t permute_number = mr::rank (size, 12, edge_pos);
-  uint64_t edge_index = 0;
-  for (uint8_t i = 0; i < size; ++i)
-  {
-    edge_index += permute_number[i] * __factorial_division_lookup[size - 1][i];
-  }
+  uint64_t edge_index = mr::k_rank (puzzle, newdual, size, 12);
 
   edge_index *= 1 << size;
 
@@ -141,12 +134,12 @@ uint8_t Rubiks::pattern_database_lookup (const uint8_t state[])
     npy::LoadArrayFromNumpy<char> ("edge_db_8b.npy", shape, edge_8b);
   }
   uint8_t best = corner_db[get_corner_index (state)];
-  uint8_t val = edge_8a[get_edge_index (state, 8, edge_pos_indices_8a, edge_rot_indices_8a)];
+  uint8_t val = edge_8a[get_edge_index (state, 8, edges_8a, edge_rot_indices_8a)];
   if (val > best)
   {
     best = val;
   }
-  val = edge_8b[get_edge_index (state, 8, edge_pos_indices_8b, edge_rot_indices_8b)];
+  val = edge_8b[get_edge_index (state, 8, edges_8b, edge_rot_indices_8b)];
   if (val > best)
   {
     best = val;
@@ -163,7 +156,7 @@ void Rubiks::generate_edges_pattern_database (std::string filename,
     const uint8_t state[],
     const uint8_t max_depth,
     const uint8_t size,
-    const uint8_t edge_pos_indices[],
+    const uint8_t edges[],
     const uint8_t edge_rot_indices[])
 {
   std::cout << "Generating edges db\n";
@@ -175,7 +168,7 @@ void Rubiks::generate_edges_pattern_database (std::string filename,
   uint64_t all_edges = npr (12, size) * pow (2, size);
   std::cout << "Edges: " << all_edges << "\n";
   std::vector<uint8_t> pattern_lookup (all_edges, max_depth);
-  uint64_t new_state_index = get_edge_index (state, size, edge_pos_indices, edge_rot_indices);
+  uint64_t new_state_index = get_edge_index (state, size, edges, edge_rot_indices);
   pattern_lookup[new_state_index] = 0;
   uint8_t* found_index_stack = new uint8_t[all_edges];
   std::fill_n (found_index_stack, all_edges, max_depth);
@@ -209,7 +202,7 @@ void Rubiks::generate_edges_pattern_database (std::string filename,
         new_state = new uint8_t[40];
         memcpy (new_state, ri->state, 40);
         rotate (new_state, face, rotation);
-        new_state_index = get_edge_index (new_state, size, edge_pos_indices, edge_rot_indices);
+        new_state_index = get_edge_index (new_state, size, edges, edge_rot_indices);
         new_state_depth = ri->depth + 1;
         if (new_state_depth == id_depth && pattern_lookup[new_state_index] == max_depth)
         {
@@ -317,11 +310,9 @@ void Rubiks::generate_corners_pattern_database (std::string filename, const uint
 
 void Rubiks::generate_all_dbs()
 {
- // generate_corners_pattern_database ("corner_db.npy", __goal, corner_max_depth);
-//  generate_edges_pattern_database ("edge_db_6a.npy", __goal, 20, 6, edge_pos_indices_6a,
-//                                   edge_rot_indices_6a);
-//  generate_edges_pattern_database ("edge_db_6b.npy", __goal, 20, 6, edge_pos_indices_6b,
-//                                   edge_rot_indices_6b);
+ generate_corners_pattern_database ("corner_db.npy", __goal, corner_max_depth);
+//  generate_edges_pattern_database ("edge_db_6a.npy", __goal, 20, 6, edges_6a, edge_rot_indices_6a);
+//  generate_edges_pattern_database ("edge_db_6b.npy", __goal, 20, 6, edges_6b, edge_rot_indices_6b);
 //  generate_edges_pattern_database ("edge_db_8a.npy", __goal, edge_8_max_depth, 8, edge_pos_indices_8a,
 //                                   edge_rot_indices_8a);
 //  generate_edges_pattern_database ("edge_db_8b.npy", __goal, edge_8_max_depth, 8, edge_pos_indices_8b,

@@ -15,8 +15,8 @@ int main()
   };
   std::clock_t c_start = std::clock();
   //search::a_star (start_state);
-  search::dibbs (start_state);
-  //Rubiks::generate_all_dbs();
+  //search::dibbs (start_state);
+  Rubiks::generate_all_dbs();
 
   std::clock_t c_end = std::clock();
 

@@ -63,7 +63,7 @@ uint64_t mr::get_rank (int n, uint8_t *vec)
   return r;
 }
 
-uint64_t mr::rank (uint8_t *locs, uint8_t *dual, int distinctSize, int puzzleSize)
+uint64_t mr::k_rank (int8_t *locs, uint8_t *dual, int distinctSize, int puzzleSize)
 {
   uint64_t result2 = 0;
   uint64_t multiplier = 1;
