@@ -310,11 +310,9 @@ void Rubiks::generate_corners_pattern_database (std::string filename, const uint
 
 void Rubiks::generate_all_dbs()
 {
- generate_corners_pattern_database ("corner_db.npy", __goal, corner_max_depth);
+// generate_corners_pattern_database ("corner_db.npy", __goal, corner_max_depth);
 //  generate_edges_pattern_database ("edge_db_6a.npy", __goal, edge_6_max_depth, 6, edges_6a, edge_rot_indices_6a);
 //  generate_edges_pattern_database ("edge_db_6b.npy", __goal, edge_6_max_depth, 6, edges_6b, edge_rot_indices_6b);
-//  generate_edges_pattern_database ("edge_db_8a.npy", __goal, edge_8_max_depth, 8, edge_pos_indices_8a,
-//                                   edge_rot_indices_8a);
-//  generate_edges_pattern_database ("edge_db_8b.npy", __goal, edge_8_max_depth, 8, edge_pos_indices_8b,
-//                                   edge_rot_indices_8b);
+  generate_edges_pattern_database ("edge_db_8a.npy", __goal, edge_8_max_depth, 8, edges_8a, edge_rot_indices_8a);
+  generate_edges_pattern_database ("edge_db_8b.npy", __goal, edge_8_max_depth, 8, edges_8b, edge_rot_indices_8b);
 }
