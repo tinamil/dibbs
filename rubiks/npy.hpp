@@ -442,7 +442,6 @@ inline void write_header (std::ostream& out, const std::string& descr, bool fort
     header_len_le32[3] = (header_len >> 24) & 0xff;
     out.write (reinterpret_cast<char *> (header_len_le32), 4);
   }
-
   out << header_dict << padding << '\n';
 }
 
@@ -518,7 +517,21 @@ inline void SaveArrayAsNumpy ( const std::string& filename, bool fortran_order, 
 
   auto size = static_cast<size_t> (comp_size (shape_v) );
 
-  stream.write (reinterpret_cast<const char*> (data.data() ), sizeof (Scalar) * size);
+  //Windows x64 min-gw g++ compiler goes into infinite loop if you try to ofstream.write
+  //more than a signed 32 bit integer ( 2^31 - 1 ) worth of bytes at once
+  const size_t max_length = 2147483647;
+  size_t index = 0;
+  while (index < size)
+  {
+    uint64_t scalars_to_write = max_length / sizeof (Scalar);
+    const uint64_t remaining_scalars = size - index;
+    if (remaining_scalars < scalars_to_write)
+    {
+      scalars_to_write = remaining_scalars;
+    }
+    stream.write (reinterpret_cast<const char*> (&data[index]), scalars_to_write * sizeof (Scalar) );
+    index += scalars_to_write;
+  }
 }
 
 

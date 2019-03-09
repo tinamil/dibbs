@@ -172,8 +172,8 @@ void Rubiks::generate_edges_pattern_database (std::string filename,
   pattern_lookup[new_state_index] = 0;
   uint8_t* found_index_stack = new uint8_t[all_edges];
   std::fill_n (found_index_stack, all_edges, max_depth);
-  unsigned int id_depth = 1;
-  unsigned int count = 1;
+  uint8_t id_depth = 1;
+  uint64_t count = 1;
 
   uint8_t new_state_depth = 0;
   while (count < all_edges && id_depth < max_depth)
@@ -229,7 +229,7 @@ void Rubiks::generate_edges_pattern_database (std::string filename,
   }
   delete[] found_index_stack;
   const uint64_t shape[] = {all_edges};
-  npy::SaveArrayAsNumpy (filename, false, 1, shape, pattern_lookup);
+  npy::SaveArrayAsNumpy<uint8_t> (filename, false, 1, shape, pattern_lookup);
 }
 
 void Rubiks::generate_corners_pattern_database (std::string filename, const uint8_t state[], const uint8_t max_depth)
@@ -246,8 +246,8 @@ void Rubiks::generate_corners_pattern_database (std::string filename, const uint
   pattern_lookup[get_corner_index (state)] = 0;
   uint8_t* found_index_stack = new uint8_t[all_corners];
   std::fill_n (found_index_stack, all_corners, max_depth);
-  unsigned int id_depth = 1;
-  unsigned int count = 1;
+  uint8_t id_depth = 1;
+  uint32_t count = 1;
 
   uint32_t new_state_index = 0;
   uint8_t new_state_depth = 0;
@@ -305,7 +305,7 @@ void Rubiks::generate_corners_pattern_database (std::string filename, const uint
   delete[] found_index_stack;
 
   const uint64_t shape [] = {all_corners};
-  npy::SaveArrayAsNumpy (filename, false, 1, shape, pattern_lookup);
+  npy::SaveArrayAsNumpy<uint8_t> (filename, false, 1, shape, pattern_lookup);
 }
 
 void Rubiks::generate_all_dbs()
@@ -314,5 +314,5 @@ void Rubiks::generate_all_dbs()
 //  generate_edges_pattern_database ("edge_db_6a.npy", __goal, edge_6_max_depth, 6, edges_6a, edge_rot_indices_6a);
 //  generate_edges_pattern_database ("edge_db_6b.npy", __goal, edge_6_max_depth, 6, edges_6b, edge_rot_indices_6b);
   generate_edges_pattern_database ("edge_db_8a.npy", __goal, edge_8_max_depth, 8, edges_8a, edge_rot_indices_8a);
-  generate_edges_pattern_database ("edge_db_8b.npy", __goal, edge_8_max_depth, 8, edges_8b, edge_rot_indices_8b);
+ // generate_edges_pattern_database ("edge_db_8b.npy", __goal, edge_8_max_depth, 8, edges_8b, edge_rot_indices_8b);
 }
