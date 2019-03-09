@@ -101,7 +101,7 @@ const uint8_t __cube_translations[] = {0, 0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 4, 8,
 const uint8_t edges_6a[] = {0, 1, 2, 3, 4, 5};
 const uint8_t edges_6b[] = {6, 7, 8, 9, 10, 11};
 const uint8_t edges_8a[] = {0, 1, 2, 3, 4, 5, 6, 7};
-const uint8_t edges_8b[] = {6, 7, 8, 9, 10, 11};
+const uint8_t edges_8b[] = {4, 5, 6, 7, 8, 9, 10, 11};
 
 
 const uint64_t __factorial_lookup[] =
