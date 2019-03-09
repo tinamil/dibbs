@@ -261,7 +261,7 @@ void Rubiks::generate_corners_pattern_database (std::string filename, const uint
       new_state = new uint8_t[40];
       memcpy (new_state, state, 40);
       stack.push (new RubiksIndex (new_state, 0, 0) );
-      std::cout << "Incrementing id-depth to " << id_depth << "\n";
+      std::cout << "Incrementing id-depth to " << unsigned int(id_depth) << "\n";
     }
 
     RubiksIndex* ri = stack.top();
