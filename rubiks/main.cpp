@@ -3,24 +3,35 @@
 #include "a_star.h"
 #include "dibbs.h"
 #include "rubiks.h"
+#include "rubiks_loader.h"
 
 using namespace std;
 
+void search_cubes()
+{
+  vector<uint8_t*> cubes = RubiksLoader::load_cubes ("korf1997.txt");
+  Rubiks::PDB type = Rubiks::PDB::a1971;
+
+  for (size_t i = 0; i < cubes.size(); ++i)
+  {
+    clock_t c_start = clock();
+    //search::a_star (cubes[i], type);
+    clock_t c_end = clock();
+    auto time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
+    cout << "IDA* CPU time used: " << time_elapsed_ms << " s" << endl;
+
+    c_start = clock();
+    //search::dibbs (cubes[i], type);
+    Rubiks::pattern_lookup(cubes[0], cubes[i], type);
+    c_end = clock();
+    time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
+    cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
+  }
+}
+
 int main()
 {
-  const uint8_t start_state[] =
-  {
-    2,  2,  8,  1, 17, 1,  9,  0, 15,  0,  7,  1, 18,  1, 14,  0,  3,  0, 13,  1,  1,  0, 10,  0,
-    12,  0,  6,  1,  5,  1,  4,  1, 11,  0,  0,  2, 16,  1, 19,  1
-  };
-  std::clock_t c_start = std::clock();
-  //search::a_star (start_state);
-  //search::dibbs (start_state);
-  Rubiks::generate_all_dbs();
-
-  std::clock_t c_end = std::clock();
-
-  auto time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
-  std::cout << "CPU time used: " << time_elapsed_ms << " s" << std::endl;
+  search_cubes();
+  //Rubiks::generate_all_dbs();
   return 0;
 }

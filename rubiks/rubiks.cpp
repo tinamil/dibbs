@@ -72,6 +72,26 @@ uint64_t FactorialUpperK (int n, int k)
   return result[n][k];
 }
 
+uint64_t Rubiks::get_edge_index (const uint8_t state[], bool a, Rubiks::PDB type)
+{
+  switch (type)
+  {
+  case PDB::a1971:
+    if (a)
+      return get_edge_index (state, 6, edges_6a, edge_rot_indices_6a);
+    else
+      return get_edge_index (state, 6, edges_6b, edge_rot_indices_6b);
+  case PDB::a888:
+    if (a)
+      return get_edge_index (state, 8, edges_8a, edge_rot_indices_8a);
+    else
+      return get_edge_index (state, 8, edges_8b, edge_rot_indices_8b);
+  case PDB::zero:
+    throw std::runtime_error ("Tried to get edge index when using zero heuristic.");
+  }
+  throw std::runtime_error ("Failed to find edge_index type");
+}
+
 uint64_t Rubiks::get_edge_index (const uint8_t state[], int size, const uint8_t edges[],
                                  const uint8_t edge_rot_indices[])
 {
@@ -113,33 +133,90 @@ bool Rubiks::is_solved (const uint8_t cube[])
   return true;
 }
 
-uint8_t Rubiks::pattern_database_lookup (const uint8_t state[])
+uint8_t Rubiks::pattern_lookup (const uint8_t state[], const uint8_t start_state[], PDB type)
 {
+  if (type == PDB::zero)
+  {
+    return 0;
+  }
   static bool initialized = false;
-  static std::vector<char> edge_8a, edge_8b;
+  static std::vector<uint8_t> edge_a, edge_b;
   static std::vector<uint8_t> corner_db;
 
   if (initialized == false)
   {
-    initialized = true;
+    std::string name;
+    for (int i = 0; i < 40; ++i)
+    {
+      name += std::to_string (start_state[i]);
+    }
+
+    std::string corner_name = "corner_db_" + name + ".npy";
+    if (!utility::test_file (corner_name) )
+    {
+      generate_corners_pattern_database (corner_name, start_state, corner_max_depth);
+    }
     std::vector<uint64_t> shape { 1 };
-    npy::LoadArrayFromNumpy<uint8_t> ("corner_db.npy", shape, corner_db);
+    npy::LoadArrayFromNumpy<uint8_t> (corner_name, shape, corner_db);
 
     shape.clear();
     shape.push_back (1);
-    npy::LoadArrayFromNumpy<char> ("edge_db_8a.npy", shape, edge_8a);
+    std::string edge_name_a;
+    if (type == PDB::a1971)
+    {
+      edge_name_a = "edge_db_6a_" + name + ".npy";
+
+      if (!utility::test_file (edge_name_a) )
+      {
+        generate_edges_pattern_database (edge_name_a, start_state, edge_6_max_depth, 6, edges_6a, edge_rot_indices_6a);
+      }
+    }
+    else if (type == PDB::a888)
+    {
+      edge_name_a =  "edge_db_8a_" + name + ".npy";
+
+      if (!utility::test_file (edge_name_a) )
+      {
+        generate_edges_pattern_database (edge_name_a, start_state, edge_8_max_depth, 8, edges_8a, edge_rot_indices_8a);
+      }
+    }
+
+    npy::LoadArrayFromNumpy<uint8_t> (edge_name_a, shape, edge_a);
 
     shape.clear();
     shape.push_back (1);
-    npy::LoadArrayFromNumpy<char> ("edge_db_8b.npy", shape, edge_8b);
+    std::string edge_name_b;
+
+    if (type == PDB::a1971)
+    {
+      edge_name_b = "edge_db_6b_" + name + ".npy";
+
+      if (!utility::test_file (edge_name_b) )
+      {
+        generate_edges_pattern_database (edge_name_b, start_state, edge_6_max_depth, 6, edges_6b, edge_rot_indices_6b);
+      }
+    }
+    else if (type == PDB::a888)
+    {
+      edge_name_b =  "edge_db_8b_" + name + ".npy";
+
+      if (!utility::test_file (edge_name_b) )
+      {
+        generate_edges_pattern_database (edge_name_b, start_state, edge_8_max_depth, 8, edges_8b, edge_rot_indices_8b);
+      }
+    }
+
+    npy::LoadArrayFromNumpy<uint8_t> (edge_name_b, shape, edge_b);
+
+    initialized = true;
   }
   uint8_t best = corner_db[get_corner_index (state)];
-  uint8_t val = edge_8a[get_edge_index (state, 8, edges_8a, edge_rot_indices_8a)];
+  uint8_t val = edge_a[get_edge_index (state, true, type)];
   if (val > best)
   {
     best = val;
   }
-  val = edge_8b[get_edge_index (state, 8, edges_8b, edge_rot_indices_8b)];
+  val = edge_b[get_edge_index (state, true, type)];
   if (val > best)
   {
     best = val;
@@ -147,9 +224,20 @@ uint8_t Rubiks::pattern_database_lookup (const uint8_t state[])
   return best;
 }
 
+
 uint64_t npr (int n, int r)
 {
-  return Rubiks::__factorial_lookup[n] / Rubiks::__factorial_lookup[n - r];
+
+  static const uint64_t __factorial_lookup[] =
+  {
+    1ll, 1ll, 2ll, 6ll, 24ll, 120ll, 720ll, 5040ll, 40320ll,
+    362880ll, 3628800ll, 39916800ll, 479001600ll,
+    6227020800ll, 87178291200ll, 1307674368000ll,
+    20922789888000ll, 355687428096000ll, 6402373705728000ll,
+    121645100408832000ll, 2432902008176640000ll
+  };
+
+  return __factorial_lookup[n] / __factorial_lookup[n - r];
 }
 
 void Rubiks::generate_edges_pattern_database (std::string filename,
@@ -261,7 +349,7 @@ void Rubiks::generate_corners_pattern_database (std::string filename, const uint
       new_state = new uint8_t[40];
       memcpy (new_state, state, 40);
       stack.push (new RubiksIndex (new_state, 0, 0) );
-      std::cout << "Incrementing id-depth to " << unsigned int(id_depth) << "\n";
+      std::cout << "Incrementing id-depth to " << int (id_depth) << "\n";
     }
 
     RubiksIndex* ri = stack.top();
@@ -310,9 +398,9 @@ void Rubiks::generate_corners_pattern_database (std::string filename, const uint
 
 void Rubiks::generate_all_dbs()
 {
-// generate_corners_pattern_database ("corner_db.npy", __goal, corner_max_depth);
-//  generate_edges_pattern_database ("edge_db_6a.npy", __goal, edge_6_max_depth, 6, edges_6a, edge_rot_indices_6a);
-//  generate_edges_pattern_database ("edge_db_6b.npy", __goal, edge_6_max_depth, 6, edges_6b, edge_rot_indices_6b);
+  generate_corners_pattern_database ("corner_db.npy", __goal, corner_max_depth);
+  generate_edges_pattern_database ("edge_db_6a.npy", __goal, edge_6_max_depth, 6, edges_6a, edge_rot_indices_6a);
+  generate_edges_pattern_database ("edge_db_6b.npy", __goal, edge_6_max_depth, 6, edges_6b, edge_rot_indices_6b);
   generate_edges_pattern_database ("edge_db_8a.npy", __goal, edge_8_max_depth, 8, edges_8a, edge_rot_indices_8a);
- // generate_edges_pattern_database ("edge_db_8b.npy", __goal, edge_8_max_depth, 8, edges_8b, edge_rot_indices_8b);
+  generate_edges_pattern_database ("edge_db_8b.npy", __goal, edge_8_max_depth, 8, edges_8b, edge_rot_indices_8b);
 }

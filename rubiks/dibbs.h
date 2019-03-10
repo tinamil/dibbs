@@ -8,5 +8,5 @@
 
 namespace search
 {
-void dibbs (const uint8_t state[]);
+void dibbs (const uint8_t state[], const Rubiks::PDB pdb_type);
 }

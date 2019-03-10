@@ -6,9 +6,15 @@
 #include <cmath>
 #include "npy.hpp"
 #include "mr_rank.h"
+#include "utility.h"
 
 namespace Rubiks
 {
+
+enum PDB
+{
+  a1971, a888, zero
+};
 
 const uint8_t __corner_cubies[] = {0, 2, 5, 7, 12, 14, 17, 19};
 
@@ -104,36 +110,13 @@ const uint8_t edges_8a[] = {0, 1, 2, 3, 4, 5, 6, 7};
 const uint8_t edges_8b[] = {4, 5, 6, 7, 8, 9, 10, 11};
 
 
-const uint64_t __factorial_lookup[] =
-{
-  1ll, 1ll, 2ll, 6ll, 24ll, 120ll, 720ll, 5040ll, 40320ll,
-  362880ll, 3628800ll, 39916800ll, 479001600ll,
-  6227020800ll, 87178291200ll, 1307674368000ll,
-  20922789888000ll, 355687428096000ll, 6402373705728000ll,
-  121645100408832000ll, 2432902008176640000ll
-};
-
-//__factorial_lookup[full_size - i - 1] / __factorial_lookup[full_size - size];
-const uint32_t __factorial_division_lookup[][10] =
-{
-  { 1 },
-  { 11, 1 },
-  { 110, 10, 1 },
-  { 990, 90, 9, 1 },
-  { 7920, 720, 72, 8, 1},
-  { 55440, 5040, 504, 56, 7, 1 },
-  { 332640, 30240, 3024, 336, 210, 42, 1 },
-  { 1663200, 151200, 15120, 1680, 210,  30,  5, 1 },
-  { 6652800, 604800, 60480, 6720, 840,  120,  20, 4, 1},
-  { 19958400, 1814400, 181440, 20160, 2520, 360, 60, 12, 3, 1 }
-};
-
 const uint8_t __goal[] = {0, 0, 1, 0, 2, 0, 3, 0,
                           4, 0, 5, 0, 6, 0, 7, 0,
                           8, 0, 9, 0, 10, 0, 11, 0,
                           12, 0, 13, 0, 14, 0, 15, 0,
                           16, 0, 17, 0, 18, 0, 19, 0
                          };
+
 
 inline bool skip_rotations (uint8_t last_face, uint8_t face)
 {
@@ -143,10 +126,16 @@ inline bool skip_rotations (uint8_t last_face, uint8_t face)
 
 extern void rotate (uint8_t state[], uint8_t face, uint8_t rotation);
 extern uint32_t get_corner_index (const uint8_t state[]);
+
+extern uint64_t get_edge_index (const uint8_t state[], bool a, PDB type);
 extern uint64_t get_edge_index (const uint8_t state[], int size, const uint8_t edges[],
                                 const uint8_t edge_rot_indices[]);
 extern bool is_solved (const uint8_t state[]);
-extern uint8_t pattern_database_lookup (const uint8_t state[]);
+extern uint8_t pattern_lookup (const uint8_t state[], const uint8_t start_state[], PDB type);
+inline uint8_t pattern_lookup (const uint8_t state[], PDB type)
+{
+  return pattern_lookup (state, __goal, type);
+}
 extern void generate_corners_pattern_database (std::string filename, const uint8_t state[], const uint8_t max_depth);
 extern void generate_edges_pattern_database (std::string filename, const uint8_t state[], const uint8_t max_depth,
     const uint8_t size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[]);

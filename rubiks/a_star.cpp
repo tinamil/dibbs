@@ -1,9 +1,9 @@
 #include "a_star.h"
 
 
-void search::a_star (const uint8_t state[])
+void search::a_star (const uint8_t state[], const Rubiks::PDB pdb_type)
 {
-  std::cout << "A*" << std::endl;
+  std::cout << "IDA*" << std::endl;
   std::stack<Node*> state_stack;
 
   if (Rubiks::is_solved (state) )
@@ -14,7 +14,7 @@ void search::a_star (const uint8_t state[])
 
   uint8_t* new_state = new uint8_t[40];
   memcpy (new_state, state, 40);
-  int id_depth = Rubiks::pattern_database_lookup (new_state);
+  int id_depth = Rubiks::pattern_lookup (new_state, pdb_type);
   state_stack.push (new Node (NULL, new_state, id_depth) );
   std::cout << "Minimum number of moves to solve: " << id_depth << std::endl;
   int count = 0;
@@ -35,7 +35,7 @@ void search::a_star (const uint8_t state[])
 
     count += 1;
 
-    if (count % 100000 == 0)
+    if (count % 1000000 == 0)
     {
       std::cout << count << std::endl;
     }
@@ -53,7 +53,7 @@ void search::a_star (const uint8_t state[])
         memcpy (new_state, next_node->state, 40);
         Rubiks::rotate (new_state, face, rotation);
 
-        uint8_t new_state_heuristic = Rubiks::pattern_database_lookup (new_state);
+        uint8_t new_state_heuristic = Rubiks::pattern_lookup (new_state, pdb_type);
         uint8_t new_state_cost = next_node->depth + 1 + new_state_heuristic;
 
         if (new_state_cost > id_depth)
