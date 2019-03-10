@@ -152,4 +152,10 @@ struct RubiksIndex
     delete[] state;
   }
 };
+
+struct PDBVectors
+{
+  std::vector<uint8_t> edge_a, edge_b;
+  std::vector<uint8_t> corner_db;
+};
 }

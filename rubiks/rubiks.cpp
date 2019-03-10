@@ -139,25 +139,31 @@ uint8_t Rubiks::pattern_lookup (const uint8_t state[], const uint8_t start_state
   {
     return 0;
   }
-  static bool initialized = false;
-  static std::vector<uint8_t> edge_a, edge_b;
-  static std::vector<uint8_t> corner_db;
 
-  if (initialized == false)
+  static std::unordered_map<const uint8_t*, PDBVectors*> initialized_pdbs;
+  auto pdbs = initialized_pdbs.find (start_state);
+  PDBVectors* vectors;
+  if (pdbs != initialized_pdbs.end()){
+        vectors = pdbs->second;
+  }
+  else if (pdbs == initialized_pdbs.end())
   {
+    vectors = new PDBVectors();
+    initialized_pdbs[start_state] = vectors;
+
     std::string name;
     for (int i = 0; i < 40; ++i)
     {
       name += std::to_string (start_state[i]);
     }
-
+    std::cout << "Loading PDBs from disk for " << name << '\n';
     std::string corner_name = "corner_db_" + name + ".npy";
     if (!utility::test_file (corner_name) )
     {
       generate_corners_pattern_database (corner_name, start_state, corner_max_depth);
     }
     std::vector<uint64_t> shape { 1 };
-    npy::LoadArrayFromNumpy<uint8_t> (corner_name, shape, corner_db);
+    npy::LoadArrayFromNumpy<uint8_t> (corner_name, shape, vectors->corner_db);
 
     shape.clear();
     shape.push_back (1);
@@ -181,7 +187,7 @@ uint8_t Rubiks::pattern_lookup (const uint8_t state[], const uint8_t start_state
       }
     }
 
-    npy::LoadArrayFromNumpy<uint8_t> (edge_name_a, shape, edge_a);
+    npy::LoadArrayFromNumpy<uint8_t> (edge_name_a, shape, vectors->edge_a);
 
     shape.clear();
     shape.push_back (1);
@@ -206,17 +212,15 @@ uint8_t Rubiks::pattern_lookup (const uint8_t state[], const uint8_t start_state
       }
     }
 
-    npy::LoadArrayFromNumpy<uint8_t> (edge_name_b, shape, edge_b);
-
-    initialized = true;
+    npy::LoadArrayFromNumpy<uint8_t> (edge_name_b, shape, vectors->edge_b);
   }
-  uint8_t best = corner_db[get_corner_index (state)];
-  uint8_t val = edge_a[get_edge_index (state, true, type)];
+  uint8_t best = vectors->corner_db[get_corner_index (state)];
+  uint8_t val = vectors->edge_a[get_edge_index (state, true, type)];
   if (val > best)
   {
     best = val;
   }
-  val = edge_b[get_edge_index (state, true, type)];
+  val = vectors->edge_b[get_edge_index (state, true, type)];
   if (val > best)
   {
     best = val;

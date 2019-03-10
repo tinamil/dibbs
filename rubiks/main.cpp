@@ -21,9 +21,7 @@ void search_cubes()
     cout << "IDA* CPU time used: " << time_elapsed_ms << " s" << endl;
 
     c_start = clock();
-    //search::dibbs (cubes[i], type);
-    Rubiks::pattern_lookup(cubes[0], cubes[i], type);
-    c_end = clock();
+    search::dibbs (cubes[i], type);
     time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
     cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
   }

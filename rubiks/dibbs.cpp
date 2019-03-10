@@ -2,19 +2,20 @@
 
 
 void expand (std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &frontier,
-             std::unordered_multiset<Node*, NodeHash, NodeEqual> &frontier_set,
-             const std::unordered_multiset<Node*, NodeHash, NodeEqual> &other_set,
+             std::unordered_set<Node*, NodeHash, NodeEqual> &frontier_set,
+             std::unordered_set<Node*, NodeHash, NodeEqual> &frontier_closed,
+             const std::unordered_set<Node*, NodeHash, NodeEqual> &other_set,
              uint64_t &upper_bound, Node* &best_node, bool reverse, Rubiks::PDB type,
              const uint8_t start_state[])
 {
   uint8_t* new_state;
   Node* next_node = frontier.top();
   frontier.pop();
-
+  frontier_closed.insert (next_node);
   auto node_index = frontier_set.find (next_node);
   if (node_index == frontier_set.end() )
   {
-    //std::cout << frontier_set.size() << " " << frontier.size() << "NULL: " << next_node->print_state() << std::endl;
+    //std::cout << "BUG: " << frontier_set.size() << " " << frontier.size() << "NULL: " << next_node->print_state() << std::endl;
   }
   else
   {
@@ -41,6 +42,13 @@ void expand (std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &fronti
 
       Node* new_node = new Node (next_node, new_state, next_node->depth + 1,
                                  new_state_heuristic, reverse_heuristic, face, rotation);
+
+      if (frontier_closed.count (new_node) > 0)
+      {
+        delete new_node;
+        continue;
+      }
+
       frontier_set.insert (new_node);
       frontier.push (new_node);
       uint8_t reverse_cost = 0;
@@ -62,7 +70,6 @@ void expand (std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &fronti
       }
     }
   }
-  delete next_node;
 }
 
 void search::dibbs (const uint8_t start_state[], const Rubiks::PDB pdb_type)
@@ -76,8 +83,8 @@ void search::dibbs (const uint8_t start_state[], const Rubiks::PDB pdb_type)
   }
 
   std::priority_queue<Node*, std::vector<Node*>, NodeCompare> front_queue, back_queue;
-  std::unordered_multiset<Node*, NodeHash, NodeEqual> front_set, back_set;
-
+  std::unordered_set<Node*, NodeHash, NodeEqual> front_set, back_set;
+  std::unordered_set<Node*, NodeHash, NodeEqual> front_closed, back_closed;
 
   uint64_t upper_bound = std::numeric_limits<uint64_t>::max();
 
@@ -97,48 +104,35 @@ void search::dibbs (const uint8_t start_state[], const Rubiks::PDB pdb_type)
   uint8_t backward_fbar_min = 0;
   int count = 0;
 
-  while (count < 1e6 && upper_bound > (forward_fbar_min + backward_fbar_min) / 2)
+  while (upper_bound > (forward_fbar_min + backward_fbar_min) / 2)
   {
+
     explore_forward = forward_fbar_min <= backward_fbar_min;
     if (explore_forward)
     {
-      expand (front_queue, front_set, back_set, upper_bound, best_node, false, pdb_type, start_state);
+      expand (front_queue, front_set, front_closed, back_set, upper_bound, best_node, false, pdb_type, start_state);
       forward_fbar_min = front_queue.top()->f_bar;
     }
     else
     {
-      expand (back_queue, back_set, front_set, upper_bound, best_node, true, pdb_type, start_state);
+      expand (back_queue, back_set, back_closed, front_set, upper_bound, best_node, true, pdb_type, start_state);
       backward_fbar_min = back_queue.top()->f_bar;
     }
 
     count += 1;
 
-    /*if (count % 3584 == 0)
-    {
-      while (back_queue.empty() == false)
-      {
-        std::cout << back_queue.size() << std::endl;
-        Node* node = back_queue.top();
-        back_queue.pop();
-
-        auto id = back_set.find (node);
-        back_set.erase (id);
-      }
-      break;
-    }*/
-
     if (count % 100000 == 0)
     {
       std::cout << unsigned (forward_fbar_min) << " " << unsigned (backward_fbar_min) << " ";
-      std::cout << count << "\n";
+      std::cout << unsigned (front_queue.top()->depth) << " " << unsigned(back_queue.top()->depth) << " " << count << "\n";
     }
 
   }
 
   std::cout << "Solved DIBBS: " << (best_node->depth + best_node->reverse_depth) << " Count = " << count << std::endl;
 
-  /*
-  std::cout << "Cleaning up open frontiers" << std::endl;
+
+  std::cout << "Cleaning up open/closed frontiers" << std::endl;
   while (front_queue.empty() == false)
   {
     Node* node = front_queue.top();
@@ -152,6 +146,9 @@ void search::dibbs (const uint8_t start_state[], const Rubiks::PDB pdb_type)
     back_queue.pop();
     delete node;
   }
-  */
+
+  front_closed.erase ( front_closed.begin(), front_closed.end() );
+  back_closed.erase ( back_closed.begin(), back_closed.end() );
+
 }
 
