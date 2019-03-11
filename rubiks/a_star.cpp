@@ -17,9 +17,9 @@ void search::a_star (const uint8_t state[], const Rubiks::PDB pdb_type)
   int id_depth = Rubiks::pattern_lookup (new_state, pdb_type);
   state_stack.push (new Node (NULL, new_state, id_depth) );
   std::cout << "Minimum number of moves to solve: " << id_depth << std::endl;
-  int count = 0;
+  uint64_t count = 0;
   Node* next_node;
-  while (count < 1e8)
+  while (true)
   {
     if (state_stack.empty() )
     {

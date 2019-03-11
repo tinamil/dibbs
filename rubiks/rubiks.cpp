@@ -220,7 +220,7 @@ uint8_t Rubiks::pattern_lookup (const uint8_t state[], const uint8_t start_state
   {
     best = val;
   }
-  val = vectors->edge_b[get_edge_index (state, true, type)];
+  val = vectors->edge_b[get_edge_index (state, false, type)];
   if (val > best)
   {
     best = val;
