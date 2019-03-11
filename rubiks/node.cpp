@@ -7,16 +7,9 @@ Node::Node (Node* _parent, const uint8_t _state[], uint8_t _depth, uint8_t _heur
   : Node (_parent, _state, _depth, _heuristic, 0, _face, _rotation) {}
 
 Node::Node (Node* _parent, const uint8_t _state[], uint8_t _depth, uint8_t _heuristic, uint8_t _reverse_heuristic,
-            uint8_t _face, uint8_t _rotation)
+            uint8_t _face, uint8_t _rotation) : state (_state), depth (_depth), heuristic (_heuristic),
+  combined (depth + heuristic), reverse_depth (0), reverse_heuristic (_reverse_heuristic), f_bar (combined + depth - reverse_heuristic)
 {
-  state = _state;
-  depth = _depth;
-  heuristic = _heuristic;
-  combined = depth + heuristic;
-  reverse_depth = 0;
-  reverse_heuristic = _reverse_heuristic;
-  f_bar = combined + depth - reverse_heuristic;
-
   faces = new uint8_t[depth];
   rotations = new uint8_t[depth];
 
@@ -29,21 +22,15 @@ Node::Node (Node* _parent, const uint8_t _state[], uint8_t _depth, uint8_t _heur
   }
 }
 
-Node::Node (const Node* old_node)
+Node::Node (const Node* old_node) : state (old_node->state), depth (old_node->depth), heuristic (old_node->heuristic),
+  combined (old_node->combined), reverse_depth (old_node->reverse_depth), reverse_heuristic (old_node->reverse_heuristic), f_bar (old_node->f_bar)
 {
-  state = old_node->state;
-  depth = old_node->depth;
-  heuristic = old_node->heuristic;
-  combined = depth + heuristic;
-  reverse_heuristic = old_node->reverse_heuristic;
-
   faces = new uint8_t[depth];
   rotations = new uint8_t[depth];
 
   memcpy (faces, old_node->faces, depth);
   memcpy (rotations, old_node->rotations, depth);
 
-  reverse_depth = old_node->reverse_depth;
   if (reverse_depth > 0)
   {
     reverse_faces = new uint8_t[reverse_depth];
@@ -90,13 +77,15 @@ void Node::set_reverse (const Node* reverse)
   }
 }
 
-std::string Node::print_state(){
-    std::string result;
-    for(int i = 0; i < 40; ++i){
-        result.append(std::to_string(state[i]));
-        result.append(" ");
-    }
-    return result;
+std::string Node::print_state()
+{
+  std::string result;
+  for (int i = 0; i < 40; ++i)
+  {
+    result.append (std::to_string (state[i]) );
+    result.append (" ");
+  }
+  return result;
 }
 
 bool NodeCompare::operator() (const Node* a, const Node* b) const

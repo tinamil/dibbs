@@ -11,7 +11,7 @@ void expand (std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &fronti
   uint8_t* new_state;
   Node* next_node = frontier.top();
   frontier.pop();
-  frontier_closed.insert (next_node);
+  //frontier_closed.insert (next_node);
   auto node_index = frontier_set.find (next_node);
   if (node_index == frontier_set.end() )
   {
