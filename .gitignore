@@ -156,3 +156,5 @@ dmypy.json
 *.depend
 
 */vtune/
+*.vcxproj.user
+.vs/
