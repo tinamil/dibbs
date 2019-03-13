@@ -5,7 +5,7 @@ void expand (std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &fronti
              std::unordered_set<Node*, NodeHash, NodeEqual> &frontier_set,
              std::unordered_set<Node*, NodeHash, NodeEqual> &frontier_closed,
              const std::unordered_set<Node*, NodeHash, NodeEqual> &other_set,
-             uint64_t &upper_bound, Node* &best_node, bool reverse, Rubiks::PDB type,
+             uint8_t &upper_bound, Node* &best_node, bool reverse, Rubiks::PDB type,
              const uint8_t start_state[])
 {
   uint8_t* new_state;
@@ -86,7 +86,7 @@ void search::dibbs (const uint8_t start_state[], const Rubiks::PDB pdb_type)
   std::unordered_set<Node*, NodeHash, NodeEqual> front_set, back_set;
   std::unordered_set<Node*, NodeHash, NodeEqual> front_closed, back_closed;
 
-  uint64_t upper_bound = std::numeric_limits<uint64_t>::max();
+  uint8_t upper_bound = std::numeric_limits<uint8_t>::max();
 
   uint8_t* new_state = new uint8_t[40];
   memcpy (new_state, start_state, 40);
@@ -99,12 +99,12 @@ void search::dibbs (const uint8_t start_state[], const Rubiks::PDB pdb_type)
   back_set.insert (back_queue.top() );
 
   bool explore_forward = true;
-  Node* best_node;
+  Node* best_node = nullptr;
   uint8_t forward_fbar_min = 0;
   uint8_t backward_fbar_min = 0;
   int count = 0;
 
-  while (upper_bound > (forward_fbar_min + backward_fbar_min) / 2)
+  while (best_node == nullptr || upper_bound > (forward_fbar_min + backward_fbar_min) / 2)
   {
 
     explore_forward = forward_fbar_min <= backward_fbar_min;

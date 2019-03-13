@@ -1,5 +1,5 @@
 #pragma once
-#include <cstring>
+#include <string>
 #include <cstdint>
 #include <iostream>
 #include "hash.hpp"
@@ -16,11 +16,11 @@ struct Node
   const uint8_t reverse_heuristic;
   const uint8_t f_bar;
 
-  uint8_t* reverse_faces;
-  uint8_t* reverse_rotations;
+  uint8_t* reverse_faces = nullptr;
+  uint8_t* reverse_rotations = nullptr;
 
-  uint8_t* faces;
-  uint8_t* rotations;
+  uint8_t* faces = nullptr;
+  uint8_t* rotations = nullptr;
 
 
   Node (Node* _parent, const uint8_t _state[], uint8_t _heuristic);

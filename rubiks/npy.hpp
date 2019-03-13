@@ -425,7 +425,7 @@ inline void write_header (std::ostream& out, const std::string& descr, bool fort
   if (version[0] == 1 && version[1] == 0)
   {
     char header_len_le16[2];
-    uint16_t header_len = header_dict.length() + padding.length() + 1;
+    size_t header_len = header_dict.length() + padding.length() + 1;
 
     header_len_le16[0] = (header_len >> 0) & 0xff;
     header_len_le16[1] = (header_len >> 8) & 0xff;
@@ -434,7 +434,7 @@ inline void write_header (std::ostream& out, const std::string& descr, bool fort
   else
   {
     char header_len_le32[4];
-    uint32_t header_len = header_dict.length() + padding.length() + 1;
+    size_t header_len = header_dict.length() + padding.length() + 1;
 
     header_len_le32[0] = (header_len >> 0) & 0xff;
     header_len_le32[1] = (header_len >> 8) & 0xff;

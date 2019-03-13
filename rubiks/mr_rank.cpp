@@ -51,8 +51,8 @@ uint64_t mr::get_rank (int n, uint8_t *vec)
 {
   uint8_t i;
   uint64_t r;
-  uint8_t v [n];
-  uint8_t inv [n];
+  uint8_t* v = new uint8_t[n];
+  uint8_t* inv = new uint8_t [n];
 
   for (i = 0; i < n; ++i)
   {
@@ -60,16 +60,18 @@ uint64_t mr::get_rank (int n, uint8_t *vec)
     inv[vec[i]] = i;
   }
   r = _mr_rank1 (n, v, inv);
+  delete[] v;
+  delete[] inv;
   return r;
 }
 
-uint64_t mr::k_rank (int8_t *locs, uint8_t *dual, int distinctSize, int puzzleSize)
+uint64_t mr::k_rank (int8_t *locs, uint8_t *dual, unsigned int distinctSize, unsigned int puzzleSize)
 {
   uint64_t result2 = 0;
   uint64_t multiplier = 1;
-  for (int i = 0; i < distinctSize; i++)
+  for (unsigned int i = 0; i < distinctSize; i++)
   {
-    int tmp = dual[i];
+    unsigned int tmp = dual[i];
     unsigned int tmp2 = locs[i];
 
     result2 += (tmp - i) * multiplier;

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <stack>
 #include "npy.hpp"
 #include "mr_rank.h"
 #include "utility.h"

@@ -112,11 +112,11 @@ uint64_t Rubiks::get_edge_index (const uint8_t state[], int size, const uint8_t 
   }
   uint64_t edge_index = mr::k_rank (puzzle, newdual, size, 12);
 
-  edge_index *= 1 << size;
+  edge_index *= 1i64 << size;
 
   for (uint8_t i = 0; i < size; ++i)
   {
-    edge_index += state[edge_rot_indices[i]] * 1 << (size - i - 1);
+    edge_index += state[edge_rot_indices[i]] * 1i64 << (size - i - 1);
   }
   return edge_index;
 }
@@ -142,7 +142,7 @@ uint8_t Rubiks::pattern_lookup (const uint8_t state[], const uint8_t start_state
 
   static std::unordered_map<const uint8_t*, PDBVectors*> initialized_pdbs;
   auto pdbs = initialized_pdbs.find (start_state);
-  PDBVectors* vectors;
+  PDBVectors* vectors = nullptr;
   if (pdbs != initialized_pdbs.end()){
         vectors = pdbs->second;
   }
@@ -257,7 +257,7 @@ void Rubiks::generate_edges_pattern_database (std::string filename,
   memcpy (new_state, state, 40);
   stack.push (new RubiksIndex (new_state, 0, 0) );
 
-  uint64_t all_edges = npr (12, size) * pow (2, size);
+  uint64_t all_edges = npr (12, size) * uint64_t(pow (2, size));
   std::cout << "Edges: " << all_edges << "\n";
   std::vector<uint8_t> pattern_lookup (all_edges, max_depth);
   uint64_t new_state_index = get_edge_index (state, size, edges, edge_rot_indices);

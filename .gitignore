@@ -158,3 +158,5 @@ dmypy.json
 */vtune/
 *.vcxproj.user
 .vs/
+Debug/
+Release/

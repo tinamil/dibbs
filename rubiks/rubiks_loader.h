@@ -36,7 +36,7 @@ private:
     int face;
     int rotation;
 
-    Move () {}
+    Move () : face(-1), rotation(-1) {}
     Move (Face _face, Rotation _rotation) : face ( (int) _face), rotation ( (int) _rotation) {}
   };
 
