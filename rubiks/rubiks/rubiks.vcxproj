@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -17,6 +17,28 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\a_star.h" />
+    <ClInclude Include="..\dibbs.h" />
+    <ClInclude Include="..\hash.hpp" />
+    <ClInclude Include="..\mr_rank.h" />
+    <ClInclude Include="..\node.h" />
+    <ClInclude Include="..\npy.hpp" />
+    <ClInclude Include="..\rubiks.h" />
+    <ClInclude Include="..\rubiks_loader.h" />
+    <ClInclude Include="..\utility.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\a_star.cpp" />
+    <ClCompile Include="..\dibbs.cpp" />
+    <ClCompile Include="..\hash.cpp" />
+    <ClCompile Include="..\main.cpp" />
+    <ClCompile Include="..\mr_rank.cpp" />
+    <ClCompile Include="..\node.cpp" />
+    <ClCompile Include="..\rubiks.cpp" />
+    <ClCompile Include="..\rubiks_loader.cpp" />
+    <ClCompile Include="..\utility.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -150,18 +172,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="pch.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="rubiks.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
