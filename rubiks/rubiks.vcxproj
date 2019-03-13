@@ -19,26 +19,26 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\a_star.h" />
-    <ClInclude Include="..\dibbs.h" />
-    <ClInclude Include="..\hash.hpp" />
-    <ClInclude Include="..\mr_rank.h" />
-    <ClInclude Include="..\node.h" />
-    <ClInclude Include="..\npy.hpp" />
-    <ClInclude Include="..\rubiks.h" />
-    <ClInclude Include="..\rubiks_loader.h" />
-    <ClInclude Include="..\utility.h" />
+    <ClCompile Include="a_star.cpp" />
+    <ClCompile Include="dibbs.cpp" />
+    <ClCompile Include="hash.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="mr_rank.cpp" />
+    <ClCompile Include="node.cpp" />
+    <ClCompile Include="rubiks.cpp" />
+    <ClCompile Include="rubiks_loader.cpp" />
+    <ClCompile Include="utility.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\a_star.cpp" />
-    <ClCompile Include="..\dibbs.cpp" />
-    <ClCompile Include="..\hash.cpp" />
-    <ClCompile Include="..\main.cpp" />
-    <ClCompile Include="..\mr_rank.cpp" />
-    <ClCompile Include="..\node.cpp" />
-    <ClCompile Include="..\rubiks.cpp" />
-    <ClCompile Include="..\rubiks_loader.cpp" />
-    <ClCompile Include="..\utility.cpp" />
+    <ClInclude Include="a_star.h" />
+    <ClInclude Include="dibbs.h" />
+    <ClInclude Include="hash.hpp" />
+    <ClInclude Include="mr_rank.h" />
+    <ClInclude Include="node.h" />
+    <ClInclude Include="npy.hpp" />
+    <ClInclude Include="rubiks.h" />
+    <ClInclude Include="rubiks_loader.h" />
+    <ClInclude Include="utility.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -164,7 +164,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -172,6 +171,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

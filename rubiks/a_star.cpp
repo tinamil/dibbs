@@ -14,7 +14,7 @@ void search::a_star (const uint8_t state[], const Rubiks::PDB pdb_type)
 
   uint8_t* new_state = new uint8_t[40];
   memcpy (new_state, state, 40);
-  int id_depth = Rubiks::pattern_lookup (new_state, pdb_type);
+  uint8_t id_depth = Rubiks::pattern_lookup (new_state, pdb_type);
   state_stack.push (new Node (NULL, new_state, id_depth) );
   std::cout << "Minimum number of moves to solve: " << id_depth << std::endl;
   uint64_t count = 0;

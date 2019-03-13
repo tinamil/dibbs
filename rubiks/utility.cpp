@@ -18,8 +18,3 @@ std::vector<std::string> utility::tokenizer ( const std::string& p_pcstStr, char
   return tokens;
 }
 
-bool utility::test_file (const std::string& name) {
-    std::ifstream f(name.c_str());
-    return f.good();
-}
-

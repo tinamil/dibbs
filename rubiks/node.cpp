@@ -1,6 +1,5 @@
 #include "Node.h"
 
-
 Node::Node (Node* _parent, const uint8_t _state[], uint8_t _heuristic)
   : Node (_parent, _state, 0, _heuristic, 0, 0, 0) {}
 Node::Node (Node* _parent, const uint8_t _state[], uint8_t _depth, uint8_t _heuristic, uint8_t _face, uint8_t _rotation)
