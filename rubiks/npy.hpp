@@ -519,7 +519,7 @@ inline void SaveArrayAsNumpy ( const std::string& filename, bool fortran_order, 
 
   //Windows x64 min-gw g++ compiler goes into infinite loop if you try to ofstream.write
   //more than a signed 32 bit integer ( 2^31 - 1 ) worth of bytes at once
-  const size_t max_length = 2147483647;
+  /*const size_t max_length = 2147483647;
   size_t index = 0;
   while (index < size)
   {
@@ -531,7 +531,8 @@ inline void SaveArrayAsNumpy ( const std::string& filename, bool fortran_order, 
     }
     stream.write (reinterpret_cast<const char*> (&data[index]), scalars_to_write * sizeof (Scalar) );
     index += scalars_to_write;
-  }
+  }*/
+  stream.write(reinterpret_cast<const char*> (data.data()), sizeof(Scalar) * size);
 }
 
 
