@@ -6,7 +6,7 @@
 class RubiksLoader
 {
 public:
-  static std::vector<uint8_t*> load_cubes (std::string file);
+  static std::vector<uint8_t*> load_cubes(std::string file);
 
 private:
   enum Face
@@ -36,11 +36,11 @@ private:
     int face;
     int rotation;
 
-    Move () : face(-1), rotation(-1) {}
-    Move (Face _face, Rotation _rotation) : face ( (int) _face), rotation ( (int) _rotation) {}
+    Move() : face(-1), rotation(-1) {}
+    Move(Face _face, Rotation _rotation) : face((int)_face), rotation((int)_rotation) {}
   };
 
-  static uint8_t* scramble (std::string notation);
-  static Move convert (std::string move);
-  static Face translate_face (char face);
+  static uint8_t* scramble(std::string notation);
+  static Move convert(std::string move);
+  static Face translate_face(char face);
 };

@@ -1,6 +1,6 @@
 #include "mr_rank.h"
 
-void mr::_mr_unrank1 (uint64_t rank, int n, uint8_t *vec)
+void mr::_mr_unrank1(uint64_t rank, int n, uint8_t *vec)
 {
   uint64_t q, r;
   if (n < 1)
@@ -11,10 +11,10 @@ void mr::_mr_unrank1 (uint64_t rank, int n, uint8_t *vec)
   uint8_t tmp = vec[r];
   vec[r] = vec[n - 1];
   vec[n - 1] = tmp;
-  _mr_unrank1 (q, n - 1, vec);
+  _mr_unrank1(q, n - 1, vec);
 }
 
-uint64_t mr::_mr_rank1 (int n, uint8_t *vec, uint8_t *inv)
+uint64_t mr::_mr_rank1(int n, uint8_t *vec, uint8_t *inv)
 {
   uint64_t s;
   if (n < 2)
@@ -30,42 +30,42 @@ uint64_t mr::_mr_rank1 (int n, uint8_t *vec, uint8_t *inv)
   inv[s] = inv[n - 1];
   inv[n - 1] = tmp;
 
-  return s + n * _mr_rank1 (n - 1, vec, inv);
+  return s + n * _mr_rank1(n - 1, vec, inv);
 }
 
 /* Fill the integer array <vec> (of size <n>) with the
  * permutation at rank <rank>.
  */
-void mr::get_permutation (uint64_t rank, int n, uint8_t *vec)
+void mr::get_permutation(uint64_t rank, int n, uint8_t *vec)
 {
   uint8_t i;
   for (i = 0; i < n; ++i)
     vec[i] = i;
-  _mr_unrank1 (rank, n, vec);
+  _mr_unrank1(rank, n, vec);
 }
 
 /* Return the rank of the current permutation of array <vec>
  * (of size <n>).
  */
-uint64_t mr::get_rank (int n, uint8_t *vec)
+uint64_t mr::get_rank(int n, uint8_t *vec)
 {
   uint8_t i;
   uint64_t r;
   uint8_t* v = new uint8_t[n];
-  uint8_t* inv = new uint8_t [n];
+  uint8_t* inv = new uint8_t[n];
 
   for (i = 0; i < n; ++i)
   {
     v[i] = vec[i];
     inv[vec[i]] = i;
   }
-  r = _mr_rank1 (n, v, inv);
+  r = _mr_rank1(n, v, inv);
   delete[] v;
   delete[] inv;
   return r;
 }
 
-uint64_t mr::k_rank (int8_t *locs, uint8_t *dual, unsigned int distinctSize, unsigned int puzzleSize)
+uint64_t mr::k_rank(int8_t *locs, uint8_t *dual, unsigned int distinctSize, unsigned int puzzleSize)
 {
   uint64_t result2 = 0;
   uint64_t multiplier = 1;
@@ -79,8 +79,8 @@ uint64_t mr::k_rank (int8_t *locs, uint8_t *dual, unsigned int distinctSize, uns
 
     if (tmp2 < puzzleSize)
     {
-      swap (locs[i], locs[dual[i]]);
-      swap (dual[tmp2], dual[i]);
+      swap(locs[i], locs[dual[i]]);
+      swap(dual[tmp2], dual[i]);
     }
   }
 
