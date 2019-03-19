@@ -14,7 +14,24 @@ namespace Rubiks
 
   enum PDB
   {
-    a1971, a888, zero
+    a1997, a888, zero
+  };
+
+  enum Face
+  {
+    front = 0,
+    up = 1,
+    left = 2,
+    back = 3,
+    down = 4,
+    right = 5
+  };
+
+  enum Rotation
+  {
+    clockwise = 0,
+    counterclockwise = 1,
+    half = 2
   };
 
   const uint8_t __corner_cubies[] = { 0, 2, 5, 7, 12, 14, 17, 19 };
@@ -90,7 +107,7 @@ namespace Rubiks
   const uint8_t __corner_rot_indices[] = { 1, 5, 11, 15, 25, 29, 35, 39 };
 
   const uint8_t corner_max_depth = 11;
-  const uint8_t edge_6_max_depth = 10;
+  const uint8_t edge_6_max_depth = 11;
   const uint8_t edge_8_max_depth = 12;
 
   const uint8_t edge_pos_indices_6a[] = { 2, 6, 8, 12, 16, 18 };
@@ -125,7 +142,7 @@ namespace Rubiks
       (last_face == 5 && face == 2) || (last_face == 4 && face == 1);
   }
 
-  extern void rotate(uint8_t state[], uint8_t face, uint8_t rotation);
+  extern uint8_t* rotate(const uint8_t prev_state[], uint8_t face, uint8_t rotation);
   extern uint32_t get_corner_index(const uint8_t state[]);
 
   extern uint64_t get_edge_index(const uint8_t state[], bool a, PDB type);
@@ -140,7 +157,7 @@ namespace Rubiks
   extern void generate_corners_pattern_database(std::string filename, const uint8_t state[], const uint8_t max_depth);
   extern void generate_edges_pattern_database(std::string filename, const uint8_t state[], const uint8_t max_depth,
     const uint8_t size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[]);
-  extern void generate_all_dbs();
+  extern void generate_goal_dbs();
   struct RubiksIndex
   {
     uint8_t* state;

@@ -17,15 +17,17 @@ std::vector<uint8_t*> RubiksLoader::load_cubes(std::string file)
 
 uint8_t* RubiksLoader::scramble(std::string notation)
 {
-  uint8_t* state = new uint8_t[40];
-  memcpy(state, Rubiks::__goal, 40);
 
   std::vector<std::string> moves = utility::tokenizer(notation, ' ');
+  RubiksLoader::Move move = convert(moves[0]);
+  uint8_t* state = Rubiks::rotate(Rubiks::__goal, move.face, move.rotation);
 
-  for (size_t i = 0; i < moves.size(); ++i)
+  for (size_t i = 1; i < moves.size(); ++i)
   {
     RubiksLoader::Move move = convert(moves[i]);
-    Rubiks::rotate(state, move.face, move.rotation);
+    uint8_t* new_state = Rubiks::rotate(state, move.face, move.rotation);
+    delete[] state;
+    state = new_state;
   }
   return state;
 }
@@ -36,37 +38,37 @@ RubiksLoader::Move RubiksLoader::convert(std::string notation)
   Move move;
   if (notation.length() == 1)
   {
-    move = Move(translate_face(notation[0]), Rotation::clockwise);
+    move = Move(translate_face(notation[0]), Rubiks::Rotation::clockwise);
   }
   else
   {
-    Face face = translate_face(notation[0]);
+    Rubiks::Face face = translate_face(notation[0]);
     if (notation[1] == '\'')
-      move = Move(face, Rotation::counterclockwise);
+      move = Move(face, Rubiks::Rotation::counterclockwise);
     else if (notation[1] == '2')
-      move = Move(face, Rotation::half);
+      move = Move(face, Rubiks::Rotation::half);
   }
   return move;
 }
 
 
-RubiksLoader::Face RubiksLoader::translate_face(char input_face)
+Rubiks::Face RubiksLoader::translate_face(char input_face)
 {
   char face = toupper(input_face);
   switch (face)
   {
   case 'U':
-    return Face::up;
+    return Rubiks::Face::up;
   case 'D':
-    return Face::down;
+    return Rubiks::Face::down;
   case 'F':
-    return Face::front;
+    return Rubiks::Face::front;
   case 'B':
-    return Face::back;
+    return Rubiks::Face::back;
   case 'R':
-    return Face::right;
+    return Rubiks::Face::right;
   case 'L':
-    return Face::left;
+    return Rubiks::Face::left;
   }
   throw std::runtime_error("Failed to identify face character");
 }

@@ -6,30 +6,32 @@
 #include "rubiks_loader.h"
 
 using namespace std;
+using namespace Rubiks;
 
 void search_cubes()
 {
   vector<uint8_t*> cubes = RubiksLoader::load_cubes("korf1997.txt");
-  Rubiks::PDB type = Rubiks::PDB::zero;
+  PDB type = PDB::a1997;
 
   for (size_t i = 0; i < cubes.size(); ++i)
   {
     clock_t c_start = clock();
-    //search::a_star (cubes[i], type);
+    search::a_star(cubes[i], type);
     clock_t c_end = clock();
     auto time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
     cout << "IDA* CPU time used: " << time_elapsed_ms << " s" << endl;
-
+    return;
     c_start = clock();
-    search::dibbs(cubes[i], type);
+    //search::dibbs(cubes[i], type);
     time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
-    cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
+    //cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
   }
 }
 
 int main()
 {
   search_cubes();
-  //Rubiks::generate_all_dbs();
+  //Rubiks::generate_goal_dbs();
+  //system("PAUSE");
   return 0;
 }

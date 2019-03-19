@@ -29,9 +29,7 @@ void expand(std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &frontie
     }
     for (uint8_t rotation = 0; rotation < 3; ++rotation)
     {
-      new_state = new uint8_t[40];
-      memcpy(new_state, next_node->state, 40);
-      Rubiks::rotate(new_state, face, rotation);
+      new_state = Rubiks::rotate(next_node->state, face, rotation);
 
       uint8_t new_state_heuristic = Rubiks::pattern_lookup(new_state, type);
       uint8_t reverse_heuristic = Rubiks::pattern_lookup(new_state, start_state, type);

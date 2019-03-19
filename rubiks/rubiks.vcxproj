@@ -40,6 +40,9 @@
     <ClInclude Include="rubiks_loader.h" />
     <ClInclude Include="utility.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="korf1997.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{06237B5F-D55D-4ABA-B377-727578FE0098}</ProjectGuid>
