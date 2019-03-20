@@ -232,6 +232,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t state[], const uint8_t start_state[
     {
       best = val;
     }
+    break;
   case PDB::a888:
     val = vectors->edge_a[get_edge_index(state, 8, edges_8a, edge_rot_indices_8a)];
     if (val > best)
@@ -243,6 +244,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t state[], const uint8_t start_state[
     {
       best = val;
     }
+    break;
   }
   return best;
 }
@@ -272,6 +274,7 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
 {
   std::cout << "Generating edges db\n";
   std::stack<RubiksIndex*> stack;
+  uint8_t* edge_only_state;
   uint8_t* new_state = new uint8_t[40];
   memcpy(new_state, state, 40);
   stack.push(new RubiksIndex(new_state, 0, 0));
@@ -279,70 +282,82 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
   uint64_t all_edges = npr(12, size) * uint64_t(pow(2, size));
   std::cout << "Edges: " << all_edges << "\n";
   std::vector<uint8_t> pattern_lookup(all_edges);
-  std::fill(pattern_lookup.begin(), pattern_lookup.end(), 20);
+  std::fill(pattern_lookup.begin(), pattern_lookup.end(), max_depth);
 
   uint64_t new_state_index = get_edge_index(state, size, edges, edge_rot_indices);
   pattern_lookup[new_state_index] = 0;
-  uint8_t* found_index_stack = new uint8_t[all_edges];
 
-  std::fill_n(found_index_stack, all_edges, 20);
+  std::unordered_map<uint8_t*, uint8_t, RubiksEdgeStateHash, RubiksEdgeStateEqual> closed_nodes;
   uint8_t id_depth = 1;
   uint64_t count = 1;
 
   uint8_t new_state_depth = 0;
-  while (count < all_edges && id_depth < 20)
+  while (count < all_edges && id_depth < max_depth)
   {
     if (stack.empty())
     {
       id_depth += 1;
-      std::fill_n(found_index_stack, all_edges, 20);
       new_state = new uint8_t[40];
       memcpy(new_state, state, 40);
       stack.push(new RubiksIndex(new_state, 0, 0));
       std::cout << "Incrementing id-depth to " << unsigned int(id_depth) << "\n";
     }
-    uint8_t testState[] = { 2, 1, 9, 0, 0, 2, 15, 0, 13, 1, 12, 0, 6, 0, 14, 2, 1, 0, 3, 1, 8, 0, 4, 1, 7, 2, 10, 0, 5, 1, 11, 1, 16, 0, 17, 2, 18, 0, 19, 0 };
-    auto testIndex = get_edge_index(testState, size, edges, edge_rot_indices);
     RubiksIndex* ri = stack.top();
     stack.pop();
     for (uint8_t face = 0; face < 6; ++face)
     {
       if (ri->depth > 0 && Rubiks::skip_rotations(ri->last_face, face))
       {
-        //continue;
+        continue;
       }
       for (uint8_t rotation = 0; rotation < 3; ++rotation)
       {
         new_state = rotate(ri->state, face, rotation);
         new_state_index = get_edge_index(new_state, size, edges, edge_rot_indices);
         new_state_depth = ri->depth + 1;
-        if (new_state_index == testIndex) {
-          std::cout << "Found TARGET NODE AT DEPTH " << unsigned int(new_state_depth) << std::endl;
+        edge_only_state = new uint8_t[24];
+        for (int i = 0; i < 12; i += 2) {
+          edge_only_state[i] = new_state[edge_pos_indices_12[i]];
+          edge_only_state[i + 1] = new_state[edge_rot_indices_12[i + 1]];
         }
-        if (new_state_depth == id_depth && pattern_lookup[new_state_index] == 20)
+        if (new_state_depth == id_depth && pattern_lookup[new_state_index] == max_depth)
         {
           pattern_lookup[new_state_index] = new_state_depth;
           count += 1;
-          if (count % 1000000 == 0 || count > (all_edges * .9999))
+          if (count % 10000000 == 0 || count > (all_edges * .9999))
           {
             std::cout << count << "\n";
           }
           delete[] new_state;
+          delete[] edge_only_state;
         }
-        else if (new_state_depth < id_depth && new_state_depth < found_index_stack[new_state_index])
+        else if (new_state_depth < id_depth && (closed_nodes.count(edge_only_state) == 0 || new_state_depth <= closed_nodes[edge_only_state]))
         {
-          found_index_stack[new_state_index] = new_state_depth;
+          if (closed_nodes.count(edge_only_state) == 0) {
+            closed_nodes[edge_only_state] = new_state_depth;
+          }
+          else {
+            closed_nodes[edge_only_state] = new_state_depth;
+            delete[] edge_only_state;
+          }
           stack.push(new RubiksIndex(new_state, new_state_depth, face));
         }
         else
         {
           delete[] new_state;
+          delete[] edge_only_state;
         }
       }
     }
     delete ri;
   }
-  delete[] found_index_stack;
+
+  auto it = closed_nodes.begin();
+  while (it != closed_nodes.end()) {
+    delete[](*it).first;
+    it++;
+  }
+  closed_nodes.clear();
   for (int i = 0; i < all_edges; ++i) {
     if (pattern_lookup[i] > max_depth) {
       std::cout << "ERROR in Edge Generation, index " << i << " has depth = " << unsigned int(pattern_lookup[i]) << std::endl;

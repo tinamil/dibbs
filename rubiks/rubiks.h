@@ -5,9 +5,11 @@
 #include <vector>
 #include <cmath>
 #include <stack>
+#include <unordered_map>
 #include "npy.hpp"
 #include "mr_rank.h"
 #include "utility.h"
+#include "hash.hpp"
 
 namespace Rubiks
 {
@@ -175,5 +177,27 @@ namespace Rubiks
   {
     std::vector<uint8_t> edge_a, edge_b;
     std::vector<uint8_t> corner_db;
+  };
+
+  struct RubiksEdgeStateHash
+  {
+    inline std::size_t operator() (const uint8_t* s) const {
+      if (s == nullptr) {
+        throw std::invalid_argument("received null pointer value in RubiksStateHash operator ()");
+      }
+      return SuperFastHash(s, 24);
+    }
+  };
+
+  struct RubiksEdgeStateEqual
+  {
+    inline bool operator() (const uint8_t* a, const uint8_t* b) const {
+      {
+        if (a == nullptr || b == nullptr) {
+          throw std::invalid_argument("received null pointer value in RubiksStateEqual operator ()");
+        }
+        return memcmp(a, b, 24) == 0;
+      }
+    }
   };
 }

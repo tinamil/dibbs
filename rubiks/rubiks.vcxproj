@@ -21,7 +21,6 @@
   <ItemGroup>
     <ClCompile Include="a_star.cpp" />
     <ClCompile Include="dibbs.cpp" />
-    <ClCompile Include="hash.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mr_rank.cpp" />
     <ClCompile Include="node.cpp" />

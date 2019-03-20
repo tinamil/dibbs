@@ -11,13 +11,9 @@ void expand(std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &frontie
   uint8_t* new_state;
   Node* next_node = frontier.top();
   frontier.pop();
-  //frontier_closed.insert (next_node);
+  frontier_closed.insert(next_node);
   auto node_index = frontier_set.find(next_node);
-  if (node_index == frontier_set.end())
-  {
-    //std::cout << "BUG: " << frontier_set.size() << " " << frontier.size() << "NULL: " << next_node->print_state() << std::endl;
-  }
-  else
+  if (node_index != frontier_set.end())
   {
     frontier_set.erase(node_index);
   }
@@ -102,7 +98,7 @@ void search::dibbs(const uint8_t start_state[], const Rubiks::PDB pdb_type)
   uint8_t backward_fbar_min = 0;
   int count = 0;
 
-  while (best_node == nullptr || upper_bound > (forward_fbar_min + backward_fbar_min) / 2)
+  while (false && (best_node == nullptr || upper_bound > (forward_fbar_min + backward_fbar_min) / 2))
   {
 
     explore_forward = forward_fbar_min <= backward_fbar_min;
@@ -127,7 +123,7 @@ void search::dibbs(const uint8_t start_state[], const Rubiks::PDB pdb_type)
 
   }
 
-  std::cout << "Solved DIBBS: " << (best_node->depth + best_node->reverse_depth) << " Count = " << count << std::endl;
+  std::cout << "Solved DIBBS: " /*<< (best_node->depth + best_node->reverse_depth) <<*/ " Count = " << count << std::endl;
 
 
   std::cout << "Cleaning up open/closed frontiers" << std::endl;

@@ -17,9 +17,6 @@
     <ClCompile Include="dibbs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="hash.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
