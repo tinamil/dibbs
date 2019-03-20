@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <iostream>
 #include "hash.hpp"
+#include "rubiks.h"
 
 struct Node
 {
@@ -33,7 +34,8 @@ struct Node
   uint8_t get_face() const;
   uint8_t get_rotation() const;
   void set_reverse (const Node* reverse);
-  std::string print_state();
+  std::string print_state() const;
+  std::string print_solution() const;
 };
 
 struct NodeCompare

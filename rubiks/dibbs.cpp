@@ -57,9 +57,9 @@ void expand(std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &frontie
           {
             delete best_node;
           }
-          best_node = new Node(next_node);
+          best_node = new Node(new_node);
           best_node->set_reverse(*search);
-          std::cout << "New upper bound: " << upper_bound << std::endl;
+          std::cout << "New upper bound: " << unsigned int(upper_bound) << std::endl;
         }
       }
     }
@@ -98,7 +98,7 @@ void search::dibbs(const uint8_t start_state[], const Rubiks::PDB pdb_type)
   uint8_t backward_fbar_min = 0;
   int count = 0;
 
-  while (false && (best_node == nullptr || upper_bound > (forward_fbar_min + backward_fbar_min) / 2))
+  while (best_node == nullptr || upper_bound > (forward_fbar_min + backward_fbar_min) / 2)
   {
 
     explore_forward = forward_fbar_min <= backward_fbar_min;
@@ -120,10 +120,10 @@ void search::dibbs(const uint8_t start_state[], const Rubiks::PDB pdb_type)
       std::cout << unsigned(forward_fbar_min) << " " << unsigned(backward_fbar_min) << " ";
       std::cout << unsigned(front_queue.top()->depth) << " " << unsigned(back_queue.top()->depth) << " " << count << "\n";
     }
-
   }
 
-  std::cout << "Solved DIBBS: " /*<< (best_node->depth + best_node->reverse_depth) <<*/ " Count = " << count << std::endl;
+  std::cout << "Solved DIBBS: " << unsigned int(best_node->depth + best_node->reverse_depth) << " Count = " << count << std::endl;
+  std::cout << "Solution: " << best_node->print_solution() << std::endl;
 
 
   std::cout << "Cleaning up open/closed frontiers" << std::endl;

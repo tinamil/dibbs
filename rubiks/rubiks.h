@@ -35,6 +35,8 @@ namespace Rubiks
     counterclockwise = 1,
     half = 2
   };
+  const std::string _face_mapping[] = { "F", "U", "L", "B", "D", "R" };
+  const std::string _rotation_mapping[] = { "", "'", "2" };
 
   const uint8_t __corner_cubies[] = { 0, 2, 5, 7, 12, 14, 17, 19 };
 

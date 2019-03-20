@@ -62,11 +62,10 @@ void search::a_star(const uint8_t state[], const Rubiks::PDB pdb_type)
 
         if (Rubiks::is_solved(new_state))
         {
-          //flip(new_faces);
-          //flip(new_rots);
           std::cout << "Solved IDA*: " << unsigned int(id_depth) << " Count = " << unsigned long long(count) << std::endl;
+          Node n(next_node, new_state, next_node->depth + 1, new_state_heuristic, face, rotation);
+          std::cout << "Solution: " << n.print_solution() << std::endl;
           return;
-          //return new_faces, new_rots, count
         }
         state_stack.push(new Node(next_node, new_state, next_node->depth + 1, new_state_heuristic, face, rotation));
       }

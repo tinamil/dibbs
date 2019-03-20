@@ -76,7 +76,7 @@ void Node::set_reverse(const Node* reverse)
   }
 }
 
-std::string Node::print_state()
+std::string Node::print_state() const
 {
   std::string result;
   for (int i = 0; i < 40; ++i)
@@ -85,6 +85,26 @@ std::string Node::print_state()
     result.append(" ");
   }
   return result;
+}
+
+std::string Node::print_solution() const
+{
+  if ((depth > 0 && (faces == nullptr || rotations == nullptr))
+    || (reverse_depth > 0 && (reverse_faces == nullptr || reverse_rotations == nullptr))) {
+    throw new std::invalid_argument("Cannot print a solution if one of the faces/rotations arrays are null");
+  }
+  std::string solution;
+  for (int i = 0; i < depth; ++i) {
+    solution.append(Rubiks::_face_mapping[faces[i]]);
+    solution.append(Rubiks::_rotation_mapping[rotations[i]]);
+    solution.append(" ");
+  }
+  for (int i = reverse_depth - 1; i >= 0; --i) {
+    solution.append(Rubiks::_face_mapping[reverse_faces[i]]);
+    solution.append(Rubiks::_rotation_mapping[reverse_rotations[i]]);
+    solution.append(" ");
+  }
+  return solution;
 }
 
 bool NodeCompare::operator() (const Node* a, const Node* b) const
