@@ -8,6 +8,7 @@ std::vector<uint8_t*> RubiksLoader::load_cubes(std::string file)
   std::vector<uint8_t*> cubes;
   while (std::getline(infile, line))
   {
+    if (line.at(0) == '#') continue;
     uint8_t* cube = scramble(line);
     cubes.push_back(cube);
   }
