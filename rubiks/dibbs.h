@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <limits>
 #include <unordered_set>
+#include <set>
 #include <queue>
 #include "node.h"
 #include "rubiks.h"

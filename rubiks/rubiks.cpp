@@ -1,36 +1,35 @@
 #include "rubiks.h"
 
-uint8_t* Rubiks::rotate(const uint8_t prev_state[], const uint8_t face, const uint8_t rotation)
+
+void Rubiks::rotate(uint8_t* new_state, const uint8_t face, const uint8_t rotation)
 {
-  uint8_t* new_state = new uint8_t[40];
-  memcpy(new_state, prev_state, 40);
-  uint8_t rotation_index = 6 * rotation + face;
+  const uint8_t rotation_index = 6 * rotation + face;
   if (rotation == 2)
   {
-    for (uint8_t i = 0; i < 40; i += 2)
+    for (int i = 0; i < 20; i++)
     {
-      new_state[i] = __turn_position_lookup[prev_state[i]][rotation_index];
+      new_state[i * 2] = __turn_position_lookup[new_state[i * 2]][rotation_index];
     }
   }
   else
   {
-    for (uint8_t i = 0; i < 40; i += 2)
+    for (int i = 0; i < 20; i++)
     {
-      if (__turn_lookup[prev_state[i]][face])
+      uint8_t index = i * 2;
+      if (__turn_lookup[new_state[index]][face])
       {
-        if (__corner_booleans[i])
+        if (__corner_booleans[index])
         {
-          new_state[i + 1] = __corner_rotation[face][prev_state[i + 1]];
+          new_state[index + 1] = __corner_rotation[face][new_state[index + 1]];
         }
-        else if (face == 2 or face == 5) // Face left and right
+        else if (face == 2 || face == 5) // Face left and right
         {
-          new_state[i + 1] = 1 - prev_state[i + 1];
+          new_state[index + 1] = 1 - new_state[index + 1];
         }
-        new_state[i] = __turn_position_lookup[prev_state[i]][rotation_index];
+        new_state[index] = __turn_position_lookup[new_state[index]][rotation_index];
       }
     }
   }
-  return new_state;
 }
 
 
@@ -39,7 +38,7 @@ uint32_t Rubiks::get_corner_index(const uint8_t state[])
   const static int base3[] = { 729, 243, 81, 27, 9, 3, 1 };
   const static int size = 8;
   uint8_t corners[size];
-  for (uint8_t i = 0; i < size; ++i)
+  for (int i = 0; i < size; ++i)
   {
     corners[i] = __cube_translations[state[__corner_pos_indices[i]]];
   }
@@ -47,7 +46,7 @@ uint32_t Rubiks::get_corner_index(const uint8_t state[])
   uint32_t corner_index = (uint32_t)mr::get_rank(size, corners);
   corner_index *= 2187;
 
-  for (uint8_t i = 0; i < size - 1; ++i)
+  for (int i = 0; i < size - 1; ++i)
   {
     corner_index += state[__corner_rot_indices[i]] * base3[i];
   }
@@ -99,7 +98,7 @@ uint64_t Rubiks::get_edge_index(const uint8_t state[], int size, const uint8_t e
   const uint8_t edge_rot_indices[])
 {
   uint8_t edge_pos[12];
-  for (uint8_t i = 0; i < 12; ++i)
+  for (int i = 0; i < 12; ++i)
   {
     edge_pos[i] = __cube_translations[state[edge_pos_indices_12[i]]];
   }
@@ -117,7 +116,7 @@ uint64_t Rubiks::get_edge_index(const uint8_t state[], int size, const uint8_t e
 
   edge_index *= 1i64 << size;
 
-  for (uint8_t i = 0; i < size; ++i)
+  for (int i = 0; i < size; ++i)
   {
     edge_index += state[edge_rot_indices[i]] * 1i64 << (size - i - 1);
   }
@@ -126,7 +125,7 @@ uint64_t Rubiks::get_edge_index(const uint8_t state[], int size, const uint8_t e
 
 bool Rubiks::is_solved(const uint8_t cube[])
 {
-  for (uint8_t i = 0; i < sizeof __goal; ++i)
+  for (int i = 0; i < 40; ++i)
   {
     if (__goal[i] != cube[i])
     {
@@ -304,15 +303,17 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
     }
     RubiksIndex* ri = stack.top();
     stack.pop();
-    for (uint8_t face = 0; face < 6; ++face)
+    for (int face = 0; face < 6; ++face)
     {
       if (ri->depth > 0 && Rubiks::skip_rotations(ri->last_face, face))
       {
         continue;
       }
-      for (uint8_t rotation = 0; rotation < 3; ++rotation)
+      for (int rotation = 0; rotation < 3; ++rotation)
       {
-        new_state = rotate(ri->state, face, rotation);
+        new_state = new uint8_t[40];
+        memcpy(new_state, ri->state, 40);
+        rotate(new_state, face, rotation);
         new_state_index = get_edge_index(new_state, size, edges, edge_rot_indices);
         new_state_depth = ri->depth + 1;
         edge_only_state = new uint8_t[24];
@@ -401,15 +402,17 @@ void Rubiks::generate_corners_pattern_database(std::string filename, const uint8
 
     RubiksIndex* ri = stack.top();
     stack.pop();
-    for (uint8_t face = 0; face < 6; ++face)
+    for (int face = 0; face < 6; ++face)
     {
       if (ri->depth > 0 && Rubiks::skip_rotations(ri->last_face, face))
       {
         continue;
       }
-      for (uint8_t rotation = 0; rotation < 3; ++rotation)
+      for (int rotation = 0; rotation < 3; ++rotation)
       {
-        new_state = rotate(ri->state, face, rotation);
+        new_state = new uint8_t[40];
+        memcpy(new_state, ri->state, 40);
+        rotate(new_state, face, rotation);
         new_state_index = get_corner_index(new_state);
         new_state_depth = ri->depth + 1;
         if (new_state_depth == id_depth && pattern_lookup[new_state_index] == max_depth)

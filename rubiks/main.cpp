@@ -23,14 +23,13 @@ void search_cubes()
     c_start = clock();
     search::dibbs(cubes[i], type);
     time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
-    //cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
+    cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
   }
 }
 
 int main()
 {
   search_cubes();
-  //Rubiks::generate_goal_dbs();
   //system("PAUSE");
   return 0;
 }

@@ -21,14 +21,13 @@ uint8_t* RubiksLoader::scramble(std::string notation)
 
   std::vector<std::string> moves = utility::tokenizer(notation, ' ');
   RubiksLoader::Move move = convert(moves[0]);
-  uint8_t* state = Rubiks::rotate(Rubiks::__goal, move.face, move.rotation);
+  uint8_t* state = new uint8_t[40];
+  memcpy(state, Rubiks::__goal, 40);
 
-  for (size_t i = 1; i < moves.size(); ++i)
+  for (size_t i = 0; i < moves.size(); ++i)
   {
     RubiksLoader::Move move = convert(moves[i]);
-    uint8_t* new_state = Rubiks::rotate(state, move.face, move.rotation);
-    delete[] state;
-    state = new_state;
+    Rubiks::rotate(state, move.face, move.rotation);
   }
   return state;
 }

@@ -146,7 +146,7 @@ namespace Rubiks
       (last_face == 5 && face == 2) || (last_face == 4 && face == 1);
   }
 
-  extern uint8_t* rotate(const uint8_t prev_state[], uint8_t face, uint8_t rotation);
+  extern void rotate(uint8_t new_state[], const uint8_t face, const uint8_t rotation);
   extern uint32_t get_corner_index(const uint8_t state[]);
 
   extern uint64_t get_edge_index(const uint8_t state[], bool a, PDB type);

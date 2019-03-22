@@ -39,7 +39,7 @@ void search::a_star(const uint8_t state[], const Rubiks::PDB pdb_type)
     {
       std::cout << count << std::endl;
     }
-    for (uint8_t face = 0; face < 6; ++face)
+    for (int face = 0; face < 6; ++face)
     {
 
       if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
@@ -47,9 +47,11 @@ void search::a_star(const uint8_t state[], const Rubiks::PDB pdb_type)
         continue;
       }
 
-      for (uint8_t rotation = 0; rotation < 3; ++rotation)
+      for (int rotation = 0; rotation < 3; ++rotation)
       {
-        new_state = Rubiks::rotate(next_node->state, face, rotation);
+        new_state = new uint8_t[40];
+        memcpy(new_state, next_node->state, 40);
+        Rubiks::rotate(new_state, face, rotation);
 
         uint8_t new_state_heuristic = Rubiks::pattern_lookup(new_state, pdb_type);
         uint8_t new_state_cost = next_node->depth + 1 + new_state_heuristic;
