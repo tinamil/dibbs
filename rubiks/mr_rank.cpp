@@ -51,8 +51,8 @@ uint64_t mr::get_rank(int n, uint8_t *vec)
 {
   uint8_t i;
   uint64_t r;
-  uint8_t* v = new uint8_t[n];
-  uint8_t* inv = new uint8_t[n];
+  uint8_t* v = (uint8_t*) _alloca(n);
+  uint8_t* inv = (uint8_t*)_alloca(n);
 
   for (i = 0; i < n; ++i)
   {
@@ -60,8 +60,8 @@ uint64_t mr::get_rank(int n, uint8_t *vec)
     inv[vec[i]] = i;
   }
   r = _mr_rank1(n, v, inv);
-  delete[] v;
-  delete[] inv;
+  _freea(v);
+  _freea(inv);
   return r;
 }
 

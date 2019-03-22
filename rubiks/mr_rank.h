@@ -6,6 +6,7 @@ https://rosettacode.org/wiki/Permutations/Rank_of_a_permutation
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <malloc.h>
 
 namespace mr
 {

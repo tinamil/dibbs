@@ -33,11 +33,12 @@ void Rubiks::rotate(uint8_t* new_state, const uint8_t face, const uint8_t rotati
 }
 
 
-uint32_t Rubiks::get_corner_index(const uint8_t state[])
+uint32_t Rubiks::get_corner_index(const uint8_t* state)
 {
   const static int base3[] = { 729, 243, 81, 27, 9, 3, 1 };
   const static int size = 8;
   uint8_t corners[size];
+
   for (int i = 0; i < size; ++i)
   {
     corners[i] = __cube_translations[state[__corner_pos_indices[i]]];
