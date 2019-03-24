@@ -348,7 +348,7 @@ void Rubiks::generate_corners_pattern_database(std::string filename, const uint8
     }
     RubiksIndex ri = stack.top();
     stack.pop();
-    #pragma omp parallel for shared(id_depth, pattern_lookup, ri, stack, count, found_index_stack) num_threads(4)
+    #pragma omp parallel for shared(id_depth, pattern_lookup, ri, stack, count, found_index_stack) 
     for (int face = 0; face < 6; ++face)
     {
       if (ri.depth > 0 && Rubiks::skip_rotations(ri.last_face, face))
