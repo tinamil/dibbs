@@ -273,7 +273,7 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
     auto prev_ri = stack.top();
     stack.pop();
 
-    #pragma omp parallel for shared(id_depth, pattern_lookup, prev_ri, stack, count) num_threads(4)
+    #pragma omp parallel for shared(id_depth, pattern_lookup, prev_ri, stack, count) 
     for (int face = 0; face < 6; ++face)
     {
       if (prev_ri.depth > 0 && Rubiks::skip_rotations(prev_ri.last_face, face))
