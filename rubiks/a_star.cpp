@@ -1,7 +1,7 @@
 #include "a_star.h"
 
 
-void search::a_star(const uint8_t state[], const Rubiks::PDB pdb_type)
+void search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
 {
   std::cout << "IDA*" << std::endl;
   std::stack<Node*, std::vector<Node*>> state_stack;
@@ -12,10 +12,12 @@ void search::a_star(const uint8_t state[], const Rubiks::PDB pdb_type)
     return;
   }
 
-  uint8_t* new_state = new uint8_t[40];
-  memcpy(new_state, state, 40);
-  uint8_t id_depth = Rubiks::pattern_lookup(new_state, pdb_type);
-  state_stack.push(new Node(NULL, new_state, id_depth));
+  Node* new_node = new Node();
+  memcpy(new_node->state, state, 40);
+  uint8_t id_depth = Rubiks::pattern_lookup(new_node->state, pdb_type, 0);
+  new_node->heuristic = id_depth;
+  new_node->combined = id_depth;
+  state_stack.push(new_node);
   std::cout << "Minimum number of moves to solve: " << unsigned int(id_depth) << std::endl;
   uint64_t count = 0;
   Node* next_node;
@@ -24,9 +26,11 @@ void search::a_star(const uint8_t state[], const Rubiks::PDB pdb_type)
     if (state_stack.empty())
     {
       id_depth += 1;
-      new_state = new uint8_t[40];
-      memcpy(new_state, state, 40);
-      state_stack.push(new Node(NULL, new_state, id_depth));
+      new_node = new Node();
+      memcpy(new_node->state, state, 40);
+      new_node->heuristic = Rubiks::pattern_lookup(new_node->state, pdb_type, 0);
+      new_node->combined = new_node->heuristic;
+      state_stack.push(new_node);
       std::cout << "Incrementing id-depth to " << unsigned int(id_depth) << std::endl;
     }
 
@@ -49,27 +53,28 @@ void search::a_star(const uint8_t state[], const Rubiks::PDB pdb_type)
 
       for (int rotation = 0; rotation < 3; ++rotation)
       {
-        new_state = new uint8_t[40];
-        memcpy(new_state, next_node->state, 40);
-        Rubiks::rotate(new_state, face, rotation);
+        new_node = new Node(next_node->state, nullptr, next_node->depth + 1, face, rotation, false, pdb_type, next_node->heuristic - 1, 0);
 
-        uint8_t new_state_heuristic = Rubiks::pattern_lookup(new_state, pdb_type);
-        uint8_t new_state_cost = next_node->depth + 1 + new_state_heuristic;
-
-        if (new_state_cost > id_depth)
+        if (new_node->combined > id_depth)
         {
-          delete[] new_state;
+          delete new_node;
           continue;
         }
 
-        if (Rubiks::is_solved(new_state))
+        if (Rubiks::is_solved(new_node->state))
         {
           std::cout << "Solved IDA*: " << unsigned int(id_depth) << " Count = " << unsigned long long(count) << std::endl;
-          Node n(next_node, new_state, next_node->depth + 1, new_state_heuristic, face, rotation);
-          std::cout << "Solution: " << n.print_solution() << std::endl;
+          std::cout << "Solution: " << new_node->print_solution() << std::endl;
+
+          delete new_node;
+          while (state_stack.empty() == false) {
+            next_node = state_stack.top();
+            state_stack.pop();
+            delete next_node;
+          }
           return;
         }
-        state_stack.push(new Node(next_node, new_state, next_node->depth + 1, new_state_heuristic, face, rotation));
+        state_stack.push(new_node);
       }
     }
     delete next_node;

@@ -14,7 +14,7 @@ namespace mr
   uint64_t _mr_rank1(int n, uint8_t *vec, uint8_t *inv);
   void get_permutation(uint64_t rank, int n, uint8_t *vec);
   uint64_t get_rank(int n, uint8_t *vec);
-  uint64_t k_rank(int8_t *locs, uint8_t *dual, unsigned int distinctSize, unsigned int puzzleSize);
+  uint64_t k_rank(uint8_t *locs, uint8_t *dual, int distinctSize, int puzzleSize);
   template <typename T>
   inline void swap(T &a, T &b)
   {

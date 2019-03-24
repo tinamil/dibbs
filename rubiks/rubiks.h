@@ -111,7 +111,7 @@ namespace Rubiks
   const uint8_t __corner_rot_indices[] = { 1, 5, 11, 15, 25, 29, 35, 39 };
 
   const uint8_t corner_max_depth = 11;
-  const uint8_t edge_6_max_depth = 11;
+  const uint8_t edge_6_max_depth = 10;
   const uint8_t edge_8_max_depth = 12;
 
   const uint8_t edge_pos_indices_6a[] = { 2, 6, 8, 12, 16, 18 };
@@ -146,32 +146,29 @@ namespace Rubiks
       (last_face == 5 && face == 2) || (last_face == 4 && face == 1);
   }
 
-  extern void rotate(uint8_t new_state[], const uint8_t face, const uint8_t rotation);
-  extern uint32_t get_corner_index(const uint8_t state[]);
+  extern void rotate(uint8_t* new_state, const uint8_t face, const uint8_t rotation);
+  extern uint32_t get_corner_index(const uint8_t* state);
 
-  extern uint64_t get_edge_index(const uint8_t state[], bool a, PDB type);
-  extern uint64_t get_edge_index(const uint8_t state[], int size, const uint8_t edges[],
-    const uint8_t edge_rot_indices[]);
-  extern bool is_solved(const uint8_t state[]);
-  extern uint8_t pattern_lookup(const uint8_t state[], const uint8_t start_state[], PDB type);
-  inline uint8_t pattern_lookup(const uint8_t state[], PDB type)
+  extern uint64_t get_edge_index(const uint8_t* state, bool a, PDB type);
+  extern uint64_t get_edge_index(const uint8_t* state, int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
+  extern bool is_solved(const uint8_t* state);
+  extern uint8_t pattern_lookup(const uint8_t* state, const uint8_t* start_state, PDB type, int min_val);
+  inline uint8_t pattern_lookup(const uint8_t* state, PDB type, int min_val)
   {
-    return pattern_lookup(state, __goal, type);
+    return pattern_lookup(state, __goal, type, min_val);
   }
-  extern void generate_corners_pattern_database(std::string filename, const uint8_t state[], const uint8_t max_depth);
-  extern void generate_edges_pattern_database(std::string filename, const uint8_t state[], const uint8_t max_depth,
-    const uint8_t size, const uint8_t edge_pos_indices[], const uint8_t edge_rot_indices[]);
+  extern void generate_corners_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth);
+  extern void generate_edges_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth,
+    const uint8_t size, const uint8_t* edge_pos_indices, const uint8_t* edge_rot_indices);
   extern void generate_goal_dbs();
   struct RubiksIndex
   {
-    uint8_t* state;
+    uint8_t state[40];
     const uint8_t depth;
     const uint8_t last_face;
-    RubiksIndex(uint8_t* state, const uint8_t depth, const uint8_t last_face) : state(state), depth(depth),
-      last_face(last_face) {}
-    ~RubiksIndex()
-    {
-      delete[] state;
+    RubiksIndex(const uint8_t depth, const uint8_t last_face) : state(), depth(depth), last_face(last_face) {}
+    RubiksIndex(const RubiksIndex& original) : state(), depth(original.depth), last_face(original.last_face) {
+      memcpy(state, original.state, 40);
     }
   };
 
@@ -187,7 +184,7 @@ namespace Rubiks
       if (s == nullptr) {
         throw std::invalid_argument("received null pointer value in RubiksStateHash operator ()");
       }
-      return SuperFastHash(s, 24);
+      return boost_hash(s, 24);
     }
   };
 

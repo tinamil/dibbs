@@ -29,7 +29,7 @@ void search_cubes()
 
 int main()
 {
+  std::cout << "Size of " << sizeof(Node) << std::endl;
   search_cubes();
-  //system("PAUSE");
   return 0;
 }
