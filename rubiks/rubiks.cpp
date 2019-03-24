@@ -257,8 +257,7 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
   std::vector<uint8_t> pattern_lookup(all_edges);
   std::fill(pattern_lookup.begin(), pattern_lookup.end(), max_depth);
 
-  uint64_t new_state_index = get_edge_index(state, size, edges, edge_rot_indices);
-  pattern_lookup[new_state_index] = 0;
+  pattern_lookup[get_edge_index(state, size, edges, edge_rot_indices)] = 0;
 
   uint8_t id_depth = 1;
   uint64_t count = 1;
@@ -274,7 +273,7 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
     auto prev_ri = stack.top();
     stack.pop();
 
-    #pragma omp parallel for shared(id_depth, pattern_lookup, prev_ri, stack, count) private(new_state_index) num_threads(4)
+    #pragma omp parallel for shared(id_depth, pattern_lookup, prev_ri, stack, count) num_threads(4)
     for (int face = 0; face < 6; ++face)
     {
       if (prev_ri.depth > 0 && Rubiks::skip_rotations(prev_ri.last_face, face))
@@ -287,21 +286,26 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
         RubiksIndex next_ri(new_state_depth, face);
         memcpy(next_ri.state, prev_ri.state, 40);
         rotate(next_ri.state, face, rotation);
-        new_state_index = get_edge_index(next_ri.state, size, edges, edge_rot_indices);
-        #pragma omp critical
+        uint64_t new_state_index = get_edge_index(next_ri.state, size, edges, edge_rot_indices);
+        if (new_state_depth < id_depth)
         {
-          if (new_state_depth == id_depth && pattern_lookup[new_state_index] == max_depth)
-          {
-            pattern_lookup[new_state_index] = new_state_depth;
-            ++count;
-            if (count % 10000000 == 0 || count > (all_edges * .9999))
-            {
-              std::cout << count << "\n";
-            }
-          }
-          else if (new_state_depth < id_depth)
+          #pragma omp critical (stack)
           {
             stack.push(next_ri);
+          }
+        }
+        else {
+          #pragma omp critical (pattern)
+          {
+            if (pattern_lookup[new_state_index] == max_depth)
+            {
+              pattern_lookup[new_state_index] = new_state_depth;
+              ++count;
+              if (count % 10000000 == 0 || count > (all_edges * .9999))
+              {
+                std::cout << count << "\n";
+              }
+            }
           }
         }
       }
@@ -320,9 +324,9 @@ void Rubiks::generate_corners_pattern_database(std::string filename, const uint8
 {
   std::cout << "Generating corners db\n";
   std::stack<RubiksIndex> stack;
-  RubiksIndex ri(0, 0);
-  memcpy(ri.state, state, 40);
-  stack.push(ri);
+  RubiksIndex original_ri(0, 0);
+  memcpy(original_ri.state, state, 40);
+  stack.push(original_ri);
 
   //# 8 corners for 8 positions, 7 of which can have 3 unique rotations, 88179840 possibilities
   uint32_t all_corners = 88179840;
@@ -333,19 +337,18 @@ void Rubiks::generate_corners_pattern_database(std::string filename, const uint8
   uint8_t id_depth = 1;
   uint32_t count = 1;
 
-  uint32_t new_state_index = 0;
-  uint8_t new_state_depth = 0;
   while (count < all_corners && id_depth < max_depth)
   {
     if (stack.empty())
     {
       id_depth += 1;
       std::fill_n(found_index_stack, all_corners, max_depth);
-      stack.push(ri);
+      stack.push(original_ri);
       std::cout << "Incrementing id-depth to " << int(id_depth) << "\n";
     }
     RubiksIndex ri = stack.top();
     stack.pop();
+    #pragma omp parallel for shared(id_depth, pattern_lookup, ri, stack, count, found_index_stack) num_threads(4)
     for (int face = 0; face < 6; ++face)
     {
       if (ri.depth > 0 && Rubiks::skip_rotations(ri.last_face, face))
@@ -354,24 +357,33 @@ void Rubiks::generate_corners_pattern_database(std::string filename, const uint8
       }
       for (int rotation = 0; rotation < 3; ++rotation)
       {
-        new_state_depth = ri.depth + 1;
+        uint8_t new_state_depth = ri.depth + 1;
         RubiksIndex next_ri(new_state_depth, face);
         memcpy(next_ri.state, ri.state, 40);
         rotate(next_ri.state, face, rotation);
-        new_state_index = get_corner_index(next_ri.state);
-        if (new_state_depth == id_depth && pattern_lookup[new_state_index] == max_depth)
-        {
-          pattern_lookup[new_state_index] = new_state_depth;
-          count += 1;
-          if (count % 1000000 == 0 || count > 88100000)
+        uint32_t new_state_index = get_corner_index(next_ri.state);
+        if (new_state_depth < id_depth) {
+          #pragma omp critical (stack)
           {
-            std::cout << count << "\n";
+            if (new_state_depth < found_index_stack[new_state_index]) {
+              found_index_stack[new_state_index] = new_state_depth;
+              stack.push(next_ri);
+            }
           }
         }
-        else if (new_state_depth < id_depth && new_state_depth < found_index_stack[new_state_index])
+        else if (new_state_depth == id_depth)
         {
-          found_index_stack[new_state_index] = new_state_depth;
-          stack.push(next_ri);
+          #pragma omp critical (pattern)
+          {
+            if (pattern_lookup[new_state_index] == max_depth) {
+              pattern_lookup[new_state_index] = new_state_depth;
+              count += 1;
+              if (count % 1000000 == 0 || count > 88100000)
+              {
+                std::cout << count << "\n";
+              }
+            }
+          }
         }
       }
     }
