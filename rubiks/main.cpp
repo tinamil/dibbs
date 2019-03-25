@@ -12,6 +12,7 @@ void search_cubes()
 {
   vector<uint8_t*> cubes = RubiksLoader::load_cubes("korf1997.txt");
   PDB type = PDB::a1997;
+  PDB type = PDB::a12;
 
   for (size_t i = 0; i < cubes.size(); ++i)
   {

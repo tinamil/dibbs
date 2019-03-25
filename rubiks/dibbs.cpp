@@ -69,13 +69,10 @@ void expand(std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &frontie
     }
     for (int rotation = 0; rotation < 3; ++rotation)
     {
-      Node* new_node = new Node(next_node->state, start_state, next_node->depth + 1, face, rotation, reverse, type, next_node->heuristic - 1, next_node->reverse_heuristic - 1);
-
-      uint8_t h = new_node->combined - new_node->depth;
-      uint8_t old_h = next_node->combined - next_node->depth;
-
-      if (h + 1 < old_h) {
-        std::cout << "ERROR: " << unsigned(h) << " " << unsigned(old_h) << " " << reverse << std::endl;
+      Node* new_node = new Node(next_node->state, start_state, next_node->depth + 1, face, rotation, reverse, type, 0, 0);
+      
+      if (new_node->combined < next_node->combined) {
+        std::cout << "DIBBS INCONSISTENCY ERROR: " << unsigned(new_node->combined) << " " << unsigned(next_node->combined) << " " << reverse << std::endl;
       }
 
       auto search = frontier_set.find(new_node);

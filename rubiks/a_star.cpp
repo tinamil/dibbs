@@ -39,7 +39,7 @@ void search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
     {
       std::cout << count << std::endl;
     }
-    #pragma omp parallel for shared(next_node, pdb_type, id_depth, count)  
+    #pragma omp parallel for
     for (int face = 0; face < 6; ++face)
     {
 
@@ -50,7 +50,11 @@ void search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
 
       for (int rotation = 0; rotation < 3; ++rotation)
       {
-        Node new_node (next_node.state, nullptr, next_node.depth + 1, face, rotation, false, pdb_type, next_node.heuristic - 1, 0);
+        Node new_node(next_node.state, nullptr, next_node.depth + 1, face, rotation, false, pdb_type, 0, 0);
+
+        if (new_node.combined < next_node.combined) {
+          std::cout << "Consistency error: " << unsigned(new_node.combined) << " < " << unsigned(next_node.combined) << " " << std::endl;
+        }
 
         if (new_node.combined > id_depth)
         {
@@ -63,7 +67,10 @@ void search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
           std::cout << "Solution: " << new_node.print_solution() << std::endl;
           done = true;
         }
-        state_stack.push(new_node);
+        #pragma omp critical (stack)
+        {
+          state_stack.push(new_node);
+        }
       }
     }
   }

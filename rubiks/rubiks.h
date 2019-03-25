@@ -16,7 +16,7 @@ namespace Rubiks
 
   enum PDB
   {
-    a1997, a888, zero
+    a1997, a888, zero, a12
   };
 
   enum Face
@@ -113,6 +113,8 @@ namespace Rubiks
   const uint8_t corner_max_depth = 11;
   const uint8_t edge_6_max_depth = 10;
   const uint8_t edge_8_max_depth = 12;
+  const uint8_t edge_12_pos_max_depth = 10;
+  const uint8_t edge_20_rot_max_depth = 9;
 
   const uint8_t edge_pos_indices_6a[] = { 2, 6, 8, 12, 16, 18 };
   const uint8_t edge_rot_indices_6a[] = { 3, 7, 9, 13, 17, 19 };
@@ -131,6 +133,8 @@ namespace Rubiks
   const uint8_t edges_8a[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
   const uint8_t edges_8b[] = { 4, 5, 6, 7, 8, 9, 10, 11 };
 
+  const static int base2[] = { 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1 };
+  const static int base3[] = { 729, 243, 81, 27, 9, 3, 1 };
 
   const uint8_t __goal[] = { 0, 0, 1, 0, 2, 0, 3, 0,
                             4, 0, 5, 0, 6, 0, 7, 0,
@@ -151,6 +155,8 @@ namespace Rubiks
 
   extern uint64_t get_edge_index(const uint8_t* state, bool a, PDB type);
   extern uint64_t get_edge_index(const uint8_t* state, int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
+  extern uint64_t get_new_edge_pos_index(const uint8_t* state);
+  extern uint64_t get_new_edge_rot_index(const uint8_t* state);
   extern bool is_solved(const uint8_t* state);
   extern uint8_t pattern_lookup(const uint8_t* state, const uint8_t* start_state, PDB type, int min_val);
   inline uint8_t pattern_lookup(const uint8_t* state, PDB type, int min_val)
@@ -158,8 +164,9 @@ namespace Rubiks
     return pattern_lookup(state, __goal, type, min_val);
   }
   extern void generate_corners_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth);
-  extern void generate_edges_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth,
-    const uint8_t size, const uint8_t* edge_pos_indices, const uint8_t* edge_rot_indices);
+  extern void generate_edges_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth, const uint8_t size, const uint8_t* edge_pos_indices, const uint8_t* edge_rot_indices);
+  extern void generate_edges_pos_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth);
+  extern void generate_rotations_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth);
   extern void generate_goal_dbs();
   struct RubiksIndex
   {
