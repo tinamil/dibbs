@@ -70,7 +70,7 @@ void expand(std::priority_queue<Node*, std::vector<Node*>, NodeCompare> &frontie
     for (int rotation = 0; rotation < 3; ++rotation)
     {
       Node* new_node = new Node(next_node->state, start_state, next_node->depth + 1, face, rotation, reverse, type, 0, 0);
-      
+
       if (new_node->combined < next_node->combined) {
         std::cout << "DIBBS INCONSISTENCY ERROR: " << unsigned(new_node->combined) << " " << unsigned(next_node->combined) << " " << reverse << std::endl;
       }
@@ -152,7 +152,7 @@ void search::dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
   uint8_t backward_fbar_min = 0;
   int count = 0;
 
-  while (false && (best_node == nullptr || upper_bound > (forward_fbar_min + backward_fbar_min) / 2))
+  while (best_node == nullptr || upper_bound > (forward_fbar_min + backward_fbar_min) / 2)
   {
 
     if (forward_fbar_min == backward_fbar_min) {
@@ -190,8 +190,8 @@ void search::dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
     }
   }
 
-  //std::cout << "Solved DIBBS: " << unsigned int(best_node->depth + best_node->reverse_depth) << " Count = " << count << std::endl;
-  //std::cout << "Solution: " << best_node->print_solution() << std::endl;
+  std::cout << "Solved DIBBS: " << unsigned int(best_node->depth + best_node->reverse_depth) << " Count = " << count << std::endl;
+  std::cout << "Solution: " << best_node->print_solution() << std::endl;
 
 
   std::cout << "Cleaning up open/closed frontiers" << std::endl;

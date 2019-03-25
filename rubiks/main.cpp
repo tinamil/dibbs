@@ -11,7 +11,6 @@ using namespace Rubiks;
 void search_cubes()
 {
   vector<uint8_t*> cubes = RubiksLoader::load_cubes("korf1997.txt");
-  PDB type = PDB::a1997;
   PDB type = PDB::a12;
 
   for (size_t i = 0; i < cubes.size(); ++i)
@@ -23,6 +22,7 @@ void search_cubes()
     cout << "IDA* CPU time used: " << time_elapsed_ms << " s" << endl;
     c_start = clock();
     search::dibbs(cubes[i], type);
+    c_end = clock();
     time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
     cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
   }
