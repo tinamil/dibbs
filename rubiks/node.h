@@ -36,6 +36,7 @@ struct Node
 struct NodeCompare
 {
   bool operator() (const Node* a, const Node* b) const;
+  bool operator() (const Node& a, const Node& b) const;
 };
 
 struct NodeHash

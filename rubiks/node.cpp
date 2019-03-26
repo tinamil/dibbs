@@ -108,16 +108,21 @@ std::string Node::print_solution() const
 
 bool NodeCompare::operator() (const Node* a, const Node* b) const
 {
-  //int cmp = memcmp(a->state, b->state, 40);
-  //if (cmp == 0) {
-  //  return false;
-  //}
-  //else if (a->f_bar == b->f_bar) {
-  //  return cmp < 0;
-  //}
-  //else {
   return a->f_bar > b->f_bar;
-  //}
+}
+
+bool NodeCompare::operator() (const Node& a, const Node& b) const
+{
+  int cmp = memcmp(a.state, b.state, 40);
+  if (cmp == 0) {
+    return false;
+  }
+  else if (a.f_bar == b.f_bar) {
+    return cmp < 0;
+  }
+  else {
+    return a.f_bar < b.f_bar;
+  }
 }
 
 size_t NodeHash::operator() (const Node* s) const
