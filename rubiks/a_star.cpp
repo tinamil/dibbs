@@ -26,7 +26,7 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
   original_node.heuristic = id_depth;
   original_node.combined = id_depth;
   std::cout << "Minimum number of moves to solve: " << unsigned int(id_depth) << std::endl;
-  bool done(false);
+  std::atomic_bool done(false);
   uint64_t count = 0;
 
   for (int face = 0; face < 6; ++face)
@@ -47,7 +47,7 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
 
   bool* done_array = new bool[omp_get_max_threads()];
 
-  #pragma omp parallel reduction(+: count) shared(shared_stack, done, id_depth, original_node, done_array)
+  #pragma omp parallel reduction(+: count) shared(shared_stack, done, id_depth, done_array)
   {
     std::stack<Node, std::vector<Node>> my_stack;
     while (done == false)
