@@ -130,7 +130,17 @@ size_t NodeHash::operator() (const Node* s) const
   return boost_hash(s->state, 40);
 }
 
+size_t NodeHash::operator() (const Node& s) const
+{
+  return boost_hash(s.state, 40);
+}
+
 bool NodeEqual::operator() (const Node* a, const Node* b) const
 {
   return memcmp(a->state, b->state, 40) == 0;
+}
+
+bool NodeEqual::operator() (const Node& a, const Node& b) const
+{
+  return memcmp(a.state, b.state, 40) == 0;
 }

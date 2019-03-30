@@ -42,9 +42,11 @@ struct NodeCompare
 struct NodeHash
 {
   std::size_t operator() (const Node* s) const;
+  std::size_t operator() (const Node& s) const;
 };
 
 struct NodeEqual
 {
   bool operator() (const Node* a, const Node* b) const;
+  bool operator() (const Node& a, const Node& b) const;
 };

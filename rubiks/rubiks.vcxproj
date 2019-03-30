@@ -37,6 +37,7 @@
     <ClInclude Include="npy.hpp" />
     <ClInclude Include="rubiks.h" />
     <ClInclude Include="rubiks_loader.h" />
+    <ClInclude Include="thread_safe_stack.hpp" />
     <ClInclude Include="utility.h" />
   </ItemGroup>
   <ItemGroup>
