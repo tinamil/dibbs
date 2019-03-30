@@ -11,6 +11,17 @@ public:
     omp_init_lock(&omp_lock);
   }
 
+  void copy(thread_safe_stack<T> &other) {
+    lock();
+    other.lock();
+    storage.clear();
+    for (size_t i = 0; i < other.storage.size(); ++i) {
+      storage.push_back(other.storage[i]);
+    }
+    other.unlock();
+    unlock();
+  }
+
   void push(T value) {
     lock();
     storage.push_back(value);
