@@ -47,7 +47,7 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
 
   bool* done_array = new bool[omp_get_max_threads()];
 
-  #pragma omp parallel reduction(+: count) shared(shared_stack, done, id_depth, done_array)
+  #pragma omp parallel default(none) reduction(+: count) shared(shared_stack, base_stack, done, id_depth, done_array)
   {
     std::stack<Node, std::vector<Node>> my_stack;
     while (done == false)
