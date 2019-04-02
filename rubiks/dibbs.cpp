@@ -107,20 +107,19 @@ void search::dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
 
     if (count % 100000 == 0)
     {
+      int h_balance = 0;
+      for (auto id = front_multi.begin(); id != front_multi.end(); ++id) {
+        Node n = *id;
+        if (n.heuristic - 1 >= n.reverse_heuristic) {
+          h_balance++;
+        }
+      }
       std::cout << unsigned(forward_fbar_min) << " " << unsigned(backward_fbar_min) << " ";
       std::cout << "Front: " << unsigned((*front_multi.begin()).depth) << " " << unsigned((*front_multi.begin()).heuristic) << " " << unsigned((*front_multi.begin()).reverse_heuristic);
       std::cout << " Back: " << unsigned((*back_multi.begin()).depth) << " " << unsigned((*back_multi.begin()).heuristic) << " " << unsigned((*back_multi.begin()).reverse_heuristic);
       std::cout << " " << count << " ";
-      std::cout << "FQueue: " << front_multi.size() << " BQueue: " << back_multi.size() << "\n";
-
-      int h_balance = 0;
-      for (auto id = front_multi.begin(); id != front_multi.end(); ++id) {
-        Node n = *id;
-        if (n.heuristic <= n.reverse_heuristic) {
-          h_balance++;
-        }
-      }
-      std::cout << "H-balance: " << h_balance << " " << double(h_balance) / front_multi.size() << '\n';
+      std::cout << "FQueue: " << front_multi.size() << " BQueue: " << back_multi.size();
+      std::cout << " H-balance: " << h_balance << " " << double(h_balance) / front_multi.size() << '\n';
     }
   }
 
