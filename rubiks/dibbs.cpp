@@ -204,15 +204,13 @@ bool expand_forward(std::stack<Node, std::vector<Node>> & front_stack,
           front_stack.push(new_node);
         }
 
-        if (new_node.heuristic <= new_node.reverse_heuristic + lambda) {
-          auto existing = front_multi.find(new_node);
-          if (existing == front_multi.end()) {
-            front_multi.insert(new_node);
-          }
-          else if ((*existing).depth > new_node.depth) {
-            front_multi.erase(existing);
-            front_multi.insert(new_node);
-          }
+        auto existing = front_multi.find(new_node);
+        if (existing == front_multi.end()) {
+          front_multi.insert(new_node);
+        }
+        else if ((*existing).f_bar > new_node.f_bar) {
+          front_multi.erase(existing);
+          front_multi.insert(new_node);
         }
       }
     }
@@ -233,8 +231,6 @@ size_t search::id_dibbs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
     return 0;
   }
 
-  std::unordered_set<Node, NodeHash, NodeEqual> front_multi;
-
   uint8_t upper_bound = std::numeric_limits<uint8_t>::max();
 
   std::stack<Node, std::vector<Node>> forward_stack, backward_stack;
@@ -245,12 +241,17 @@ size_t search::id_dibbs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
   Node goal(Rubiks::__goal, start_state, pdb_type);
   backward_stack.push(goal);
 
+
+  std::unordered_set<Node, NodeHash, NodeEqual> front_multi;
+  front_multi.insert(start);
+
   Node* best_node = nullptr;
   size_t count = 0;
   size_t id_limit = 15;
 
   unsigned int forward_fbar_min(0), backward_fbar_min(0);
   //epsilon is the smallest edge cost, must be >0 but can be infinitesmal
+  return 0;
   while (best_node == nullptr || upper_bound >= (forward_fbar_min + backward_fbar_min) / 2.0f + epsilon)
   {
     if (backward_stack.empty()) {
@@ -261,6 +262,7 @@ size_t search::id_dibbs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
         expand_forward(forward_stack, front_multi, false, pdb_type, start_state, forward_fbar_min, count, lambda);
       }
       backward_fbar_min += 1;
+      std::cout << "Searching backwards depth " << backward_fbar_min << '\n';
     }
 
     expand_backwards(backward_stack, front_multi, upper_bound, best_node, true, pdb_type, start_state, backward_fbar_min);
