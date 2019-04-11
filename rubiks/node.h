@@ -22,8 +22,8 @@ struct Node
   uint8_t reverse_heuristic;
 
   Node();
-  Node(const uint8_t* prev_state, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
-    const bool reverse, const Rubiks::PDB type, const int min_heuristic, const int min_reverse_heuristic);
+  Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type);
+  Node(const uint8_t* prev_state, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation, const bool reverse, const Rubiks::PDB type);
   Node(const Node& old_obj);
   ~Node();
 

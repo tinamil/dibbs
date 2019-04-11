@@ -18,16 +18,17 @@ void search_cubes()
   for (size_t i = 0; i < cubes.size(); ++i)
   {
     clock_t c_start = clock();
-    count_results.push_back(search::a_star(cubes[i], type));
+    //count_results.push_back(search::a_star(cubes[i], type));
     clock_t c_end = clock();
     auto time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
-    time_results.push_back(time_elapsed_ms);
-    cout << "IDA* CPU time used: " << time_elapsed_ms << " s" << endl;
+    //time_results.push_back(time_elapsed_ms);
+    //cout << "IDA* CPU time used: " << time_elapsed_ms << " s" << endl;
     c_start = clock();
-    //search::id_dibbs(cubes[i], type);
+    count_results.push_back(search::id_dibbs(cubes[i], type));
     c_end = clock();
     time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
-    //cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
+    time_results.push_back(time_elapsed_ms);
+    cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
   }
 
   for (size_t i = 0; i < count_results.size(); ++i) {

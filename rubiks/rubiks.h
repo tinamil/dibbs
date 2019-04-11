@@ -158,10 +158,10 @@ namespace Rubiks
   extern uint64_t get_new_edge_pos_index(const uint8_t* state);
   extern uint64_t get_new_edge_rot_index(const uint8_t* state);
   extern bool is_solved(const uint8_t* state);
-  extern uint8_t pattern_lookup(const uint8_t* state, const uint8_t* start_state, PDB type, int min_val);
-  inline uint8_t pattern_lookup(const uint8_t* state, PDB type, int min_val)
+  extern uint8_t pattern_lookup(const uint8_t* state, const uint8_t* start_state, PDB type);
+  inline uint8_t pattern_lookup(const uint8_t* state, PDB type)
   {
-    return pattern_lookup(state, __goal, type, min_val);
+    return pattern_lookup(state, __goal, type);
   }
   extern void generate_corners_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth);
   extern void generate_edges_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth, const uint8_t size, const uint8_t* edge_pos_indices, const uint8_t* edge_rot_indices);

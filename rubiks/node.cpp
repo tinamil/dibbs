@@ -2,15 +2,23 @@
 
 Node::Node() : state(), face(0), depth(0), combined(0), f_bar(0), reverse_depth(0), heuristic(0), reverse_heuristic(0) {}
 
+Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type) : face(0), depth(0), reverse_depth(0) {
+  memcpy(state, prev_state, 40);
+  heuristic = Rubiks::pattern_lookup(state, start_state, type);
+  reverse_heuristic = 0;
+  f_bar = heuristic;
+  combined = heuristic;
+}
+
 Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
-  const bool reverse, const Rubiks::PDB type, const int min_heuristic, const int min_reverse_heuristic) : face(_face), depth(_depth), reverse_depth(0)
+  const bool reverse, const Rubiks::PDB type) : face(_face), depth(_depth), reverse_depth(0)
 {
   memcpy(state, prev_state, 40);
   Rubiks::rotate(state, _face, _rotation);
 
-  heuristic = Rubiks::pattern_lookup(state, type, min_heuristic);
+  heuristic = Rubiks::pattern_lookup(state, type);
   if (start_state != nullptr) {
-    reverse_heuristic = Rubiks::pattern_lookup(state, start_state, type, min_reverse_heuristic);
+    reverse_heuristic = Rubiks::pattern_lookup(state, start_state, type);
     if (reverse)
     {
       uint8_t tmp = heuristic;
@@ -34,7 +42,7 @@ Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const uint8_t 
   }*/
 }
 
-Node::Node(const Node &old_node) : face(old_node.face), depth(old_node.depth), combined(old_node.combined), reverse_depth(old_node.reverse_depth),
+Node::Node(const Node& old_node) : face(old_node.face), depth(old_node.depth), combined(old_node.combined), reverse_depth(old_node.reverse_depth),
 f_bar(old_node.f_bar), heuristic(old_node.heuristic), reverse_heuristic(old_node.reverse_heuristic)
 {
   memcpy(state, old_node.state, 40);
