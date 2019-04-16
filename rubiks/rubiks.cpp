@@ -172,6 +172,7 @@ bool Rubiks::is_solved(const uint8_t * cube)
   return true;
 }
 
+
 uint8_t Rubiks::pattern_lookup(const uint8_t * state, const uint8_t * start_state, PDB type)
 {
   if (type == PDB::zero)
@@ -179,7 +180,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t * state, const uint8_t * start_stat
     return 0;
   }
 
-  static std::unordered_map<const uint8_t*, PDBVectors*> initialized_pdbs;
+  static std::unordered_map<const uint8_t*, PDBVectors*, StateHash, StateHash> initialized_pdbs;
   auto pdbs = initialized_pdbs.find(start_state);
   PDBVectors* vectors = nullptr;
   if (pdbs != initialized_pdbs.end()) {

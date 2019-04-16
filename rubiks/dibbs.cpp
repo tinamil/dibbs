@@ -247,11 +247,10 @@ size_t search::id_dibbs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
 
   Node* best_node = nullptr;
   size_t count = 0;
-  size_t id_limit = 15;
+  size_t id_limit = 14;
 
   unsigned int forward_fbar_min(0), backward_fbar_min(0);
   //epsilon is the smallest edge cost, must be >0 but can be infinitesmal
-  return 0;
   while (best_node == nullptr || upper_bound >= (forward_fbar_min + backward_fbar_min) / 2.0f + epsilon)
   {
     if (backward_stack.empty()) {
