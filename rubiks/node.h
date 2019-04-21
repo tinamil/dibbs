@@ -8,8 +8,8 @@
 struct Node
 {
   uint8_t state[40];
-  //uint8_t* reverse_faces = nullptr;
-  //uint8_t* faces = nullptr;
+  uint8_t reverse_faces[20];
+  uint8_t faces[20];
   uint8_t face;
 
   uint8_t depth;
@@ -23,9 +23,8 @@ struct Node
 
   Node();
   Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type);
-  Node(const uint8_t* prev_state, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation, const bool reverse, const Rubiks::PDB type);
+  Node(const Node& parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation, const bool reverse, const Rubiks::PDB type);
   Node(const Node& old_obj);
-  ~Node();
 
   uint8_t get_face() const;
   void set_reverse(const Node* reverse);

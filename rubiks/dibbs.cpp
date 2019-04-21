@@ -19,7 +19,7 @@ void expand(std::multiset<Node, NodeCompare>& front_multi,
     }
     for (int rotation = 0; rotation < 3; ++rotation)
     {
-      Node new_node(next_node.state, start_state, next_node.depth + 1, face, rotation, reverse, type);
+      Node new_node(next_node, start_state, next_node.depth + 1, face, rotation, reverse, type);
 
       uint8_t reverse_cost = 0;
       auto search = back_multi.find(new_node);
@@ -146,7 +146,7 @@ void expand_backwards(std::stack<Node, std::vector<Node>> & front_stack,
     }
     for (int rotation = 0; rotation < 3; ++rotation)
     {
-      Node new_node(next_node.state, start_state, next_node.depth + 1, face, rotation, reverse, type);
+      Node new_node(next_node, start_state, next_node.depth + 1, face, rotation, reverse, type);
 
       if (new_node.f_bar <= id_depth) {
         front_stack.push(new_node);
@@ -198,7 +198,7 @@ bool expand_forward(std::stack<Node, std::vector<Node>> & front_stack,
       }
       for (int rotation = 0; rotation < 3; ++rotation)
       {
-        Node new_node(next_node.state, start_state, next_node.depth + 1, face, rotation, reverse, type);
+        Node new_node(next_node, start_state, next_node.depth + 1, face, rotation, reverse, type);
 
         if (new_node.f_bar <= id_depth) {
           front_stack.push(new_node);

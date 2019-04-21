@@ -33,7 +33,7 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
   {
     for (int rotation = 0; rotation < 3; ++rotation)
     {
-      Node new_node(original_node.state, nullptr, 1, face, rotation, false, pdb_type);
+      Node new_node(original_node, state, 1, face, rotation, false, pdb_type);
       count += 1;
       if (Rubiks::is_solved(new_node.state))
       {
@@ -97,7 +97,7 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
 
         for (int rotation = 0; rotation < 3; ++rotation)
         {
-          Node new_node(next_node.state, nullptr, next_node.depth + 1, face, rotation, false, pdb_type);
+          Node new_node(next_node, state, next_node.depth + 1, face, rotation, false, pdb_type);
 
           if (new_node.combined < next_node.combined) {
             std::cout << "Consistency error: " << unsigned(new_node.combined) << " < " << unsigned(next_node.combined) << " " << std::endl;
