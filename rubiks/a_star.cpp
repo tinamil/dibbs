@@ -1,6 +1,6 @@
 #include "a_star.h"
 
-bool all_done(const bool* done_array) {
+bool all_done(const std::atomic_bool* done_array) {
   for (int i = 0; i < omp_get_num_threads(); ++i) {
     if (done_array[i] == false) {
       return false;
@@ -45,9 +45,9 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
     }
   }
 
-  bool* done_array = new bool[omp_get_max_threads()];
+  std::atomic_bool* done_array = new std::atomic_bool[omp_get_max_threads()];
 
-  #pragma omp parallel default(none) reduction(+: count) shared(shared_stack, base_stack, done, id_depth, done_array, std::cout)
+  #pragma omp parallel default(none) reduction(+: count) shared(shared_stack, base_stack, done, id_depth, done_array, std::cout, state)
   {
     std::stack<Node, std::vector<Node>> my_stack;
     while (done == false)
@@ -110,9 +110,9 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
 
           if (Rubiks::is_solved(new_node.state))
           {
+            done = true;
             std::cout << "Solved IDA*: " << unsigned int(id_depth) << std::endl;
             std::cout << "Solution: " << new_node.print_solution() << std::endl;
-            done = true;
           }
 
           my_stack.push(new_node);
