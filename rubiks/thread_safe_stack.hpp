@@ -11,7 +11,7 @@ public:
     omp_init_lock(&omp_lock);
   }
 
-  void copy(thread_safe_stack<T> &other) {
+  void copy(thread_safe_stack<T>& other) {
     lock();
     other.lock();
     storage.clear();
@@ -22,7 +22,7 @@ public:
     unlock();
   }
 
-  void push(T value) {
+  void push(const T& value) {
     lock();
     storage.push_back(value);
     unlock();
@@ -37,7 +37,7 @@ public:
       storage.pop_back();
     }
     unlock();
-    return std::pair<bool, T>(success, value);
+    return std::pair(success, value);
   }
 
 
