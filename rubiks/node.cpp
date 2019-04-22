@@ -88,9 +88,9 @@ std::string Node::print_solution() const
     throw new std::invalid_argument("Cannot print a solution if one of the faces/rotations arrays are null");
   }
   std::string solution;
+  for (int i = 0; i < depth; ++i) {
     solution.append(Rubiks::_face_mapping[faces[i] / 6]);
     solution.append(Rubiks::_rotation_mapping[faces[i] % 3]);
-  for (int i = 0; i < depth; ++i) {
     solution.append(" ");
   }
   for (int i = reverse_depth - 1; i >= 0; --i) {

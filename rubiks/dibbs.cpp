@@ -180,7 +180,8 @@ bool expand_forward(std::stack<Node, std::vector<Node>> & front_stack,
   const uint8_t * start_state,
   const int id_depth,
   size_t & count,
-  const uint8_t lambda)
+  int &lambda,
+  const size_t node_limit)
 {
   std::cout << "Expanding forward layer " << id_depth << '\n';
   while (front_stack.empty() == false) {
@@ -203,14 +204,30 @@ bool expand_forward(std::stack<Node, std::vector<Node>> & front_stack,
         if (new_node.f_bar <= id_depth) {
           front_stack.push(new_node);
         }
+        if(new_node.f_bar == id_depth && new_node.heuristic + lambda <= new_node.reverse_heuristic) {
+          auto existing = front_multi.find(new_node);
+          if (existing == front_multi.end()) {
+            front_multi.insert(new_node);
+          }
+          else if ((*existing).depth > new_node.depth) {
+            //Must check because we are searching in DFS order, not BFS
+            front_multi.erase(existing);
+            front_multi.insert(new_node);
+          }
 
-        auto existing = front_multi.find(new_node);
-        if (existing == front_multi.end()) {
-          front_multi.insert(new_node);
-        }
-        else if ((*existing).f_bar > new_node.f_bar) {
-          front_multi.erase(existing);
-          front_multi.insert(new_node);
+          if (front_multi.size() > node_limit) {
+            lambda += 1;
+            std::cout << "Reached node limit " << front_multi.size() << " new lambda = " << std::to_string(lambda) << '\n';
+
+            for (auto i = front_multi.begin(), last = front_multi.end(); i != last; ) {
+              if ((*i).heuristic + lambda > (*i).reverse_heuristic) {
+                i = front_multi.erase(i);
+              }
+              else {
+                ++i;
+              }
+            }
+          }
         }
       }
     }
@@ -223,7 +240,7 @@ size_t search::id_dibbs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
 {
   std::cout << "ID-DIBBS" << std::endl;
   const uint8_t epsilon = 1;
-  const uint8_t lambda = 1;
+  int lambda = -1;
 
   if (Rubiks::is_solved(start_state))
   {
@@ -241,25 +258,22 @@ size_t search::id_dibbs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
   Node goal(Rubiks::__goal, start_state, pdb_type);
   backward_stack.push(goal);
 
-
   std::unordered_set<Node, NodeHash, NodeEqual> front_multi;
   front_multi.insert(start);
 
   Node* best_node = nullptr;
   size_t count = 0;
-  size_t id_limit = 14;
+  const size_t node_limit = (size_t)1e8;
 
-  unsigned int forward_fbar_min(0), backward_fbar_min(0);
+  unsigned int forward_fbar_min(1), backward_fbar_min(0);
   //epsilon is the smallest edge cost, must be >0 but can be infinitesmal
   while (best_node == nullptr || upper_bound >= (forward_fbar_min + backward_fbar_min) / 2.0f + epsilon)
   {
     if (backward_stack.empty()) {
       forward_stack.push(start);
       backward_stack.push(goal);
-      if (forward_fbar_min < id_limit) {
-        forward_fbar_min += 1;
-        expand_forward(forward_stack, front_multi, false, pdb_type, start_state, forward_fbar_min, count, lambda);
-      }
+      expand_forward(forward_stack, front_multi, false, pdb_type, start_state, forward_fbar_min, count, lambda, node_limit);
+      forward_fbar_min += 1;
       backward_fbar_min += 1;
       std::cout << "Searching backwards depth " << backward_fbar_min << '\n';
     }
