@@ -12,7 +12,7 @@ bool all_done(const std::atomic_bool* done_array) {
 uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
 {
   std::cout << "IDA*" << std::endl;
-  thread_safe_stack<Node> shared_stack, base_stack;
+  thread_safe_stack<std::shared_ptr<Node>> shared_stack, base_stack;
 
   if (Rubiks::is_solved(state))
   {
@@ -20,11 +20,11 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
     return 0;
   }
 
-  Node original_node;
-  memcpy(original_node.state, state, 40);
-  uint8_t id_depth = Rubiks::pattern_lookup(original_node.state, pdb_type);
-  original_node.heuristic = id_depth;
-  original_node.combined = id_depth;
+  auto original_node = std::make_shared<Node>();
+  memcpy(original_node->state, state, 40);
+  uint8_t id_depth = Rubiks::pattern_lookup(original_node->state, pdb_type);
+  original_node->heuristic = id_depth;
+  original_node->combined = id_depth;
   std::cout << "Minimum number of moves to solve: " << unsigned int(id_depth) << std::endl;
   std::atomic_bool done(false);
   uint64_t count = 0;
@@ -33,12 +33,12 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
   {
     for (int rotation = 0; rotation < 3; ++rotation)
     {
-      Node new_node(original_node, state, 1, face, rotation, false, pdb_type);
+      auto new_node = std::make_shared<Node>(original_node, state, 1, face, rotation, false, pdb_type);
       count += 1;
-      if (Rubiks::is_solved(new_node.state))
+      if (Rubiks::is_solved(new_node->state))
       {
         std::cout << "Solved IDA*: 1 Count = " << unsigned long long(count) << std::endl;
-        std::cout << "Solution: " << new_node.print_solution() << std::endl;
+        std::cout << "Solution: " << new_node->print_solution() << std::endl;
         return count;
       }
       base_stack.push(new_node);
@@ -49,7 +49,7 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
 
   #pragma omp parallel default(none) reduction(+: count) shared(shared_stack, base_stack, done, id_depth, done_array, std::cout, state)
   {
-    std::stack<Node, std::vector<Node>> my_stack;
+    std::stack<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node> > > my_stack;
     while (done == false)
     {
       if (my_stack.empty()) {
@@ -83,36 +83,43 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
           continue;
         }
       }
-      Node next_node = my_stack.top();
+      auto next_node = my_stack.top();
       my_stack.pop();
 
       count += 1;
 
+      if (count % 1000000 == 0) {
+        #pragma omp critical
+        {
+          std::cout << "In-progress: " << next_node->print_solution() << std::endl;
+        }
+      }
+
       for (int face = 0; face < 6; ++face)
       {
-        if (next_node.depth > 0 && Rubiks::skip_rotations(next_node.get_face(), face))
+        if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
         {
           continue;
         }
 
         for (int rotation = 0; rotation < 3; ++rotation)
         {
-          Node new_node(next_node, state, next_node.depth + 1, face, rotation, false, pdb_type);
+          auto new_node = std::make_shared<Node>(next_node, state, next_node->depth + 1, face, rotation, false, pdb_type);
 
-          if (new_node.combined < next_node.combined) {
-            std::cout << "Consistency error: " << unsigned(new_node.combined) << " < " << unsigned(next_node.combined) << " " << std::endl;
+          if (new_node->combined < next_node->combined) {
+            std::cout << "Consistency error: " << unsigned(new_node->combined) << " < " << unsigned(next_node->combined) << " " << std::endl;
           }
 
-          if (new_node.combined > id_depth)
+          if (new_node->combined > id_depth)
           {
             continue;
           }
 
-          if (Rubiks::is_solved(new_node.state))
+          if (Rubiks::is_solved(new_node->state))
           {
             done = true;
             std::cout << "Solved IDA*: " << unsigned int(id_depth) << std::endl;
-            std::cout << "Solution: " << new_node.print_solution() << std::endl;
+            std::cout << "Solution: " << new_node->print_solution() << std::endl;
           }
 
           my_stack.push(new_node);

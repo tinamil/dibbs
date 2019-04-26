@@ -1,10 +1,10 @@
 #include "Node.h"
 
-Node::Node() : state(), face(0), depth(0), combined(0), f_bar(0), reverse_depth(0), heuristic(0),
-reverse_heuristic(0), faces(), reverse_faces() {}
+Node::Node() : parent(nullptr), reverse_parent(nullptr), state(), face(0), depth(0), combined(0), f_bar(0), heuristic(0),
+reverse_heuristic(0) {}
 
-Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type) : face(0), depth(0), reverse_depth(0),
-faces(), reverse_faces() {
+Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type) : parent(nullptr), reverse_parent(nullptr), face(0), depth(0)
+{
   memcpy(state, prev_state, 40);
   heuristic = Rubiks::pattern_lookup(state, start_state, type);
   reverse_heuristic = 0;
@@ -12,10 +12,11 @@ faces(), reverse_faces() {
   combined = heuristic;
 }
 
-Node::Node(const Node& parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
-  const bool reverse, const Rubiks::PDB type) : face(_face), depth(_depth), reverse_depth(0), reverse_faces()
+Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
+  const bool reverse, const Rubiks::PDB type) : reverse_parent(nullptr), face(_face * 6 + _rotation), depth(_depth)
 {
-  memcpy(state, parent.state, 40);
+  parent = node_parent;
+  memcpy(state, parent->state, 40);
   Rubiks::rotate(state, _face, _rotation);
 
   heuristic = Rubiks::pattern_lookup(state, type);
@@ -34,41 +35,23 @@ Node::Node(const Node& parent, const uint8_t* start_state, const uint8_t _depth,
     reverse_heuristic = 0;
   }
   combined = depth + heuristic;
-
-    faces[depth - 1] = _face * 6 + _rotation;
-  if (depth > 1) {
-    memcpy(faces, parent.faces, depth - 1);
-  }
 }
 
-Node::Node(const Node & old_node) : state(), faces(), face(old_node.face), depth(old_node.depth), combined(old_node.combined),
-reverse_depth(old_node.reverse_depth), f_bar(old_node.f_bar), heuristic(old_node.heuristic),
-reverse_heuristic(old_node.reverse_heuristic), reverse_faces()
+Node::Node(const Node& old_node) : parent(old_node.parent), reverse_parent(old_node.reverse_parent), state(),
+face(old_node.face), depth(old_node.depth), combined(old_node.combined), f_bar(old_node.f_bar),
+heuristic(old_node.heuristic), reverse_heuristic(old_node.reverse_heuristic)
 {
   memcpy(state, old_node.state, 40);
-
-  if (old_node.faces != nullptr) {
-    memcpy(faces, old_node.faces, depth);
-  }
-
-  if (reverse_depth > 0)
-  {
-    memcpy(reverse_faces, old_node.reverse_faces, reverse_depth);
-  }
 }
 
 uint8_t Node::get_face() const
 {
-  return face;// this->faces[this->depth - 1] / 6;
+  return face / 6;
 }
 
-void Node::set_reverse(const Node * reverse)
+void Node::set_reverse(const std::shared_ptr<Node> reverse)
 {
-  reverse_depth = reverse->depth;
-  if (reverse_depth > 0)
-  {
-    memcpy(reverse_faces, reverse->faces, reverse_depth);
-  }
+  reverse_parent = reverse;
 }
 
 std::string Node::print_state() const
@@ -84,20 +67,28 @@ std::string Node::print_state() const
 
 std::string Node::print_solution() const
 {
-  if ((depth > 0 && faces == nullptr) || (reverse_depth > 0 && reverse_faces == nullptr)) {
-    throw new std::invalid_argument("Cannot print a solution if one of the faces/rotations arrays are null");
-  }
+  const Node* this_parent = this;
   std::string solution;
-  for (int i = 0; i < depth; ++i) {
-    solution.append(Rubiks::_face_mapping[faces[i] / 6]);
-    solution.append(Rubiks::_rotation_mapping[faces[i] % 3]);
+  while (this_parent != nullptr) {
     solution.append(" ");
+    if (this_parent->parent != nullptr) {
+      solution.append(Rubiks::_rotation_mapping[this_parent->face % 3]);
+      solution.append(Rubiks::_face_mapping[this_parent->face / 6]);
+    }
+    else {
+      solution.append("tratS"); //Reversed "Start"
+    }
+    this_parent = this_parent->parent.get();
   }
-  for (int i = reverse_depth - 1; i >= 0; --i) {
-    solution.append(Rubiks::_face_mapping[reverse_faces[i] / 6]);
-    solution.append(Rubiks::_rotation_mapping[reverse_faces[i] % 3]);
+  std::reverse(solution.begin(), solution.end());
+  this_parent = reverse_parent.get();
+  while (this_parent != nullptr && this_parent->parent != nullptr) {
+    solution.append(Rubiks::_face_mapping[this_parent->face / 6]);
+    solution.append(Rubiks::_rotation_mapping[this_parent->face % 3]);
     solution.append(" ");
+    this_parent = this_parent->parent.get();
   }
+  solution.append("Goal");
   return solution;
   //return "Solutions disabled.";
 }
@@ -121,6 +112,20 @@ bool NodeCompare::operator() (const Node & a, const Node & b) const
   }
 }
 
+bool NodeCompare::operator() (const std::shared_ptr<Node> a, const std::shared_ptr<Node> b) const
+{
+  int cmp = memcmp(a->state, b->state, 40);
+  if (cmp == 0) {
+    return false;
+  }
+  else if (a->f_bar == b->f_bar) {
+    return cmp < 0;
+  }
+  else {
+    return a->f_bar < b->f_bar;
+  }
+}
+
 size_t NodeHash::operator() (const Node * s) const
 {
   return boost_hash(s->state, 40);
@@ -131,6 +136,11 @@ size_t NodeHash::operator() (const Node & s) const
   return boost_hash(s.state, 40);
 }
 
+size_t NodeHash::operator() (const std::shared_ptr<Node> s) const
+{
+  return boost_hash(s->state, 40);
+}
+
 bool NodeEqual::operator() (const Node * a, const Node * b) const
 {
   return memcmp(a->state, b->state, 40) == 0;
@@ -139,4 +149,9 @@ bool NodeEqual::operator() (const Node * a, const Node * b) const
 bool NodeEqual::operator() (const Node & a, const Node & b) const
 {
   return memcmp(a.state, b.state, 40) == 0;
+}
+
+bool NodeEqual::operator() (const std::shared_ptr<Node> a, const std::shared_ptr<Node> b) const
+{
+  return memcmp(a->state, b->state, 40) == 0;
 }
