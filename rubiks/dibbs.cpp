@@ -44,7 +44,7 @@ void expand(multi_set& front_multi,
   }
 }
 
-void search::dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
+size_t search::dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
 {
   std::cout << "DIBBS" << std::endl;
   const uint8_t epsilon = 1;
@@ -52,7 +52,7 @@ void search::dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
   if (Rubiks::is_solved(start_state))
   {
     std::cout << "Given a solved cube.  Nothing to solve." << std::endl;
-    return;
+    return 0;
   }
 
   multi_set front_multi, back_multi;
@@ -121,12 +121,13 @@ void search::dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
 
   std::cout << "Solved DIBBS: " << " Count = " << count << std::endl;
   std::cout << "Solution: " << best_node->print_solution() << std::endl;
+  return count;
 }
 
 
 bool expand_layer(stack& my_stack,
   hash_set& my_set,
-  const hash_set& other_set,
+  hash_set& other_set,
   uint8_t& upper_bound,
   std::shared_ptr<Node>& best_node,
   const bool reverse,
@@ -203,7 +204,7 @@ bool expand_layer(stack& my_stack,
             }
             for (auto i = other_set.begin(), last = other_set.end(); i != last; ) {
               if ((*i)->heuristic + lambda > (*i)->reverse_heuristic) {
-                i = my_set.erase(i);
+                i = other_set.erase(i);
               }
               else {
                 ++i;
@@ -243,12 +244,12 @@ size_t search::id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
 
   std::shared_ptr<Node> best_node(nullptr);
   size_t count = 0;
-  const size_t node_limit = (size_t)1e8;
+  const size_t node_limit = (size_t)1e15;//1e8;
 
   unsigned int forward_fbar_min(1), backward_fbar_min(1);
   bool reverse = true;
 
-  double termination = 0;
+  float termination = 0;
   //epsilon is the smallest edge cost, must be >0 but can be infinitesmal
   while (best_node == nullptr || upper_bound >= termination)
   {
