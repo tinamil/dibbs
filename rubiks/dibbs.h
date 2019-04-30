@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <set>
 #include <queue>
+#include <functional>
 #include "node.h"
 #include "rubiks.h"
 

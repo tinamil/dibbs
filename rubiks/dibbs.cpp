@@ -124,6 +124,61 @@ size_t search::dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
   return count;
 }
 
+std::shared_ptr<Node> make_node(const hash_set& other_set,
+  std::shared_ptr<Node> prev_node,
+  const uint8_t* start_state,
+  const int face,
+  const int rotation,
+  const bool reverse,
+  const Rubiks::PDB type,
+  std::shared_ptr<Node>& best_node,
+  uint8_t& upper_bound)
+{
+  auto new_node = std::make_shared<Node>(prev_node, start_state, prev_node->depth + 1, face, rotation, reverse, type);
+
+  uint8_t reverse_cost = 0;
+  auto search = other_set.find(new_node);
+  if (search != other_set.end())
+  {
+    reverse_cost = (*search)->depth;
+    if (new_node->depth + reverse_cost < upper_bound)
+    {
+      upper_bound = new_node->depth + reverse_cost;
+      best_node = new_node;
+      best_node->set_reverse(*search);
+      std::cout << "New upper bound: " << unsigned int(upper_bound) << std::endl;
+    }
+  }
+
+  return new_node;
+}
+
+void expand_node(std::shared_ptr<Node> next_node,
+  const hash_set& other_set,
+  uint8_t& upper_bound,
+  std::shared_ptr<Node>& best_node,
+  const bool reverse,
+  const Rubiks::PDB type,
+  const uint8_t* start_state,
+  size_t& count,
+  const std::function<void(const std::shared_ptr<Node>)>& process_node_func) {
+  count += 1;
+  if (count % 1000000 == 0) {
+    std::cout << count << "\n";
+  }
+  for (int face = 0; face < 6; ++face)
+  {
+    if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
+    {
+      continue;
+    }
+    for (int rotation = 0; rotation < 3; ++rotation)
+    {
+      auto new_node = make_node(other_set, next_node, start_state, face, rotation, reverse, type, best_node, upper_bound);
+      process_node_func(new_node);
+    }
+  }
+}
 
 bool expand_layer(stack& my_stack,
   hash_set& my_set,
@@ -133,106 +188,56 @@ bool expand_layer(stack& my_stack,
   const bool reverse,
   const Rubiks::PDB type,
   const uint8_t* start_state,
-  const int id_depth,
-  const double termination,
+  unsigned int& id_depth,
+  const unsigned int other_depth,
   size_t& count,
   int& lambda,
+  const int epsilon,
   const size_t node_limit)
 {
   std::cout << "Expanding layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
   my_set.clear();
   std::vector<std::shared_ptr<Node> > tmpNodes;
   const auto other_size = other_set.size();
+  float termination = (id_depth + other_depth) / 2.0f + epsilon;
+
+  const std::function<void(const std::shared_ptr<Node>)> search_func = [&](std::shared_ptr<Node> new_node) {
+    if (new_node->f_bar == id_depth)// && new_node->heuristic + lambda <= new_node->reverse_heuristic)
+    {
+      tmpNodes.push_back(new_node);
+    }
+    if (new_node->f_bar <= id_depth) {
+      my_stack.push(new_node);
+    }
+  };
   while (!my_stack.empty() && upper_bound >= termination) {
     std::shared_ptr<Node> next_node = my_stack.top();
     my_stack.pop();
-    count += 1;
-    if (count % 1000000 == 0) {
-      std::cout << count << "\n";
-    }
-    for (int face = 0; face < 6; ++face)
-    {
-      if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
-      {
-        continue;
-      }
-      for (int rotation = 0; rotation < 3; ++rotation)
-      {
-        auto new_node = std::make_shared<Node>(next_node, start_state, next_node->depth + 1, face, rotation, reverse, type);
-
-        if (new_node->f_bar <= id_depth) {
-          my_stack.push(new_node);
-        }
-
-        uint8_t reverse_cost = 0;
-        auto search = other_set.find(new_node);
-        if (search != other_set.end())
-        {
-          reverse_cost = (*search)->depth;
-          if (new_node->depth + reverse_cost < upper_bound)
-          {
-            upper_bound = new_node->depth + reverse_cost;
-            best_node = new_node;
-            best_node->set_reverse(*search);
-            std::cout << "New upper bound: " << unsigned int(upper_bound) << std::endl;
-          }
-        }
-
-        if (new_node->f_bar == id_depth && new_node->heuristic + lambda <= new_node->reverse_heuristic)
-        {
-          tmpNodes.push_back(new_node);
-        }
-      }
-    }
+    expand_node(next_node, other_set, upper_bound, best_node, reverse, type, start_state, count, search_func);
   }
 
-  for (auto set_iterator = tmpNodes.begin(), end = tmpNodes.end(); set_iterator != end; set_iterator++) {
+  std::cout << "Finished expanding layer " << id_depth << "; size= " << tmpNodes.size() << '\n';
+  id_depth += 1;
+  std::cout << "Speculatively expanding layer " << id_depth << '\n';
+  termination = (id_depth + other_depth) / 2.0f + epsilon;
+  const std::function<void(const std::shared_ptr<Node>)> speculative_func = [&](std::shared_ptr<Node> new_node) {
+    if (new_node->f_bar == id_depth + 1)// && new_node->heuristic + lambda <= new_node->reverse_heuristic)
+    {
+      auto existing = my_set.find(new_node);
+      if (existing == my_set.end()) {
+        my_set.insert(new_node);
+      }
+      else if ((*existing)->depth > new_node->depth) {
+        //Must check because we are searching in DFS order, not BFS
+        my_set.erase(existing);
+        my_set.insert(new_node);
+      }
+    }
+  };
+  for (auto set_iterator = tmpNodes.begin(), end = tmpNodes.end(); set_iterator != end && upper_bound >= termination; set_iterator++) {
     auto next_node = *set_iterator;
-    count += 1;
-    if (count % 1000000 == 0) {
-      std::cout << count << "\n";
-    }
-    for (int face = 0; face < 6; ++face)
-    {
-      if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
-      {
-        continue;
-      }
-      for (int rotation = 0; rotation < 3; ++rotation)
-      {
-        auto new_node = std::make_shared<Node>(next_node, start_state, next_node->depth + 1, face, rotation, reverse, type);
-
-        uint8_t reverse_cost = 0;
-        auto search = other_set.find(new_node);
-        if (search != other_set.end())
-        {
-          reverse_cost = (*search)->depth;
-          if (new_node->depth + reverse_cost < upper_bound)
-          {
-            upper_bound = new_node->depth + reverse_cost;
-            best_node = new_node;
-            best_node->set_reverse(*search);
-            std::cout << "New upper bound: " << unsigned int(upper_bound) << std::endl;
-          }
-        }
-
-        if (new_node->f_bar == id_depth + 1 && new_node->heuristic + lambda <= new_node->reverse_heuristic)
-        {
-          auto existing = my_set.find(new_node);
-          if (existing == my_set.end()) {
-            my_set.insert(new_node);
-          }
-          else if ((*existing)->depth > new_node->depth) {
-            //Must check because we are searching in DFS order, not BFS
-            my_set.erase(existing);
-            my_set.insert(new_node);
-          }
-        }
-      }
-    }
+    expand_node(next_node, other_set, upper_bound, best_node, reverse, type, start_state, count, speculative_func);
   }
-
-  std::cout << "Finished expanding layer " << id_depth << "; size= " << my_set.size() << '\n';
   return true;
 }
 
@@ -264,22 +269,18 @@ size_t search::id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
   const size_t node_limit = (size_t)1e15;//1e8;
 
   unsigned int forward_fbar_min(1), backward_fbar_min(1);
-  bool reverse = true;
+  bool reverse = false;
 
-  float termination = 0;
   //epsilon is the smallest edge cost, must be >0 but can be infinitesmal
-  while (best_node == nullptr || upper_bound >= termination)
+  while (best_node == nullptr || upper_bound >= (forward_fbar_min + backward_fbar_min) / 2.0f + epsilon)
   {
-    termination = (forward_fbar_min + backward_fbar_min) / 2.0f + epsilon;
     if (reverse) {
       backward_stack.push(goal);
-      expand_layer(backward_stack, back_set, front_set, upper_bound, best_node, reverse, pdb_type, start_state, backward_fbar_min, termination, count, lambda, node_limit);
-      backward_fbar_min += 1;
+      expand_layer(backward_stack, back_set, front_set, upper_bound, best_node, reverse, pdb_type, start_state, backward_fbar_min, forward_fbar_min, count, lambda, epsilon, node_limit);
     }
     else {
       forward_stack.push(start);
-      expand_layer(forward_stack, front_set, back_set, upper_bound, best_node, reverse, pdb_type, start_state, forward_fbar_min, termination, count, lambda, node_limit);
-      forward_fbar_min += 1;
+      expand_layer(forward_stack, front_set, back_set, upper_bound, best_node, reverse, pdb_type, start_state, forward_fbar_min, backward_fbar_min, count, lambda, epsilon, node_limit);
     }
     reverse = !reverse;
   }
