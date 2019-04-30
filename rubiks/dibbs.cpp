@@ -141,6 +141,7 @@ bool expand_layer(stack& my_stack,
 {
   std::cout << "Expanding layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
   my_set.clear();
+  std::vector<std::shared_ptr<Node> > tmpNodes;
   const auto other_size = other_set.size();
   while (!my_stack.empty() && upper_bound >= termination) {
     std::shared_ptr<Node> next_node = my_stack.top();
@@ -177,7 +178,45 @@ bool expand_layer(stack& my_stack,
           }
         }
 
-        if (new_node->f_bar == id_depth)// && new_node->heuristic + lambda <= new_node->reverse_heuristic) 
+        if (new_node->f_bar == id_depth && new_node->heuristic + lambda <= new_node->reverse_heuristic)
+        {
+          tmpNodes.push_back(new_node);
+        }
+      }
+    }
+  }
+
+  for (auto set_iterator = tmpNodes.begin(), end = tmpNodes.end(); set_iterator != end; set_iterator++) {
+    auto next_node = *set_iterator;
+    count += 1;
+    if (count % 1000000 == 0) {
+      std::cout << count << "\n";
+    }
+    for (int face = 0; face < 6; ++face)
+    {
+      if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
+      {
+        continue;
+      }
+      for (int rotation = 0; rotation < 3; ++rotation)
+      {
+        auto new_node = std::make_shared<Node>(next_node, start_state, next_node->depth + 1, face, rotation, reverse, type);
+
+        uint8_t reverse_cost = 0;
+        auto search = other_set.find(new_node);
+        if (search != other_set.end())
+        {
+          reverse_cost = (*search)->depth;
+          if (new_node->depth + reverse_cost < upper_bound)
+          {
+            upper_bound = new_node->depth + reverse_cost;
+            best_node = new_node;
+            best_node->set_reverse(*search);
+            std::cout << "New upper bound: " << unsigned int(upper_bound) << std::endl;
+          }
+        }
+
+        if (new_node->f_bar == id_depth + 1 && new_node->heuristic + lambda <= new_node->reverse_heuristic)
         {
           auto existing = my_set.find(new_node);
           if (existing == my_set.end()) {
@@ -188,33 +227,11 @@ bool expand_layer(stack& my_stack,
             my_set.erase(existing);
             my_set.insert(new_node);
           }
-
-          if (my_set.size() + other_size > node_limit) {
-            lambda += 1;
-            std::cout << "Reached node limit " << my_set.size() << " new lambda = " << std::to_string(lambda) << '\n';
-
-            //Erase all nodes that violate the increased lambda value
-            for (auto i = my_set.begin(), last = my_set.end(); i != last; ) {
-              if ((*i)->heuristic + lambda > (*i)->reverse_heuristic) {
-                i = my_set.erase(i);
-              }
-              else {
-                ++i;
-              }
-            }
-            for (auto i = other_set.begin(), last = other_set.end(); i != last; ) {
-              if ((*i)->heuristic + lambda > (*i)->reverse_heuristic) {
-                i = other_set.erase(i);
-              }
-              else {
-                ++i;
-              }
-            }
-          }
         }
       }
     }
   }
+
   std::cout << "Finished expanding layer " << id_depth << "; size= " << my_set.size() << '\n';
   return true;
 }
