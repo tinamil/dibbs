@@ -65,30 +65,76 @@ std::string Node::print_state() const
   return result;
 }
 
-std::string Node::print_solution() const
-{
-  const Node* this_parent = this;
+std::string generate_solution(const Node* node, const std::function<std::string(const Node*)> func, bool reverse = false) {
+  const Node* this_parent = node;
   std::string solution;
   while (this_parent != nullptr) {
-    solution.append(" ");
-    if (this_parent->parent != nullptr) {
-      solution.append(Rubiks::_rotation_mapping[this_parent->face % 3]);
-      solution.append(Rubiks::_face_mapping[this_parent->face / 6]);
-    }
-    else {
-      solution.append("tratS"); //Reversed "Start"
-    }
+    std::string tmp = func(this_parent);
+    if (reverse)
+      std::reverse(tmp.begin(), tmp.end());
+    solution.append(tmp);
     this_parent = this_parent->parent.get();
   }
+  return solution;
+}
+
+std::string get_face_rotation(const Node* x) {
+  std::stringstream ss;
+  ss << std::setw(3) << std::setfill(' ');
+  if (x->parent != nullptr)
+    ss << Rubiks::_face_mapping[x->face / 6] + Rubiks::_rotation_mapping[x->face % 3];
+  else
+    ss << " ";
+  return ss.str();
+}
+
+std::string get_depth(const Node * x) {
+  std::stringstream ss;
+  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->depth);
+  return ss.str();
+}
+std::string get_h1(const Node * x) {
+  std::stringstream ss;
+  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->heuristic);
+  return ss.str();
+}
+std::string get_h2(const Node * x) {
+  std::stringstream ss;
+  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->reverse_heuristic);
+  return ss.str();
+}
+std::string get_combined(const Node * x) {
+  std::stringstream ss;
+  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->combined);
+  return ss.str();
+}
+std::string get_fbar(const Node * x) {
+  std::stringstream ss;
+  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->f_bar);
+  return ss.str();
+}
+
+
+std::string generate_bidirectional_solution(const Node * node, std::function<std::string(const Node*)> func) {
+  std::string solution = generate_solution(node, func, true);
   std::reverse(solution.begin(), solution.end());
-  this_parent = reverse_parent.get();
-  while (this_parent != nullptr && this_parent->parent != nullptr) {
-    solution.append(Rubiks::_face_mapping[this_parent->face / 6]);
-    solution.append(Rubiks::_rotation_mapping[this_parent->face % 3]);
-    solution.append(" ");
-    this_parent = this_parent->parent.get();
-  }
-  solution.append("Goal");
+  solution.append(" |");
+  solution.append(generate_solution(node->reverse_parent.get(), func));
+  solution.insert(0, "Start ");
+  solution.append(" Goal");
+  return solution;
+}
+
+
+std::string Node::print_solution() const
+{
+  std::string solution;
+  solution += "\nmove=" + generate_bidirectional_solution(this, get_face_rotation);
+  solution += "\ng=   " + generate_bidirectional_solution(this, get_depth);
+  solution += "\nh =  " + generate_bidirectional_solution(this, get_h1);
+  solution += "\nh'=  " + generate_bidirectional_solution(this, get_h2);
+  solution += "\nf=   " + generate_bidirectional_solution(this, get_combined);
+  solution += "\nfbar=" + generate_bidirectional_solution(this, get_fbar) + "\n";
   return solution;
   //return "Solutions disabled.";
 }

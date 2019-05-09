@@ -2,6 +2,8 @@
 #include <string>
 #include <cstdint>
 #include <iostream>
+#include <functional>
+#include <iomanip>
 #include "hash.hpp"
 #include "rubiks.h"
 
