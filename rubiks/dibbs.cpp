@@ -154,18 +154,21 @@ std::shared_ptr<Node> make_node(const hash_set& other_set,
 }
 
 void expand_node(std::shared_ptr<Node> next_node,
+  stack& my_stack,
+  hash_set& my_set,
   const hash_set& other_set,
+  const unsigned int id_depth,
   uint8_t& upper_bound,
   std::shared_ptr<Node>& best_node,
   const bool reverse,
   const Rubiks::PDB type,
   const uint8_t* start_state,
-  size_t& count,
-  const std::function<void(const std::shared_ptr<Node>)>& process_node_func) {
+  size_t& count) {
   count += 1;
   if (count % 1000000 == 0) {
     std::cout << count << "\n";
   }
+
   for (int face = 0; face < 6; ++face)
   {
     if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
@@ -175,7 +178,21 @@ void expand_node(std::shared_ptr<Node> next_node,
     for (int rotation = 0; rotation < 3; ++rotation)
     {
       auto new_node = make_node(other_set, next_node, start_state, face, rotation, reverse, type, best_node, upper_bound);
-      process_node_func(new_node);
+      if (new_node->f_bar <= id_depth) {
+        my_stack.push(new_node);
+      }
+      //-1 is maximum difference between heuristic estimates (g(a-b)
+      else if(new_node->heuristic + -1 <= new_node->reverse_heuristic){
+        auto existing = my_set.find(next_node);
+        if (existing == my_set.end()) {
+          my_set.insert(next_node);
+        }
+        else if ((*existing)->depth > next_node->depth) {
+          //Must check because we are searching in DFS order, not BFS
+          my_set.erase(existing);
+          my_set.insert(next_node);
+        }
+      }
     }
   }
 }
@@ -197,47 +214,37 @@ bool expand_layer(stack& my_stack,
 {
   std::cout << "Expanding layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
   my_set.clear();
-  std::vector<std::shared_ptr<Node> > tmpNodes;
   const auto other_size = other_set.size();
   float termination = (id_depth + other_depth) / 2.0f + epsilon;
 
-  const std::function<void(const std::shared_ptr<Node>)> search_func = [&](std::shared_ptr<Node> new_node) {
-    if (new_node->f_bar == id_depth)// && new_node->heuristic + lambda <= new_node->reverse_heuristic)
-    {
-      tmpNodes.push_back(new_node);
-    }
-    if (new_node->f_bar <= id_depth) {
-      my_stack.push(new_node);
-    }
-  };
   while (!my_stack.empty() && upper_bound >= termination) {
     std::shared_ptr<Node> next_node = my_stack.top();
     my_stack.pop();
-    expand_node(next_node, other_set, upper_bound, best_node, reverse, type, start_state, count, search_func);
+    expand_node(next_node, my_stack, my_set, other_set, id_depth, upper_bound, best_node, reverse, type, start_state, count);
   }
 
-  std::cout << "Finished expanding layer " << id_depth << "; size= " << tmpNodes.size() << '\n';
+  std::cout << "Finished expanding layer " << id_depth << "; size= " << my_set.size() << '\n';
   id_depth += 1;
-  std::cout << "Speculatively expanding layer " << id_depth << '\n';
-  termination = (id_depth + other_depth) / 2.0f + epsilon;
-  const std::function<void(const std::shared_ptr<Node>)> speculative_func = [&](std::shared_ptr<Node> new_node) {
-    if (new_node->f_bar == id_depth + 1)// && new_node->heuristic + lambda <= new_node->reverse_heuristic)
-    {
-      auto existing = my_set.find(new_node);
-      if (existing == my_set.end()) {
-        my_set.insert(new_node);
-      }
-      else if ((*existing)->depth > new_node->depth) {
-        //Must check because we are searching in DFS order, not BFS
-        my_set.erase(existing);
-        my_set.insert(new_node);
-      }
-    }
-  };
-  for (auto set_iterator = tmpNodes.begin(), end = tmpNodes.end(); set_iterator != end && upper_bound >= termination; set_iterator++) {
-    auto next_node = *set_iterator;
-    expand_node(next_node, other_set, upper_bound, best_node, reverse, type, start_state, count, speculative_func);
-  }
+  //std::cout << "Speculatively expanding layer " << id_depth << '\n';
+  //termination = (id_depth + other_depth) / 2.0f + epsilon;
+  //const std::function<void(const std::shared_ptr<Node>)> speculative_func = [&](std::shared_ptr<Node> new_node) {
+  //  if (new_node->f_bar == id_depth + 1)// && new_node->heuristic + lambda <= new_node->reverse_heuristic)
+  //  {
+  //    auto existing = my_set.find(new_node);
+  //    if (existing == my_set.end()) {
+  //      my_set.insert(new_node);
+  //    }
+  //    else if ((*existing)->depth > new_node->depth) {
+  //      //Must check because we are searching in DFS order, not BFS
+  //      my_set.erase(existing);
+  //      my_set.insert(new_node);
+  //    }
+  //  }
+  //};
+  //for (auto set_iterator = tmpNodes.begin(), end = tmpNodes.end(); set_iterator != end && upper_bound >= termination; set_iterator++) {
+  //  auto next_node = *set_iterator;
+  //  expand_node(next_node, other_set, upper_bound, best_node, reverse, type, start_state, count, speculative_func);
+  //}
   return true;
 }
 
