@@ -6,13 +6,16 @@ reverse_heuristic(0) {}
 Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type) : parent(nullptr), reverse_parent(nullptr), face(0), depth(0)
 {
   memcpy(state, prev_state, 40);
-  heuristic = Rubiks::pattern_lookup(state, start_state, type);
+  if (start_state != nullptr)
+    heuristic = Rubiks::pattern_lookup(state, start_state, type);
+  else
+    heuristic = 0;
   reverse_heuristic = 0;
   f_bar = heuristic;
   combined = heuristic;
 }
 
-Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
+Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t * start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
   const bool reverse, const Rubiks::PDB type) : reverse_parent(nullptr), face(_face * 6 + _rotation), depth(_depth)
 {
   parent = node_parent;
@@ -37,7 +40,7 @@ Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, 
   combined = depth + heuristic;
 }
 
-Node::Node(const Node& old_node) : parent(old_node.parent), reverse_parent(old_node.reverse_parent), state(),
+Node::Node(const Node & old_node) : parent(old_node.parent), reverse_parent(old_node.reverse_parent), state(),
 face(old_node.face), depth(old_node.depth), combined(old_node.combined), f_bar(old_node.f_bar),
 heuristic(old_node.heuristic), reverse_heuristic(old_node.reverse_heuristic)
 {
@@ -65,7 +68,7 @@ std::string Node::print_state() const
   return result;
 }
 
-std::string generate_solution(const Node* node, const std::function<std::string(const Node*)> func, bool reverse = false) {
+std::string generate_solution(const Node * node, const std::function<std::string(const Node*)> func, bool reverse = false) {
   const Node* this_parent = node;
   std::string solution;
   while (this_parent != nullptr) {
@@ -78,7 +81,7 @@ std::string generate_solution(const Node* node, const std::function<std::string(
   return solution;
 }
 
-std::string get_face_rotation(const Node* x) {
+std::string get_face_rotation(const Node * x) {
   std::stringstream ss;
   ss << std::setw(3) << std::setfill(' ');
   if (x->parent != nullptr)

@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="a_star.cpp" />
     <ClCompile Include="dibbs.cpp" />
+    <ClCompile Include="gbfhs.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mr_rank.cpp" />
     <ClCompile Include="node.cpp" />
@@ -31,6 +32,7 @@
   <ItemGroup>
     <ClInclude Include="a_star.h" />
     <ClInclude Include="dibbs.h" />
+    <ClInclude Include="gbfhs.h" />
     <ClInclude Include="hash.hpp" />
     <ClInclude Include="mr_rank.h" />
     <ClInclude Include="node.h" />
