@@ -22,6 +22,7 @@
     <ClCompile Include="a_star.cpp" />
     <ClCompile Include="dibbs.cpp" />
     <ClCompile Include="gbfhs.cpp" />
+    <ClCompile Include="id_gbfhs.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mr_rank.cpp" />
     <ClCompile Include="node.cpp" />
@@ -34,6 +35,7 @@
     <ClInclude Include="dibbs.h" />
     <ClInclude Include="gbfhs.h" />
     <ClInclude Include="hash.hpp" />
+    <ClInclude Include="id_gbfhs.h" />
     <ClInclude Include="mr_rank.h" />
     <ClInclude Include="node.h" />
     <ClInclude Include="npy.hpp" />

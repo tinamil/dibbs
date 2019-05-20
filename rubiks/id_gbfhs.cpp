@@ -1,20 +1,20 @@
-#include "gbfhs.h"
+#include "id_gbfhs.h"
 
 typedef std::unordered_set<std::shared_ptr<Node>, NodeHash, NodeEqual> hash_set;
 typedef std::vector<std::shared_ptr<Node> > vector;
 typedef std::set<std::shared_ptr<Node>, NodeCompare> tree_set;
 
-void split(const uint8_t f_lim, uint8_t& g_lim_a, uint8_t& g_lim_b) {
+void id_gbfhs_split(const uint8_t f_lim, uint8_t& g_lim_a, uint8_t& g_lim_b) {
   g_lim_b = f_lim / 2;
   //g_lim_b = 0;
   g_lim_a = f_lim - g_lim_b;
 }
 
-bool is_expandable(const std::shared_ptr<Node> node, const uint8_t f_lim, const uint8_t g_lim) {
+bool id_gbfhs_is_expandable(const std::shared_ptr<Node> node, const uint8_t f_lim, const uint8_t g_lim) {
   return (node->combined <= f_lim && node->depth < g_lim);
 }
 
-std::shared_ptr<Node> make_gbfhs_node(const hash_set& other_set,
+std::shared_ptr<Node> make_id_gbfhs_node(const hash_set & other_set,
   std::shared_ptr<Node> prev_node,
   const uint8_t * start_state,
   const int face,
@@ -44,10 +44,10 @@ std::shared_ptr<Node> make_gbfhs_node(const hash_set& other_set,
 }
 
 
-void expand_level(const uint8_t g_lim,
+void id_gbfhs_expand_level(const uint8_t g_lim,
   const uint8_t f_lim,
-  hash_set& my_open,
-  hash_set& other_open,
+  hash_set & my_open,
+  hash_set & other_open,
   size_t & count,
   const Rubiks::PDB type,
   uint8_t & upper_bound,
@@ -57,7 +57,7 @@ void expand_level(const uint8_t g_lim,
 
   vector expandable;
   for each (auto var in my_open) {
-    if (is_expandable(var, f_lim, g_lim)) {
+    if (id_gbfhs_is_expandable(var, f_lim, g_lim)) {
       expandable.push_back(var);
     }
   }
@@ -80,7 +80,7 @@ void expand_level(const uint8_t g_lim,
       }
       for (int rotation = 0; rotation < 3; ++rotation)
       {
-        auto new_node = make_gbfhs_node(other_open, next_node, start_state, face, rotation, is_reverse, type, best_node, upper_bound);
+        auto new_node = make_id_gbfhs_node(other_open, next_node, start_state, face, rotation, is_reverse, type, best_node, upper_bound);
         if (upper_bound <= f_lim) {
           return;
         }
@@ -93,7 +93,7 @@ void expand_level(const uint8_t g_lim,
           my_open.erase(find);
         }
         my_open.insert(new_node);
-        if (is_expandable(new_node, f_lim, g_lim)) {
+        if (id_gbfhs_is_expandable(new_node, f_lim, g_lim)) {
           expandable.push_back(new_node);
         }
       }
@@ -102,9 +102,9 @@ void expand_level(const uint8_t g_lim,
 
 }
 
-size_t search::gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
+size_t search::id_gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
 {
-  std::cout << "GBFHS" << std::endl;
+  std::cout << "ID-GBFHS" << std::endl;
   const uint8_t epsilon = 1;
 
   if (Rubiks::is_solved(start_state))
@@ -133,9 +133,9 @@ size_t search::gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
   while (best_cost > f_lim && !front_open.empty() && !back_open.empty())
   {
     std::cout << "Expanding f_lim = " << std::to_string(f_lim) << std::endl;
-    split(f_lim, g_lim_f, g_lim_b);
-    expand_level(g_lim_f, f_lim, front_open, back_open, count, pdb_type, best_cost, best_node, start_state, false);
-    expand_level(g_lim_b, f_lim, back_open, front_open, count, pdb_type, best_cost, best_node, start_state, true);
+    id_gbfhs_split(f_lim, g_lim_f, g_lim_b);
+    id_gbfhs_expand_level(g_lim_f, f_lim, front_open, back_open, count, pdb_type, best_cost, best_node, start_state, false);
+    id_gbfhs_expand_level(g_lim_b, f_lim, back_open, front_open, count, pdb_type, best_cost, best_node, start_state, true);
     f_lim += 1;
   }
 

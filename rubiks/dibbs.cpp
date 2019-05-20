@@ -81,7 +81,7 @@ size_t search::dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
 
   uint8_t forward_fbar_min(0), backward_fbar_min(0);
 
-  while (best_node == nullptr || upper_bound > (forward_fbar_min + uint64_t(backward_fbar_min)) / 2.0 - epsilon)
+  while (best_node == nullptr || upper_bound > ((forward_fbar_min + uint64_t(backward_fbar_min)) / 2.0 - epsilon))
   {
     explore_forward = forward_fbar_min < backward_fbar_min;
     if (forward_fbar_min == backward_fbar_min && best_node == nullptr) {

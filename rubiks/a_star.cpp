@@ -89,7 +89,7 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
       count += 1;
 
       if (count % 1000000 == 0) {
-        #pragma omp critical
+        #pragma omp single nowait
         {
           std::cout << "In-progress: " << next_node->print_solution() << std::endl;
         }
