@@ -5,6 +5,7 @@
 #include "rubiks.h"
 #include "rubiks_loader.h"
 #include "gbfhs.h"
+#include "id_gbfhs.h"
 
 using namespace std;
 using namespace Rubiks;
@@ -42,7 +43,7 @@ void search_cubes()
     #endif
     #ifdef GBFHS
     c_start = clock();
-    count_results.push_back(search::gbfhs(cubes[i], type));
+    count_results.push_back(search::id_gbfhs(cubes[i], type));
     c_end = clock();
     time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
     time_results.push_back(time_elapsed_ms);
