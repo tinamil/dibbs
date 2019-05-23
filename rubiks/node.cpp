@@ -153,7 +153,7 @@ std::string generate_bidirectional_solution(const Node* node, std::function<std:
   std::string solution = generate_solution(node, func, true);
   std::reverse(solution.begin(), solution.end());
   solution.append(" |");
-  if(skip_middle)
+  if(skip_middle && node->reverse_parent != nullptr)
     solution.append(generate_solution(node->reverse_parent->parent.get(), func));
   else
     solution.append(generate_solution(node->reverse_parent.get(), func));
