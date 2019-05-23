@@ -1,9 +1,9 @@
 #include "Node.h"
 
 Node::Node() : parent(nullptr), reverse_parent(nullptr), state(), face(0), depth(0), combined(0), f_bar(0), heuristic(0),
-reverse_heuristic(0) {}
+reverse_heuristic(0), passed_threshold(false) {}
 
-Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type) : parent(nullptr), reverse_parent(nullptr), face(0), depth(0)
+Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type) : parent(nullptr), reverse_parent(nullptr), face(0), depth(0), passed_threshold(false)
 {
   memcpy(state, prev_state, 40);
   if (start_state != nullptr)
@@ -15,7 +15,7 @@ Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::
   combined = heuristic;
 }
 
-Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t * start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
+Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
   const bool reverse, const Rubiks::PDB type) : reverse_parent(nullptr), face(_face * 6 + _rotation), depth(_depth)
 {
   parent = node_parent;
@@ -37,12 +37,18 @@ Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t * start_state,
     f_bar = 0;
     reverse_heuristic = 0;
   }
+  if (node_parent != nullptr && node_parent->passed_threshold) {
+    passed_threshold = true;
+  }
+  else {
+    passed_threshold = heuristic <= reverse_heuristic;
+  }
   combined = depth + heuristic;
 }
 
-Node::Node(const Node & old_node) : parent(old_node.parent), reverse_parent(old_node.reverse_parent), state(),
+Node::Node(const Node& old_node) : parent(old_node.parent), reverse_parent(old_node.reverse_parent), state(),
 face(old_node.face), depth(old_node.depth), combined(old_node.combined), f_bar(old_node.f_bar),
-heuristic(old_node.heuristic), reverse_heuristic(old_node.reverse_heuristic)
+heuristic(old_node.heuristic), reverse_heuristic(old_node.reverse_heuristic), passed_threshold(old_node.passed_threshold)
 {
   memcpy(state, old_node.state, 40);
 }
@@ -68,7 +74,7 @@ std::string Node::print_state() const
   return result;
 }
 
-std::string generate_solution(const Node * node, const std::function<std::string(const Node*)> func, bool reverse = false) {
+std::string generate_solution(const Node* node, const std::function<std::string(const Node*)> func, bool reverse = false) {
   const Node* this_parent = node;
   std::string solution;
   while (this_parent != nullptr) {
@@ -81,48 +87,76 @@ std::string generate_solution(const Node * node, const std::function<std::string
   return solution;
 }
 
-std::string get_face_rotation(const Node * x) {
+std::string get_face_rotation(const Node* x) {
   std::stringstream ss;
-  ss << std::setw(3) << std::setfill(' ');
-  if (x->parent != nullptr)
+  if (x->parent != nullptr) {
+    ss << std::setw(3) << std::setfill(' ');
     ss << Rubiks::_face_mapping[x->face / 6] + Rubiks::_rotation_mapping[x->face % 3];
+  }
+  ss << " **";
+  return ss.str();
+}
+
+std::string get_depth(const Node* x) {
+  std::stringstream ss;
+  if (x->parent != nullptr)
+    ss << std::setw(6);
   else
-    ss << " ";
+    ss << std::setw(3);
+
+  ss << std::setfill(' ') << std::to_string(x->depth);
+  return ss.str();
+}
+std::string get_h1(const Node* x) {
+  std::stringstream ss;
+  if (x->parent != nullptr)
+    ss << std::setw(6);
+  else
+    ss << std::setw(3);
+
+  ss << std::setfill(' ') << std::to_string(x->heuristic);
+  return ss.str();
+}
+std::string get_h2(const Node* x) {
+  std::stringstream ss;
+  if (x->parent != nullptr)
+    ss << std::setw(6);
+  else
+    ss << std::setw(3);
+
+  ss << std::setfill(' ') << std::to_string(x->reverse_heuristic);
+  return ss.str();
+}
+std::string get_combined(const Node* x) {
+  std::stringstream ss;
+  if (x->parent != nullptr)
+    ss << std::setw(6);
+  else
+    ss << std::setw(3);
+
+  ss << std::setfill(' ') << std::to_string(x->combined);
+  return ss.str();
+}
+std::string get_fbar(const Node* x) {
+  std::stringstream ss;
+  if (x->parent != nullptr)
+    ss << std::setw(6);
+  else
+    ss << std::setw(3);
+
+  ss << std::setfill(' ') << std::to_string(x->f_bar);
   return ss.str();
 }
 
-std::string get_depth(const Node * x) {
-  std::stringstream ss;
-  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->depth);
-  return ss.str();
-}
-std::string get_h1(const Node * x) {
-  std::stringstream ss;
-  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->heuristic);
-  return ss.str();
-}
-std::string get_h2(const Node * x) {
-  std::stringstream ss;
-  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->reverse_heuristic);
-  return ss.str();
-}
-std::string get_combined(const Node * x) {
-  std::stringstream ss;
-  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->combined);
-  return ss.str();
-}
-std::string get_fbar(const Node * x) {
-  std::stringstream ss;
-  ss << std::setw(3) << std::setfill(' ') << std::to_string(x->f_bar);
-  return ss.str();
-}
 
-
-std::string generate_bidirectional_solution(const Node * node, std::function<std::string(const Node*)> func) {
+std::string generate_bidirectional_solution(const Node* node, std::function<std::string(const Node*)> func, bool skip_middle = true) {
   std::string solution = generate_solution(node, func, true);
   std::reverse(solution.begin(), solution.end());
   solution.append(" |");
-  solution.append(generate_solution(node->reverse_parent.get(), func));
+  if(skip_middle)
+    solution.append(generate_solution(node->reverse_parent->parent.get(), func));
+  else
+    solution.append(generate_solution(node->reverse_parent.get(), func));
   solution.insert(0, "Start ");
   solution.append(" Goal");
   return solution;
@@ -132,7 +166,7 @@ std::string generate_bidirectional_solution(const Node * node, std::function<std
 std::string Node::print_solution() const
 {
   std::string solution;
-  solution += "\nmove=" + generate_bidirectional_solution(this, get_face_rotation);
+  solution += "\nmove=" + generate_bidirectional_solution(this, get_face_rotation, false);
   solution += "\ng=   " + generate_bidirectional_solution(this, get_depth);
   solution += "\nh =  " + generate_bidirectional_solution(this, get_h1);
   solution += "\nh'=  " + generate_bidirectional_solution(this, get_h2);
@@ -142,12 +176,12 @@ std::string Node::print_solution() const
   //return "Solutions disabled.";
 }
 
-bool NodeCompare::operator() (const Node * a, const Node * b) const
+bool NodeCompare::operator() (const Node* a, const Node* b) const
 {
   return a->f_bar > b->f_bar;
 }
 
-bool NodeCompare::operator() (const Node & a, const Node & b) const
+bool NodeCompare::operator() (const Node& a, const Node& b) const
 {
   int cmp = memcmp(a.state, b.state, 40);
   if (cmp == 0) {
@@ -175,12 +209,12 @@ bool NodeCompare::operator() (const std::shared_ptr<Node> a, const std::shared_p
   }
 }
 
-size_t NodeHash::operator() (const Node * s) const
+size_t NodeHash::operator() (const Node* s) const
 {
   return boost_hash(s->state, 40);
 }
 
-size_t NodeHash::operator() (const Node & s) const
+size_t NodeHash::operator() (const Node& s) const
 {
   return boost_hash(s.state, 40);
 }
@@ -190,12 +224,12 @@ size_t NodeHash::operator() (const std::shared_ptr<Node> s) const
   return boost_hash(s->state, 40);
 }
 
-bool NodeEqual::operator() (const Node * a, const Node * b) const
+bool NodeEqual::operator() (const Node* a, const Node* b) const
 {
   return memcmp(a->state, b->state, 40) == 0;
 }
 
-bool NodeEqual::operator() (const Node & a, const Node & b) const
+bool NodeEqual::operator() (const Node& a, const Node& b) const
 {
   return memcmp(a.state, b.state, 40) == 0;
 }

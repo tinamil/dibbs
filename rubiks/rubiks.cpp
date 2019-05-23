@@ -124,7 +124,7 @@ uint64_t Rubiks::get_edge_index(const uint8_t* state, int size, const uint8_t* e
   return edge_index;
 }
 
-uint64_t Rubiks::get_new_edge_pos_index(const uint8_t * state)
+uint64_t Rubiks::get_new_edge_pos_index(const uint8_t* state)
 {
   uint8_t edge_pos[12];
   for (int i = 0; i < 12; ++i)
@@ -135,7 +135,7 @@ uint64_t Rubiks::get_new_edge_pos_index(const uint8_t * state)
   return mr::get_rank(12, edge_pos);
 }
 
-uint64_t Rubiks::get_new_edge_rot_index(const uint8_t * state) {
+uint64_t Rubiks::get_new_edge_rot_index(const uint8_t* state) {
   uint8_t edge_rots[12];
   for (int i = 0; i < 12; ++i)
   {
@@ -160,7 +160,7 @@ uint64_t Rubiks::get_new_edge_rot_index(const uint8_t * state) {
 }
 
 
-bool Rubiks::is_solved(const uint8_t * cube)
+bool Rubiks::is_solved(const uint8_t* cube)
 {
   for (int i = 0; i < 40; ++i)
   {
@@ -173,23 +173,32 @@ bool Rubiks::is_solved(const uint8_t * cube)
 }
 
 
-uint8_t Rubiks::pattern_lookup(const uint8_t * state, const uint8_t * start_state, PDB type)
+uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state, PDB type)
 {
   if (type == PDB::zero)
   {
     return 0;
   }
 
-  static std::unordered_map<const uint8_t*, PDBVectors*, StateHash, StateHash> initialized_pdbs;
-  auto pdbs = initialized_pdbs.find(start_state);
-  PDBVectors* vectors = nullptr;
-  if (pdbs != initialized_pdbs.end()) {
-    vectors = pdbs->second;
+  // static std::unordered_map<const uint8_t*, PDBVectors*, StateHash, StateHash> initialized_pdbs;
+  static std::vector<const uint8_t*> initialized_pdbs_locs;
+  static std::vector<std::shared_ptr<PDBVectors>> initialized_pdbs;
+  std::shared_ptr<PDBVectors>  vectors = nullptr;
+  for (int i = 0; i < initialized_pdbs_locs.size(); ++i) {
+    if (memcmp(initialized_pdbs_locs[i], start_state, 40) == 0) {
+      vectors = initialized_pdbs[i];
+      break;
+    }
   }
-  else if (pdbs == initialized_pdbs.end())
+
+  uint64_t rot_index = get_new_edge_rot_index(state);
+  uint64_t pos_index = get_new_edge_pos_index(state);
+  uint64_t corner_index = get_corner_index(state);
+  if (vectors == nullptr)
   {
-    vectors = new PDBVectors();
-    initialized_pdbs[start_state] = vectors;
+    vectors = std::make_shared<PDBVectors>();
+    initialized_pdbs_locs.push_back(start_state);
+    initialized_pdbs.push_back(vectors);
 
     std::string name;
     for (int i = 0; i < 40; ++i)
@@ -269,15 +278,17 @@ uint8_t Rubiks::pattern_lookup(const uint8_t * state, const uint8_t * start_stat
     }
     npy::LoadArrayFromNumpy<uint8_t>(edge_name_b, shape, vectors->edge_b);
   }
-  uint8_t best = vectors->corner_db[get_corner_index(state)];
-  if (type == PDB::a12) {
-    best = std::max(best, vectors->edge_a[get_new_edge_pos_index(state)]);
-    best = std::max(best, vectors->edge_b[get_new_edge_rot_index(state)]);
-  }
-  else {
-    best = std::max(best, vectors->edge_a[get_edge_index(state, true, type)]);
-    best = std::max(best, vectors->edge_b[get_edge_index(state, false, type)]);
-  }
+  uint8_t best = vectors->corner_db[corner_index];
+  //if (type == PDB::a12) {
+  uint8_t a = vectors->edge_a[pos_index];
+  uint8_t b = vectors->edge_b[rot_index];
+  if (a > best) best = a;
+  if (b > best) best = b;
+  //}
+  //else {
+  //  best = std::max(best, vectors->edge_a[get_edge_index(state, true, type)]);
+  //  best = std::max(best, vectors->edge_b[get_edge_index(state, false, type)]);
+  //}
   return best;
 }
 
@@ -298,11 +309,11 @@ uint64_t npr(int n, int r)
 }
 
 void Rubiks::generate_edges_pattern_database(std::string filename,
-  const uint8_t * state,
+  const uint8_t* state,
   const uint8_t max_depth,
   const uint8_t size,
-  const uint8_t * edges,
-  const uint8_t * edge_rot_indices)
+  const uint8_t* edges,
+  const uint8_t* edge_rot_indices)
 {
   std::cout << "Generating edges db\n";
   std::stack<RubiksIndex> stack;
@@ -379,7 +390,7 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
 }
 
 
-void Rubiks::generate_rotations_pattern_database(std::string filename, const uint8_t * state, const uint8_t max_depth)
+void Rubiks::generate_rotations_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth)
 {
   std::cout << "Generating edges db\n";
   std::stack<RubiksIndex> stack;
@@ -461,7 +472,7 @@ void Rubiks::generate_rotations_pattern_database(std::string filename, const uin
   npy::SaveArrayAsNumpy<uint8_t>(filename, false, 1, shape, pattern_lookup);
 }
 
-void Rubiks::generate_edges_pos_pattern_database(std::string filename, const uint8_t * state, const uint8_t max_depth)
+void Rubiks::generate_edges_pos_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth)
 {
   std::cout << "Generating edges db\n";
   std::stack<RubiksIndex> stack;
@@ -543,7 +554,7 @@ void Rubiks::generate_edges_pos_pattern_database(std::string filename, const uin
   npy::SaveArrayAsNumpy<uint8_t>(filename, false, 1, shape, pattern_lookup);
 }
 
-void Rubiks::generate_corners_pattern_database(std::string filename, const uint8_t * state, const uint8_t max_depth)
+void Rubiks::generate_corners_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth)
 {
   std::cout << "Generating corners db\n";
   std::stack<RubiksIndex> stack;

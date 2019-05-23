@@ -41,6 +41,9 @@
     <ClCompile Include="id_gbfhs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="id_dibbs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="a_star.h">
@@ -77,6 +80,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="id_gbfhs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="id_dibbs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -22,6 +22,7 @@
     <ClCompile Include="a_star.cpp" />
     <ClCompile Include="dibbs.cpp" />
     <ClCompile Include="gbfhs.cpp" />
+    <ClCompile Include="id_dibbs.cpp" />
     <ClCompile Include="id_gbfhs.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mr_rank.cpp" />
@@ -35,6 +36,7 @@
     <ClInclude Include="dibbs.h" />
     <ClInclude Include="gbfhs.h" />
     <ClInclude Include="hash.hpp" />
+    <ClInclude Include="id_dibbs.h" />
     <ClInclude Include="id_gbfhs.h" />
     <ClInclude Include="mr_rank.h" />
     <ClInclude Include="node.h" />
@@ -113,6 +115,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -196,12 +200,13 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OpenMPSupport>true</OpenMPSupport>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <EnablePREfast>true</EnablePREfast>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <LargeAddressAware>true</LargeAddressAware>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>

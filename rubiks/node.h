@@ -20,6 +20,7 @@ struct Node
   uint8_t f_bar;
   uint8_t heuristic;
   uint8_t reverse_heuristic;
+  bool passed_threshold;
 
   Node();
   Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type);

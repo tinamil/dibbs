@@ -6,6 +6,7 @@
 #include "rubiks_loader.h"
 #include "gbfhs.h"
 #include "id_gbfhs.h"
+#include "id_dibbs.h"
 
 using namespace std;
 using namespace Rubiks;
