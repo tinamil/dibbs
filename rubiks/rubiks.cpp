@@ -53,7 +53,7 @@ uint32_t Rubiks::get_corner_index(const uint8_t* state)
   return corner_index;
 }
 
-uint64_t FactorialUpperK(int n, int k)
+uint64_t FactorialUpperK(const int n, const int k)
 {
   static const uint64_t result[13][13] =
   {
@@ -173,7 +173,7 @@ bool Rubiks::is_solved(const uint8_t* cube)
 }
 
 
-uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state, PDB type)
+uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state, const PDB type)
 {
   if (type == PDB::zero)
   {
@@ -279,16 +279,16 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
     npy::LoadArrayFromNumpy<uint8_t>(edge_name_b, shape, vectors->edge_b);
   }
   uint8_t best = vectors->corner_db[corner_index];
-  //if (type == PDB::a12) {
-  uint8_t a = vectors->edge_a[pos_index];
-  uint8_t b = vectors->edge_b[rot_index];
-  if (a > best) best = a;
-  if (b > best) best = b;
-  //}
-  //else {
-  //  best = std::max(best, vectors->edge_a[get_edge_index(state, true, type)]);
-  //  best = std::max(best, vectors->edge_b[get_edge_index(state, false, type)]);
-  //}
+  if (type == PDB::a12) {
+    uint8_t a = vectors->edge_a[pos_index];
+    uint8_t b = vectors->edge_b[rot_index];
+    if (a > best) best = a;
+    if (b > best) best = b;
+  }
+  else {
+    best = std::max(best, vectors->edge_a[get_edge_index(state, true, type)]);
+    best = std::max(best, vectors->edge_b[get_edge_index(state, false, type)]);
+  }
   return best;
 }
 
@@ -308,7 +308,7 @@ uint64_t npr(int n, int r)
   return __factorial_lookup[n] / __factorial_lookup[n - r];
 }
 
-void Rubiks::generate_edges_pattern_database(std::string filename,
+void Rubiks::generate_edges_pattern_database(const std::string filename,
   const uint8_t* state,
   const uint8_t max_depth,
   const uint8_t size,
@@ -342,7 +342,7 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
     auto prev_ri = stack.top();
     stack.pop();
 
-    #pragma omp parallel for shared(id_depth, pattern_lookup, prev_ri, stack, count) 
+    //#pragma omp parallel for shared(id_depth, pattern_lookup, prev_ri, stack, count) 
     for (int face = 0; face < 6; ++face)
     {
       if (prev_ri.depth > 0 && Rubiks::skip_rotations(prev_ri.last_face, face))
@@ -358,13 +358,13 @@ void Rubiks::generate_edges_pattern_database(std::string filename,
         uint64_t new_state_index = get_edge_index(next_ri.state, size, edges, edge_rot_indices);
         if (new_state_depth < id_depth)
         {
-          #pragma omp critical (stack)
+          //#pragma omp critical (stack) nowait
           {
             stack.push(next_ri);
           }
         }
         else {
-          #pragma omp critical (pattern)
+          //#pragma omp critical (pattern) nowait
           {
             if (pattern_lookup[new_state_index] == max_depth)
             {
