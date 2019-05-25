@@ -341,7 +341,8 @@ void Rubiks::generate_edges_pattern_database(const std::string filename,
     }
     auto prev_ri = stack.top();
     stack.pop();
-
+    auto prev_index = get_edge_index(prev_ri.state, size, edges, edge_rot_indices);
+    auto prev_db_val = pattern_lookup[prev_index];
     //#pragma omp parallel for shared(id_depth, pattern_lookup, prev_ri, stack, count) 
     for (int face = 0; face < 6; ++face)
     {
@@ -368,7 +369,7 @@ void Rubiks::generate_edges_pattern_database(const std::string filename,
           {
             if (pattern_lookup[new_state_index] == max_depth)
             {
-              pattern_lookup[new_state_index] = new_state_depth;
+              pattern_lookup[new_state_index] = prev_db_val + 1;
               ++count;
               if (count % 10000000 == 0 || count > (all_edges * .9999))
               {
