@@ -5,11 +5,16 @@
 #include <vector>
 #include <cmath>
 #include <stack>
+#include <queue>
+#include <functional>
 #include <unordered_map>
+#include <thread>
+#include <utility>
 #include "npy.hpp"
 #include "mr_rank.h"
 #include "utility.h"
 #include "hash.hpp"
+#include "cameron314/blockingconcurrentqueue.h"
 
 namespace Rubiks
 {
@@ -112,6 +117,17 @@ namespace Rubiks
   { 2, 1, 0 }
   };
 
+  static constexpr uint64_t __factorial_lookup[] =
+  {
+    1ll, 1ll, 2ll, 6ll, 24ll, 120ll, 720ll, 5040ll, 40320ll,
+    362880ll, 3628800ll, 39916800ll, 479001600ll,
+    6227020800ll, 87178291200ll, 1307674368000ll,
+    20922789888000ll, 355687428096000ll, 6402373705728000ll,
+    121645100408832000ll, 2432902008176640000ll
+  };
+
+  inline constexpr uint64_t npr(int n, int r) { return __factorial_lookup[n] / __factorial_lookup[n - r]; }
+
   const bool __corner_booleans[] = { true, true, false, false, true, true, false, false,
     false, false, true, true, false, false, true, true,
     false, false, false, false, false, false, false, false,
@@ -122,11 +138,17 @@ namespace Rubiks
   const uint8_t __corner_pos_indices[] = { 0, 4, 10, 14, 24, 28, 34, 38 };
   const uint8_t __corner_rot_indices[] = { 1, 5, 11, 15, 25, 29, 35, 39 };
 
-  const uint8_t corner_max_depth = 11;
-  const uint8_t edge_6_max_depth = 10;
-  const uint8_t edge_8_max_depth = 12;
-  const uint8_t edge_12_pos_max_depth = 10;
-  const uint8_t edge_20_rot_max_depth = 9;
+  constexpr uint8_t corner_max_depth = 11;
+  constexpr uint8_t edge_6_max_depth = 10;
+  constexpr uint8_t edge_8_max_depth = 12;
+  constexpr uint8_t edge_12_pos_max_depth = 10;
+  constexpr uint8_t edge_20_rot_max_depth = 9;
+
+  constexpr size_t corner_max_count = 88179840;
+  constexpr size_t edge_6_max_count = npr(12, 6) * uint64_t(2 ^ 6);
+  constexpr size_t edge_8_max_count = npr(12, 8) * uint64_t(2 ^ 8);
+  constexpr size_t edge_12_pos_max_count = npr(12, 12);
+  constexpr size_t edge_20_rot_max_count = 4478976;
 
   const uint8_t edge_pos_indices_6a[] = { 2, 6, 8, 12, 16, 18 };
   const uint8_t edge_rot_indices_6a[] = { 3, 7, 9, 13, 17, 19 };
@@ -165,8 +187,14 @@ namespace Rubiks
   extern void rotate(uint8_t* new_state, const uint8_t face, const uint8_t rotation);
   extern uint32_t get_corner_index(const uint8_t* state);
 
-  extern uint64_t get_edge_index(const uint8_t* state, bool a, PDB type);
-  extern uint64_t get_edge_index(const uint8_t* state, int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
+  extern uint64_t get_edge_index(const uint8_t* state, const bool a, const PDB type);
+  extern uint64_t get_edge_index(const uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
+
+  inline uint64_t get_edge_index6a(const uint8_t* state) { return get_edge_index(state, 6, edges_6a, edge_rot_indices_6a); }
+  inline uint64_t get_edge_index6b(const uint8_t* state) { return get_edge_index(state, 6, edges_6b, edge_rot_indices_6b); }
+  inline uint64_t get_edge_index8a(const uint8_t* state) { return get_edge_index(state, 8, edges_8a, edge_rot_indices_8a); }
+  inline uint64_t get_edge_index8b(const uint8_t* state) { return get_edge_index(state, 8, edges_8b, edge_rot_indices_8b); }
+
   extern uint64_t get_new_edge_pos_index(const uint8_t* state);
   extern uint64_t get_new_edge_rot_index(const uint8_t* state);
   extern bool is_solved(const uint8_t* state);
@@ -175,21 +203,36 @@ namespace Rubiks
   {
     return pattern_lookup(state, __goal, type);
   }
-  extern void generate_corners_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth);
-  extern void generate_edges_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth, const uint8_t size, const uint8_t* edge_pos_indices, const uint8_t* edge_rot_indices);
-  extern void generate_edges_pos_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth);
-  extern void generate_rotations_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth);
+  extern void generate_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth, const size_t max_count, const std::function<size_t(const uint8_t* state)> func);
+  extern void generate_pattern_database_multithreaded(std::string filename, const uint8_t* state, const uint8_t max_depth, const size_t max_count, const std::function<size_t(const uint8_t* state)> func);
   extern void generate_goal_dbs();
   struct RubiksIndex
   {
     uint8_t state[40];
     const uint8_t depth;
     const uint8_t last_face;
-    RubiksIndex(const uint8_t depth, const uint8_t last_face) : state(), depth(depth), last_face(last_face) {}
+
+    RubiksIndex() : depth(0), last_face(0) {  }
+    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t last_face) : depth(depth), last_face(last_face) {
+      memcpy(state, original_state, 40);
+    }
+    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t face, const uint8_t rotation) : depth(depth), last_face(last_face) {
+      memcpy(state, original_state, 40);
+      rotate(state, face, rotation);
+    }
     RubiksIndex(const RubiksIndex& original) : state(), depth(original.depth), last_face(original.last_face) {
       memcpy(state, original.state, 40);
     }
   };
+
+  extern void pdb_expand_nodes(
+    moodycamel::BlockingConcurrentQueue<std::pair<size_t, uint8_t>>& results_queue,
+    moodycamel::BlockingConcurrentQueue<RubiksIndex>& input_queue,
+    std::vector<uint8_t>& pattern_lookup,
+    const std::function<size_t(const uint8_t* state)> lookup_func,
+    const uint8_t id_depth,
+    std::atomic_bool& finished
+  );
 
   struct PDBVectors
   {

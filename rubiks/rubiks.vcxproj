@@ -33,6 +33,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="a_star.h" />
+    <ClInclude Include="cameron314\atomicops.h" />
+    <ClInclude Include="cameron314\blockingconcurrentqueue.h" />
+    <ClInclude Include="cameron314\concurrentqueue.h" />
+    <ClInclude Include="cameron314\readerwriterqueue.h" />
     <ClInclude Include="dibbs.h" />
     <ClInclude Include="gbfhs.h" />
     <ClInclude Include="hash.hpp" />
