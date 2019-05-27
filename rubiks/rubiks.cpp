@@ -1,33 +1,28 @@
 #include "rubiks.h"
 
-
-void Rubiks::rotate(uint8_t* new_state, const uint8_t face, const uint8_t rotation)
+void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uint8_t rotation)
 {
-
-  static constexpr uint8_t __turn_position_lookup[][18] =
+  static constexpr unsigned int __turn_position_lookup[18][20] =
   {
-    { 0, 0, 5, 2, 12, 0, 0, 0, 12, 5, 2, 0, 0, 0, 17, 7, 14, 0 },
-  { 1, 1, 1, 4, 8, 1, 1, 1, 1, 3, 9, 1, 1, 1, 1, 6, 13, 1 },
-  { 2, 2, 2, 7, 0, 14, 2, 2, 2, 0, 14, 7, 2, 2, 2, 5, 12, 19 },
-  { 3, 3, 10, 1, 3, 3, 3, 3, 8, 6, 3, 3, 3, 3, 15, 4, 3, 3 },
-  { 4, 4, 4, 6, 4, 9, 4, 4, 4, 1, 4, 11, 4, 4, 4, 3, 4, 16 },
-  { 5, 7, 17, 0, 5, 5, 5, 17, 0, 7, 5, 5, 5, 19, 12, 2, 5, 5 },
-  { 6, 11, 6, 3, 6, 6, 6, 10, 6, 4, 6, 6, 6, 18, 6, 1, 6, 6 },
-  { 7, 19, 7, 5, 7, 2, 7, 5, 7, 2, 7, 19, 7, 17, 7, 0, 7, 14 },
-  { 8, 8, 3, 8, 13, 8, 8, 8, 15, 8, 1, 8, 8, 8, 10, 8, 9, 8 },
-  { 9, 9, 9, 9, 1, 16, 9, 9, 9, 9, 13, 4, 9, 9, 9, 9, 8, 11 },
-  { 10, 6, 15, 10, 10, 10, 10, 18, 3, 10, 10, 10, 10, 11, 8, 10, 10, 10 },
-  { 11, 18, 11, 11, 11, 4, 11, 6, 11, 11, 11, 16, 11, 10, 11, 11, 11, 9 },
-  { 17, 12, 0, 12, 14, 12, 14, 12, 17, 12, 0, 12, 19, 12, 5, 12, 2, 12 },
-  { 15, 13, 13, 13, 9, 13, 16, 13, 13, 13, 8, 13, 18, 13, 13, 13, 1, 13 },
-  { 12, 14, 14, 14, 2, 19, 19, 14, 14, 14, 12, 2, 17, 14, 14, 14, 0, 7 },
-  { 18, 15, 8, 15, 15, 15, 13, 15, 10, 15, 15, 15, 16, 15, 3, 15, 15, 15 },
-  { 13, 16, 16, 16, 16, 11, 18, 16, 16, 16, 16, 9, 15, 16, 16, 16, 16, 4 },
-  { 19, 5, 12, 17, 17, 17, 12, 19, 5, 17, 17, 17, 14, 7, 0, 17, 17, 17 },
-  { 16, 10, 18, 18, 18, 18, 15, 11, 18, 18, 18, 18, 13, 6, 18, 18, 18, 18 },
-  { 14, 17, 19, 19, 19, 7, 17, 7, 19, 19, 19, 14, 12, 5, 19, 19, 19, 2 }
+    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, 15, 12, 18, 13, 19, 16, 14 },
+  { 0, 1, 2, 3, 4, 7, 11, 19, 8, 9, 6, 18, 12, 13, 14, 15, 16, 5, 10, 17 },
+  { 5, 1, 2, 10, 4, 17, 6, 7, 3, 9, 15, 11, 0, 13, 14, 8, 16, 12, 18, 19 },
+  { 2, 4, 7, 1, 6, 0, 3, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 },
+  { 12, 8, 0, 3, 4, 5, 6, 7, 13, 1, 10, 11, 14, 9, 2, 15, 16, 17, 18, 19 },
+  { 0, 1, 14, 3, 9, 5, 6, 2, 8, 16, 10, 4, 12, 13, 19, 15, 11, 17, 18, 7 },
+  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 19, 13, 18, 12, 15, 17 },
+  { 0, 1, 2, 3, 4, 17, 10, 5, 8, 9, 18, 6, 12, 13, 14, 15, 16, 19, 11, 7 },
+  { 12, 1, 2, 8, 4, 0, 6, 7, 15, 9, 3, 11, 17, 13, 14, 10, 16, 5, 18, 19 },
+  { 5, 3, 0, 6, 1, 7, 4, 2, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 },
+  { 2, 9, 14, 3, 4, 5, 6, 7, 1, 13, 10, 11, 0, 8, 12, 15, 16, 17, 18, 19 },
+  { 0, 1, 7, 3, 11, 5, 6, 19, 8, 4, 10, 16, 12, 13, 2, 15, 9, 17, 18, 14 },
+  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 19, 18, 17, 16, 15, 14, 13, 12 },
+  { 0, 1, 2, 3, 4, 19, 18, 17, 8, 9, 11, 10, 12, 13, 14, 15, 16, 7, 6, 5 },
+  { 17, 1, 2, 15, 4, 12, 6, 7, 10, 9, 8, 11, 5, 13, 14, 3, 16, 0, 18, 19 },
+  { 7, 6, 5, 4, 3, 2, 1, 0, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 },
+  { 14, 13, 12, 3, 4, 5, 6, 7, 9, 8, 10, 11, 2, 1, 0, 15, 16, 17, 18, 19 },
+  { 0, 1, 19, 3, 16, 5, 6, 14, 8, 11, 10, 9, 12, 13, 7, 15, 4, 17, 18, 2 }
   };
-
 
   static constexpr uint8_t __corner_rotation[][3] =
   {
@@ -39,28 +34,14 @@ void Rubiks::rotate(uint8_t* new_state, const uint8_t face, const uint8_t rotati
   { 2, 1, 0 }
   };
 
-  static constexpr bool __turn_lookup[][6] =
+  static constexpr bool __turn_lookup[6][20] =
   {
-    { false, false, true, true, true, false },
-  { false, false, false, true, true, false },
-  { false, false, false, true, true, true },
-  { false, false, true, true, false, false },
-  { false, false, false, true, false, true },
-  { false, true, true, true, false, false },
-  { false, true, false, true, false, false },
-  { false, true, false, true, false, true },
-  { false, false, true, false, true, false },
-  { false, false, false, false, true, true },
-  { false, true, true, false, false, false },
-  { false, true, false, false, false, true },
-  { true, false, true, false, true, false },
-  { true, false, false, false, true, false },
-  { true, false, false, false, true, true },
-  { true, false, true, false, false, false },
-  { true, false, false, false, false, true },
-  { true, true, true, false, false, false },
-  { true, true, false, false, false, false },
-  { true, true, false, false, false, true }
+    { false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true, true, true, true, true },
+  { false, false, false, false, false, true, true, true, false, false, true, true, false, false, false, false, false, true, true, true },
+  { true, false, false, true, false, true, false, false, true, false, true, false, true, false, false, true, false, true, false, false },
+  { true, true, true, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false },
+  { true, true, true, false, false, false, false, false, true, true, false, false, true, true, true, false, false, false, false, false },
+  { false, false, true, false, true, false, false, true, false, true, false, true, false, false, true, false, true, false, false, true },
   };
 
   static constexpr bool __corner_booleans[] = { true, true, false, false, true, true, false, false,
@@ -71,34 +52,34 @@ void Rubiks::rotate(uint8_t* new_state, const uint8_t face, const uint8_t rotati
   };
 
   const uint8_t rotation_index = 6 * rotation + face;
+  const unsigned int* __restrict turn_pos = __turn_position_lookup[rotation_index];
   if (rotation == 2)
   {
     for (int i = 0; i < 20; i++)
     {
-      new_state[i * 2] = __turn_position_lookup[new_state[i * 2]][rotation_index];
+      new_state[i] = turn_pos[new_state[i]];
     }
   }
   else
   {
-    for (int i = 0; i < 20; i++)
+    const bool* __restrict do_turn = __turn_lookup[face];
+    const uint8_t* __restrict corner_rotation = __corner_rotation[face];
+    for (int i = 0; i < 20; ++i)
     {
-      const uint8_t index = i * 2;
-      new_state[index] = __turn_position_lookup[new_state[index]][rotation_index];
+      new_state[i] = turn_pos[new_state[i]];
     }
-    for (int i = 0; i < 20; i++) {
-      const uint8_t index = i * 2;
-      if (__turn_lookup[new_state[index]][face])
+    for (int i = 20; i < 40; i++) {
+      if (do_turn[new_state[i]])
       {
-        if (__corner_booleans[index])
+        if (__corner_booleans[i])
         {
-          new_state[index + 1] = __corner_rotation[face][new_state[index + 1]];
+          new_state[i] = corner_rotation[new_state[i]];
         }
         else if (face == 2 || face == 5) // Face left and right
         {
-          new_state[index + 1] = 1 - new_state[index + 1];
+          new_state[i] = 1 - new_state[i];
         }
       }
-
     }
   }
 }
@@ -234,14 +215,13 @@ uint64_t Rubiks::get_new_edge_rot_index(const uint8_t* state) {
 
 bool Rubiks::is_solved(const uint8_t* cube)
 {
+  bool solved = true;
   for (int i = 0; i < 40; ++i)
   {
-    if (__goal[i] != cube[i])
-    {
-      return false;
-    }
+    //Using bitwise and to allow auto-vectorization
+    solved &= __goal[i] != cube[i];
   }
-  return true;
+  return solved;
 }
 
 
@@ -506,7 +486,7 @@ void Rubiks::generate_pattern_database_multithreaded(
 )
 {
   using namespace std::chrono_literals;
-  const size_t thread_count = 8;
+  const unsigned int thread_count = std::thread::hardware_concurrency();
   const size_t bulk_size = 50;
 
   std::cout << "Generating PDB\n";
@@ -519,7 +499,7 @@ void Rubiks::generate_pattern_database_multithreaded(
   uint8_t id_depth = 0;
   moodycamel::ConcurrentQueue<RubiksIndex> input_queue;
   std::atomic_size_t count = 1;
-  std::thread threads[thread_count];
+  std::thread* threads = new std::thread[thread_count];
   std::mutex pattern_mutex;
   while (count < max_count)
   {

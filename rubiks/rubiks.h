@@ -72,8 +72,8 @@ namespace Rubiks
   inline constexpr uint64_t npr(int n, int r) { return __factorial_lookup[n] / __factorial_lookup[n - r]; }
 
 
-  const uint8_t __corner_pos_indices[] = { 0, 4, 10, 14, 24, 28, 34, 38 };
-  const uint8_t __corner_rot_indices[] = { 1, 5, 11, 15, 25, 29, 35, 39 };
+  const uint8_t __corner_pos_indices[] = { 0, 2, 5, 7, 12, 14, 17, 19 };
+  const uint8_t __corner_rot_indices[] = { 20, 22, 25, 27, 32, 34, 37, 39 };
 
   constexpr uint8_t corner_max_depth = 11;
   constexpr uint8_t edge_6_max_depth = 10;
@@ -87,16 +87,16 @@ namespace Rubiks
   constexpr size_t edge_12_pos_max_count = npr(12, 12);
   constexpr size_t edge_20_rot_max_count = 4478976;
 
-  const uint8_t edge_pos_indices_6a[] = { 2, 6, 8, 12, 16, 18 };
-  const uint8_t edge_rot_indices_6a[] = { 3, 7, 9, 13, 17, 19 };
-  const uint8_t edge_pos_indices_6b[] = { 20, 22, 26, 30, 32, 36 };
-  const uint8_t edge_rot_indices_6b[] = { 21, 23, 27, 31, 33, 37 };
-  const uint8_t edge_pos_indices_8a[] = { 2, 6, 8, 12, 16, 18, 20, 22 };
-  const uint8_t edge_rot_indices_8a[] = { 3, 7, 9, 13, 17, 19, 21, 23 };
-  const uint8_t edge_pos_indices_8b[] = { 16, 18, 20, 22, 26, 30, 32, 36 };
-  const uint8_t edge_rot_indices_8b[] = { 17, 19, 21, 23, 27, 31, 33, 37 };
-  const uint8_t edge_pos_indices_12[] = { 2, 6, 8, 12, 16, 18, 20, 22, 26, 30, 32, 36 };
-  const uint8_t edge_rot_indices_12[] = { 3, 7, 9, 13, 17, 19, 21, 23, 27, 31, 33, 37 };
+  const uint8_t edge_pos_indices_6a[] = { 1, 3, 4, 6, 8, 9 };
+  const uint8_t edge_rot_indices_6a[] = { 21, 23, 24, 26, 28, 29 };
+  const uint8_t edge_pos_indices_6b[] = { 10, 11, 13, 15, 16, 18 };
+  const uint8_t edge_rot_indices_6b[] = { 30, 31, 33, 35, 36, 38 };
+  const uint8_t edge_pos_indices_8a[] = { 1, 3, 4, 6, 8, 9, 10, 11 };
+  const uint8_t edge_rot_indices_8a[] = { 21, 23, 24, 26, 28, 29, 30, 31 };
+  const uint8_t edge_pos_indices_8b[] = { 8, 9, 10, 11, 13, 15, 16, 18 };
+  const uint8_t edge_rot_indices_8b[] = { 28, 29, 30, 31, 33, 35, 36, 38 };
+  const uint8_t edge_pos_indices_12[] = { 1, 3, 4, 6, 8, 9, 10, 11, 13, 15, 16, 18 };
+  const uint8_t edge_rot_indices_12[] = { 21, 23, 24, 26, 28, 29, 30, 31, 33, 35, 36, 38 };
 
   const uint8_t __cube_translations[] = { 0, 0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 4, 8, 5, 9, 10, 6, 11, 7 };
   const uint8_t edges_6a[] = { 0, 1, 2, 3, 4, 5 };
@@ -107,11 +107,9 @@ namespace Rubiks
   const static int base2[] = { 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1 };
   const static int base3[] = { 729, 243, 81, 27, 9, 3, 1 };
 
-  const uint8_t __goal[] = { 0, 0, 1, 0, 2, 0, 3, 0,
-    4, 0, 5, 0, 6, 0, 7, 0,
-    8, 0, 9, 0, 10, 0, 11, 0,
-    12, 0, 13, 0, 14, 0, 15, 0,
-    16, 0, 17, 0, 18, 0, 19, 0
+  const uint8_t __goal[] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
   };
 
 
