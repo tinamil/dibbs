@@ -245,7 +245,7 @@ namespace Rubiks
 
   extern void pdb_expand_nodes(
     moodycamel::ConcurrentQueue<PDB_Value>& results_queue,
-    moodycamel::ConcurrentQueue<RubiksIndex>& input_queue,
+    moodycamel::BlockingConcurrentQueue<RubiksIndex>& input_queue,
     std::vector<uint8_t>& pattern_lookup,
     const std::function<size_t(const uint8_t* state)> lookup_func,
     const uint8_t id_depth,
