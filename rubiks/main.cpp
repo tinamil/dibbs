@@ -11,14 +11,20 @@
 using namespace std;
 using namespace Rubiks;
 
-//#define ASTAR 
+#define ASTAR 
 //#define DIBBS 
-#define GBFHS
+//#define GBFHS
 
 void search_cubes()
 {
   vector<uint8_t*> cubes = RubiksLoader::load_cubes("korf1997.txt");
-  PDB type = PDB::a12;
+  for (int i = 0; i < cubes.size(); ++i) {
+    for (int j = 0; j < 40; ++j) {
+      std::cout << std::to_string(cubes[i][j]) << " ";
+    }
+    std::cout << "\n";
+  }
+  PDB type = PDB::a888;
   vector<uint64_t> count_results;
   vector<int64_t> time_results;
 
@@ -60,6 +66,17 @@ void search_cubes()
 int main()
 {
   std::cout << "Size of Node=" << sizeof(Node) << std::endl;
-  search_cubes();
+  uint8_t state[40];
+  memcpy(state, Rubiks::__goal, 40);
+  Rubiks::rotate(state, 0, 0);
+  Rubiks::rotate(state, 0, 0);
+  vector<uint8_t*> cubes = RubiksLoader::load_cubes("korf1997.txt");
+  for (int i = 0; i < cubes.size(); ++i) {
+    for (int j = 0; j < 40; ++j) {
+      std::cout << std::to_string(cubes[i][j]) << " ";
+    }
+    std::cout << "\n";
+  }
+  //search_cubes();
   return 0;
 }

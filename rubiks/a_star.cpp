@@ -44,7 +44,7 @@ uint64_t search::a_star(const uint8_t* state, const Rubiks::PDB pdb_type)
       base_stack.push(new_node);
     }
   }
-
+  return 0;
   std::atomic_bool* done_array = new std::atomic_bool[omp_get_max_threads()];
 
   #pragma omp parallel default(none) reduction(+: count) shared(shared_stack, base_stack, done, id_depth, done_array, std::cout, state)

@@ -146,6 +146,7 @@ namespace Rubiks
     uint8_t state[40];
     uint8_t depth;
     uint8_t last_face;
+    size_t index;
 
     RubiksIndex() : state(), depth(0), last_face(0) {  }
     RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t last_face) : depth(depth), last_face(last_face) {
@@ -155,16 +156,17 @@ namespace Rubiks
       memcpy(state, original_state, 40);
       rotate(state, face, rotation);
     }
-    RubiksIndex(const RubiksIndex& original) : state(), depth(original.depth), last_face(original.last_face) {
+    RubiksIndex(const RubiksIndex& original) : state(), depth(original.depth), last_face(original.last_face), index(original.index) {
       memcpy(state, original.state, 40);
     }
-    RubiksIndex(RubiksIndex&& original) noexcept : state(), depth(original.depth), last_face(original.last_face) {
+    RubiksIndex(RubiksIndex&& original) noexcept : state(), depth(original.depth), last_face(original.last_face), index(original.index) {
       memcpy(state, original.state, 40);
     }
     RubiksIndex& operator=(const RubiksIndex& rhs) {
       memcpy(state, rhs.state, 40);
       depth = rhs.depth;
       last_face = rhs.last_face;
+      index = rhs.index;
       return *this;
     }
   };

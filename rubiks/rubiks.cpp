@@ -428,7 +428,25 @@ void Rubiks::pdb_expand_nodes(
   const size_t buffer_size = 1024;
   std::stack<RubiksIndex, std::vector<RubiksIndex>> stack;
   moodycamel::ConsumerToken ctok(input_queue);
-  std::vector<PDB_Value> local_results_buffer(buffer_size);
+  std::vector<PDB_Value> local_results_buffer;
+
+  auto process_buffer = [&pattern_lookup, &count, &local_results_buffer]() {
+    for (size_t i = 0; i < local_results_buffer.size(); ++i) {
+      auto id = local_results_buffer[i].index;
+      auto value = local_results_buffer[i].value;
+      if (pattern_lookup[id] > value) {
+        bool new_value = pattern_lookup[id] > 20;
+        if (new_value) {
+          count++;
+          std::cout << count << '\n';
+        }
+        else if (pattern_lookup[id] - value > 1) {
+          std::cout << std::to_string(pattern_lookup[id]) << " " << std::to_string(value) << '\n';
+        }
+        pattern_lookup[id] = value;
+      }
+    }};
+
   while (true) {
     if (stack.empty()) {
       RubiksIndex queue_ri;
@@ -441,30 +459,19 @@ void Rubiks::pdb_expand_nodes(
     }
     if (local_results_buffer.size() >= buffer_size) {
       pattern_lookup_mutex.lock();
-      for (size_t i = 0; i < local_results_buffer.size(); ++i) {
-        auto id = local_results_buffer[i].index;
-        auto value = local_results_buffer[i].value;
-        bool new_value = pattern_lookup[id] > 20;
-        if (pattern_lookup[id] > value) {
-          if (new_value) {
-            count++;
-            if (count % 10000000 == 0) {
-              std::cout << count << '\n';
-            }
-          }
-          pattern_lookup[id] = value;
-        }
-      }
+      process_buffer();
       pattern_lookup_mutex.unlock();
       local_results_buffer.clear();
     }
-    auto prev_ri = stack.top();
+    const auto prev_ri = stack.top();
     stack.pop();
-    auto prev_index = lookup_func(prev_ri.state);
-    auto prev_db_val = pattern_lookup[prev_index];
+    uint8_t next_db_val = 50;
+    if (prev_ri.depth + 1 == id_depth) {
+      next_db_val = pattern_lookup[prev_ri.index] + 1;
+    }
     for (int face = 0; face < 6; ++face)
     {
-      if (prev_ri.depth > 0 && Rubiks::skip_rotations(prev_ri.last_face, face))
+      if (Rubiks::skip_rotations(prev_ri.last_face, face))
       {
         continue;
       }
@@ -472,17 +479,23 @@ void Rubiks::pdb_expand_nodes(
       {
         uint8_t new_state_depth = prev_ri.depth + 1;
         RubiksIndex next_ri(prev_ri.state, new_state_depth, face, rotation);
-        uint64_t new_state_index = lookup_func(next_ri.state);
+        next_ri.index = lookup_func(next_ri.state);
+        next_ri.index = lookup_func(next_ri.state);
         if (new_state_depth < id_depth)
         {
           stack.push(next_ri);
         }
         else
         {
-          local_results_buffer.emplace_back(new_state_index, prev_db_val + 1);
+          local_results_buffer.emplace_back(next_ri.index, next_db_val);
         }
       }
     }
+  }
+  if (local_results_buffer.size() > 0) {
+    pattern_lookup_mutex.lock();
+    process_buffer();
+    pattern_lookup_mutex.unlock();
   }
 }
 
@@ -494,7 +507,7 @@ void Rubiks::generate_pattern_database_multithreaded(
 )
 {
   using namespace std::chrono_literals;
-  const unsigned int thread_count = std::thread::hardware_concurrency();
+  const unsigned int thread_count = 2;// std::thread::hardware_concurrency() - 1;
 
   std::cout << "Generating PDB\n";
   std::cout << "Count: " << max_count << "\n";
@@ -510,38 +523,43 @@ void Rubiks::generate_pattern_database_multithreaded(
   std::atomic_size_t count = 1;
   std::thread* threads = new std::thread[thread_count];
   std::mutex pattern_mutex;
+
+  //Initialize input queue by exploring down to depth 2 to create 252 (18*14) separate work inputs to divide amongst threads
+  std::vector<RubiksIndex> initial_storage;
+  for (int face = 0; face < 6; ++face)
+  {
+    for (int rotation = 0; rotation < 3; ++rotation)
+    {
+      RubiksIndex ri = RubiksIndex(state, 1, face, rotation);
+      ri.index = lookup_func(ri.state);
+      pattern_lookup[ri.index] = 1;
+      count += 1;
+
+      for (int face2 = 0; face2 < 6; ++face2)
+      {
+        if (Rubiks::skip_rotations(face, face2))
+        {
+          continue;
+        }
+        for (int rotation2 = 0; rotation2 < 3; ++rotation2)
+        {
+          RubiksIndex ri2 = RubiksIndex(ri.state, 2, face2, rotation2);
+          ri2.index = lookup_func(ri2.state);
+          pattern_lookup[ri2.index] = 2;
+          count += 1;
+
+          initial_storage.push_back(ri2);
+        }
+      }
+    }
+  }
+
   while (count < max_count)
   {
     id_depth += 1;
     std::cout << "Incrementing id-depth to " << unsigned int(id_depth) << "\n";
-    //Initialize input queue by exploring down to depth 2 to create 252 (18*14) separate work inputs to divide amongst threads
-    for (int face = 0; face < 6; ++face)
-    {
-      for (int rotation = 0; rotation < 3; ++rotation)
-      {
-        RubiksIndex ri = RubiksIndex(state, 1, face, rotation);
-        auto index = lookup_func(ri.state);
-        pattern_lookup[index] = 1;
-        count += 1;
 
-        for (int face2 = 0; face2 < 6; ++face2)
-        {
-          if (Rubiks::skip_rotations(face, face2))
-          {
-            continue;
-          }
-          for (int rotation2 = 0; rotation2 < 3; ++rotation2)
-          {
-            RubiksIndex ri2 = RubiksIndex(ri.state, 2, face2, rotation2);
-            auto index = lookup_func(ri2.state);
-            pattern_lookup[index] = 2;
-            count += 1;
-
-            input_queue.enqueue(ri2);
-          }
-        }
-      }
-    }
+    input_queue.enqueue_bulk(initial_storage.begin(), initial_storage.size());
 
     //Start threads
     for (unsigned int i = 0; i < thread_count; ++i) {
