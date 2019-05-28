@@ -99,7 +99,7 @@ uint32_t Rubiks::get_corner_index(const uint8_t* state)
     inv[corner] = i;
   }
 
-  uint32_t corner_index = mr::k_rank(vec, inv, 8, 8);
+  uint32_t corner_index = (uint32_t)mr::k_rank(vec, inv, 8, 8);
 
   corner_index *= 2187;
 
