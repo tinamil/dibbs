@@ -442,7 +442,8 @@ void Rubiks::pdb_expand_nodes(
     if (local_results_buffer.size() >= buffer_size) {
       pattern_lookup_mutex.lock();
       for (size_t i = 0; i < local_results_buffer.size(); ++i) {
-        auto [id, value] = local_results_buffer[i];
+        auto id = local_results_buffer[i].index;
+        auto value = local_results_buffer[i].value;
         bool new_value = pattern_lookup[id] > 20;
         if (pattern_lookup[id] > value) {
           if (new_value) {
@@ -498,11 +499,13 @@ void Rubiks::generate_pattern_database_multithreaded(
   std::cout << "Generating PDB\n";
   std::cout << "Count: " << max_count << "\n";
   std::vector<uint8_t> pattern_lookup(max_count);
-  std::fill(pattern_lookup.begin(), pattern_lookup.end(), 21);
+  for (size_t i = 0; i < pattern_lookup.size(); ++i) {
+    pattern_lookup[i] = 21;
+  }
 
   pattern_lookup[lookup_func(state)] = 0;
 
-  uint8_t id_depth = 0;
+  uint8_t id_depth = 2;
   moodycamel::ConcurrentQueue<RubiksIndex> input_queue;
   std::atomic_size_t count = 1;
   std::thread* threads = new std::thread[thread_count];
