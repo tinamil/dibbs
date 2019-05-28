@@ -454,8 +454,8 @@ void Rubiks::pdb_expand_nodes(
           pattern_lookup[id] = value;
         }
       }
-      local_results_buffer.clear();
       pattern_lookup_mutex.unlock();
+      local_results_buffer.clear();
     }
     auto prev_ri = stack.top();
     stack.pop();
@@ -519,6 +519,7 @@ void Rubiks::generate_pattern_database_multithreaded(
         RubiksIndex ri = RubiksIndex(state, 1, face, rotation);
         auto index = lookup_func(ri.state);
         pattern_lookup[index] = 1;
+        count += 1;
 
         for (int face2 = 0; face2 < 6; ++face2)
         {
@@ -531,6 +532,7 @@ void Rubiks::generate_pattern_database_multithreaded(
             RubiksIndex ri2 = RubiksIndex(ri.state, 2, face2, rotation2);
             auto index = lookup_func(ri2.state);
             pattern_lookup[index] = 2;
+            count += 1;
 
             input_queue.enqueue(ri2);
           }
