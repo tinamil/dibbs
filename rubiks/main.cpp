@@ -18,12 +18,6 @@ using namespace Rubiks;
 void search_cubes()
 {
   vector<uint8_t*> cubes = RubiksLoader::load_cubes("korf1997.txt");
-  for (int i = 0; i < cubes.size(); ++i) {
-    for (int j = 0; j < 40; ++j) {
-      std::cout << std::to_string(cubes[i][j]) << " ";
-    }
-    std::cout << "\n";
-  }
   PDB type = PDB::a888;
   vector<uint64_t> count_results;
   vector<int64_t> time_results;

@@ -44,7 +44,7 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
   { false, false, true, false, true, false, false, true, false, true, false, true, false, false, true, false, true, false, false, true },
   };
 
-  static constexpr bool __corner_booleans[] = { 
+  static constexpr bool __corner_booleans[] = {
     true, false, true, false,
     false, true, false, true,
     false, false, false, false,
@@ -66,9 +66,9 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
     const bool* __restrict do_turn = __turn_lookup[face];
     const uint8_t* __restrict corner_rotation = __corner_rotation[face];
     for (int i = 20; i < 40; i++) {
-      if (do_turn[new_state[i-20]])
+      if (do_turn[new_state[i - 20]])
       {
-        if (__corner_booleans[i-20])
+        if (__corner_booleans[i - 20])
         {
           new_state[i] = corner_rotation[new_state[i]];
         }
@@ -439,10 +439,8 @@ void Rubiks::pdb_expand_nodes(
         bool new_value = pattern_lookup[id] > 20;
         if (new_value) {
           count++;
-          std::cout << count << '\n';
-        }
-        else if (pattern_lookup[id] - value > 1) {
-          std::cout << std::to_string(pattern_lookup[id]) << " " << std::to_string(value) << '\n';
+          if (count % 1000000 == 0)
+            std::cout << count << '\n';
         }
         pattern_lookup[id] = value;
       }
@@ -508,7 +506,7 @@ void Rubiks::generate_pattern_database_multithreaded(
 )
 {
   using namespace std::chrono_literals;
-  const unsigned int thread_count = 2;// std::thread::hardware_concurrency() - 1;
+  const unsigned int thread_count = std::thread::hardware_concurrency();
 
   std::cout << "Generating PDB\n";
   std::cout << "Count: " << max_count << "\n";
