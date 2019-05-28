@@ -44,11 +44,12 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
   { false, false, true, false, true, false, false, true, false, true, false, true, false, false, true, false, true, false, false, true },
   };
 
-  static constexpr bool __corner_booleans[] = { true, true, false, false, true, true, false, false,
-    false, false, true, true, false, false, true, true,
-    false, false, false, false, false, false, false, false,
-    true, true, false, false, true, true, false, false,
-    false, false, true, true, false, false, true, true
+  static constexpr bool __corner_booleans[] = { 
+    true, false, true, false,
+    false, true, false, true,
+    false, false, false, false,
+    true, false, true, false,
+    false, true, false, true
   };
 
   const uint8_t rotation_index = 6 * rotation + face;
@@ -64,14 +65,10 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
   {
     const bool* __restrict do_turn = __turn_lookup[face];
     const uint8_t* __restrict corner_rotation = __corner_rotation[face];
-    for (int i = 0; i < 20; ++i)
-    {
-      new_state[i] = turn_pos[new_state[i]];
-    }
     for (int i = 20; i < 40; i++) {
-      if (do_turn[new_state[i]])
+      if (do_turn[new_state[i-20]])
       {
-        if (__corner_booleans[i])
+        if (__corner_booleans[i-20])
         {
           new_state[i] = corner_rotation[new_state[i]];
         }
@@ -80,6 +77,10 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
           new_state[i] = 1 - new_state[i];
         }
       }
+    }
+    for (int i = 0; i < 20; ++i)
+    {
+      new_state[i] = turn_pos[new_state[i]];
     }
   }
 }

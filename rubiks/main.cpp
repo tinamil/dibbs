@@ -66,17 +66,6 @@ void search_cubes()
 int main()
 {
   std::cout << "Size of Node=" << sizeof(Node) << std::endl;
-  uint8_t state[40];
-  memcpy(state, Rubiks::__goal, 40);
-  Rubiks::rotate(state, 0, 0);
-  Rubiks::rotate(state, 0, 0);
-  vector<uint8_t*> cubes = RubiksLoader::load_cubes("korf1997.txt");
-  for (int i = 0; i < cubes.size(); ++i) {
-    for (int j = 0; j < 40; ++j) {
-      std::cout << std::to_string(cubes[i][j]) << " ";
-    }
-    std::cout << "\n";
-  }
-  //search_cubes();
+  search_cubes();
   return 0;
 }
