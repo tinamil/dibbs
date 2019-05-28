@@ -174,6 +174,7 @@ namespace Rubiks
   extern void pdb_expand_nodes(
     moodycamel::ConcurrentQueue<RubiksIndex>& input_queue,
     std::atomic_size_t& count,
+    const size_t max_count,
     std::mutex& pattern_lookup_mutex,
     std::vector<uint8_t>& pattern_lookup,
     const std::function<size_t(const uint8_t* state)> lookup_func,

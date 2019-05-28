@@ -88,15 +88,19 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
 
 uint32_t Rubiks::get_corner_index(const uint8_t* state)
 {
-  const static int size = 8;
-  uint8_t corners[size];
+  constexpr int size = 8;
+  uint8_t vec[size];
+  uint8_t inv[size];
 
-  for (int i = 0; i < size; ++i)
+  for (uint8_t i = 0; i < size; ++i)
   {
-    corners[i] = __cube_translations[state[__corner_pos_indices[i]]];
+    uint8_t corner = __cube_translations[state[__corner_pos_indices[i]]];
+    vec[i] = corner;
+    inv[corner] = i;
   }
 
-  uint32_t corner_index = (uint32_t)mr::get_rank(size, corners);
+  uint32_t corner_index = mr::k_rank(vec, inv, 8, 8);
+
   corner_index *= 2187;
 
   for (int i = 0; i < size - 1; ++i)
@@ -143,7 +147,10 @@ uint64_t Rubiks::get_edge_index(const uint8_t* state, const bool is_a, const Rub
       else
         return get_edge_index8b(state);
     case PDB::a12:
-      return get_new_edge_pos_index(state);
+      if (is_a)
+        return get_new_edge_pos_index(state);
+      else
+        return get_new_edge_rot_index(state);
     case PDB::zero:
       throw std::runtime_error("Tried to get edge index when using zero heuristic.");
   }
@@ -243,10 +250,6 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
       break;
     }
   }
-
-  uint64_t rot_index = get_new_edge_rot_index(state);
-  uint64_t pos_index = get_new_edge_pos_index(state);
-  uint64_t corner_index = get_corner_index(state);
   if (vectors == nullptr)
   {
     vectors = std::make_shared<PDBVectors>();
@@ -331,17 +334,10 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
     }
     npy::LoadArrayFromNumpy<uint8_t>(edge_name_b, shape, vectors->edge_b);
   }
-  uint8_t best = vectors->corner_db[corner_index];
-  if (type == PDB::a12) {
-    uint8_t a = vectors->edge_a[pos_index];
-    uint8_t b = vectors->edge_b[rot_index];
-    if (a > best) best = a;
-    if (b > best) best = b;
-  }
-  else {
-    best = std::max(best, vectors->edge_a[get_edge_index(state, true, type)]);
-    best = std::max(best, vectors->edge_b[get_edge_index(state, false, type)]);
-  }
+
+  uint8_t best = vectors->corner_db[get_corner_index(state)];
+  best = std::max(best, vectors->edge_a[get_edge_index(state, true, type)]);
+  best = std::max(best, vectors->edge_b[get_edge_index(state, false, type)]);
   return best;
 }
 
@@ -420,6 +416,7 @@ void Rubiks::generate_pattern_database(
 void Rubiks::pdb_expand_nodes(
   moodycamel::ConcurrentQueue<RubiksIndex>& input_queue,
   std::atomic_size_t& count,
+  const size_t max_count,
   std::mutex& pattern_lookup_mutex,
   std::vector<uint8_t>& pattern_lookup,
   const std::function<size_t(const uint8_t* state)> lookup_func,
@@ -446,7 +443,7 @@ void Rubiks::pdb_expand_nodes(
       }
     }};
 
-  while (true) {
+  while (count < max_count) {
     if (stack.empty()) {
       RubiksIndex queue_ri;
       if (input_queue.try_dequeue(ctok, queue_ri) == false) {
@@ -562,7 +559,7 @@ void Rubiks::generate_pattern_database_multithreaded(
 
     //Start threads
     for (unsigned int i = 0; i < thread_count; ++i) {
-      threads[i] = std::thread(Rubiks::pdb_expand_nodes, std::ref(input_queue), std::ref(count), std::ref(pattern_mutex), std::ref(pattern_lookup), lookup_func, id_depth);
+      threads[i] = std::thread(Rubiks::pdb_expand_nodes, std::ref(input_queue), std::ref(count), max_count, std::ref(pattern_mutex), std::ref(pattern_lookup), lookup_func, id_depth);
     }
 
     //Wait for all threads to terminate
