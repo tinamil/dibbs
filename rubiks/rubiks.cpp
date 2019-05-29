@@ -475,8 +475,9 @@ void Rubiks::pdb_expand_nodes(
       {
         uint8_t new_state_depth = prev_ri.depth + 1;
         RubiksIndex next_ri(prev_ri.state, new_state_depth, face, rotation);
-        next_ri.index = lookup_func(next_ri.state);
-        next_ri.index = lookup_func(next_ri.state);
+        if (new_state_depth == id_depth || new_state_depth == id_depth - 1) {
+          next_ri.index = lookup_func(next_ri.state)
+        }
         if (new_state_depth < id_depth)
         {
           stack.push(next_ri);
