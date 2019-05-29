@@ -413,6 +413,32 @@ void Rubiks::generate_pattern_database(
   npy::SaveArrayAsNumpy<uint8_t>(filename, false, 1, shape, pattern_lookup);
 }
 
+void Rubiks::process_buffer(
+  std::vector<uint8_t>& pattern_lookup,
+  std::atomic_size_t& count,
+  std::vector<PDB_Value> local_results_buffer,
+  const size_t max_count)
+{
+  size_t divisor = 10000000;
+  for (size_t i = 0; i < local_results_buffer.size(); ++i) {
+    auto id = local_results_buffer[i].index;
+    auto value = local_results_buffer[i].value;
+    if (pattern_lookup[id] > value) {
+      bool new_value = pattern_lookup[id] > 20;
+      if (new_value) {
+        count++;
+        size_t remaining = max_count - count;
+        if (remaining > 0) {
+          while (remaining / divisor == 0) divisor /= 10;
+          if (remaining % divisor == 0)
+            std::cout << remaining << '\n';
+        }
+      }
+      pattern_lookup[id] = value;
+    }
+  }
+}
+
 void Rubiks::pdb_expand_nodes(
   moodycamel::ConcurrentQueue<RubiksIndex>& input_queue,
   std::atomic_size_t& count,
@@ -427,22 +453,7 @@ void Rubiks::pdb_expand_nodes(
   std::stack<RubiksIndex, std::vector<RubiksIndex>> stack;
   moodycamel::ConsumerToken ctok(input_queue);
   std::vector<PDB_Value> local_results_buffer;
-
-  auto process_buffer = [&pattern_lookup, &count, &local_results_buffer]() {
-    for (size_t i = 0; i < local_results_buffer.size(); ++i) {
-      auto id = local_results_buffer[i].index;
-      auto value = local_results_buffer[i].value;
-      if (pattern_lookup[id] > value) {
-        bool new_value = pattern_lookup[id] > 20;
-        if (new_value) {
-          count++;
-          if (count % 1000000 == 0)
-            std::cout << count << '\n';
-        }
-        pattern_lookup[id] = value;
-      }
-    }};
-
+  
   while (count < max_count) {
     if (stack.empty()) {
       RubiksIndex queue_ri;
@@ -455,7 +466,7 @@ void Rubiks::pdb_expand_nodes(
     }
     if (local_results_buffer.size() >= buffer_size) {
       pattern_lookup_mutex.lock();
-      process_buffer();
+      process_buffer(pattern_lookup, count, local_results_buffer, max_count);
       pattern_lookup_mutex.unlock();
       local_results_buffer.clear();
     }
@@ -476,7 +487,7 @@ void Rubiks::pdb_expand_nodes(
         uint8_t new_state_depth = prev_ri.depth + 1;
         RubiksIndex next_ri(prev_ri.state, new_state_depth, face, rotation);
         if (new_state_depth == id_depth || new_state_depth == id_depth - 1) {
-          next_ri.index = lookup_func(next_ri.state)
+          next_ri.index = lookup_func(next_ri.state);
         }
         if (new_state_depth < id_depth)
         {
@@ -491,7 +502,7 @@ void Rubiks::pdb_expand_nodes(
   }
   if (local_results_buffer.size() > 0) {
     pattern_lookup_mutex.lock();
-    process_buffer();
+    process_buffer(pattern_lookup, count, local_results_buffer, max_count);
     pattern_lookup_mutex.unlock();
   }
 }
