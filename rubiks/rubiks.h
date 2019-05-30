@@ -121,10 +121,10 @@ namespace Rubiks
     size_t index;
 
     RubiksIndex() : state(), depth(0), last_face(0), index(0) {  }
-    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t last_face) : depth(depth), last_face(last_face), index(0) {
+    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t last_face) : depth(depth), last_face(last_face), index(18446744073709551615UL) {
       memcpy(state, original_state, 40);
     }
-    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t face, const uint8_t rotation) : state(), depth(depth), last_face(face), index(0) {
+    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t face, const uint8_t rotation) : state(), depth(depth), last_face(face), index(18446744073709551615UL) {
       memcpy(state, original_state, 40);
       rotate(state, face, rotation);
     }
