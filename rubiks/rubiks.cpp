@@ -511,7 +511,7 @@ void Rubiks::generate_pattern_database_multithreaded(
   const std::string filename,
   const uint8_t* state,
   const size_t max_count,
-  const size_t max_depth,
+  const uint8_t max_depth,
   const std::function<size_t(const uint8_t* state)> lookup_func
 )
 {

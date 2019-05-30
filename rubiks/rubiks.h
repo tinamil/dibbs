@@ -204,7 +204,7 @@ namespace Rubiks
     return pattern_lookup(state, __goal, type);
   }
   extern void generate_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth, const size_t max_count, const std::function<size_t(const uint8_t* state)> func);
-  extern void generate_pattern_database_multithreaded(std::string filename, const uint8_t* state, const size_t max_count, const size_t max_depth, const std::function<size_t(const uint8_t* state)> func);
+  extern void generate_pattern_database_multithreaded(std::string filename, const uint8_t* state, const size_t max_count, const uint8_t max_depth, const std::function<size_t(const uint8_t* state)> func);
   extern void process_buffer(std::vector<uint8_t>& pattern_lookup, std::atomic_size_t& count, std::vector<PDB_Value> local_results_buffer, const size_t max_count);
 
   extern void pdb_expand_nodes(
