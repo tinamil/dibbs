@@ -90,11 +90,11 @@ uint32_t Rubiks::get_corner_index(const uint8_t* state)
 {
   constexpr int size = 8;
   uint8_t vec[size];
-  uint8_t inv[size];
+  uint8_t inv[size + 1];
 
   for (uint8_t i = 0; i < size; ++i)
   {
-    uint8_t corner = __cube_translations[state[__corner_pos_indices[i]]];
+    const uint8_t corner = __cube_translations[state[__corner_pos_indices[i]]];
     vec[i] = corner;
     inv[corner] = i;
   }
@@ -159,16 +159,12 @@ uint64_t Rubiks::get_edge_index(const uint8_t* state, const bool is_a, const Rub
 
 uint64_t Rubiks::get_edge_index(const uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices)
 {
-  uint8_t edge_pos[12];
-  for (int i = 0; i < 12; ++i)
-  {
-    edge_pos[i] = __cube_translations[state[edge_pos_indices_12[i]]];
-  }
   uint8_t puzzle[12] = { UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
-  uint8_t dual[12];
-  uint8_t newdual[12];
-  for (int x = 0; x < 12; x++)
-    dual[edge_pos[x]] = x;
+  uint8_t dual[13];
+  uint8_t newdual[13];
+  for (uint8_t x = 0; x < 12; x++) {
+    dual[x] = __cube_translations[state[edge_pos_indices_12[x]]];
+  }
   for (int x = 0; x < size; x++)
   {
     newdual[x] = dual[edges[x]];
@@ -185,6 +181,31 @@ uint64_t Rubiks::get_edge_index(const uint8_t* state, const int size, const uint
   return edge_index;
 }
 
+void Rubiks::restore_state_from_index(const size_t hash_index, uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices)
+{
+  uint8_t puzzle[12];
+  uint8_t dual[12];
+  const size_t pos_index = hash_index / (1i64 << size);
+  mr::unrank(pos_index, puzzle, dual, size, 12);
+  for (int i = 0; i < 20; ++i) {
+    state[i] = 20ui8; 
+  }
+  for (int i = 20; i < 40; ++i) {
+    state[i] = 4ui8; 
+  }
+
+  for (int i = 0; i < size; ++i) {
+    state[edge_pos_indices_12[dual[i]]] = edge_pos_indices_12[edges[i]];
+  }
+
+  size_t rot_index = hash_index % (1i64 << size);
+  for (int i = size - 1; i >= 0; --i)
+  {
+    state[edge_rot_indices[i]] = rot_index % 2;
+    rot_index /= 2;
+  }
+}
+
 uint64_t Rubiks::get_new_edge_pos_index(const uint8_t* state)
 {
   uint8_t edge_pos[12];
@@ -194,6 +215,13 @@ uint64_t Rubiks::get_new_edge_pos_index(const uint8_t* state)
   }
 
   return mr::get_rank(12, edge_pos);
+}
+
+void Rubiks::restore_new_edge_rot_index(const size_t index, uint8_t* state) {
+
+}
+void Rubiks::restore_new_edge_pos_index(const size_t index, uint8_t* state) {
+
 }
 
 uint64_t Rubiks::get_new_edge_rot_index(const uint8_t* state) {
@@ -264,7 +292,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
     std::string corner_name = "corner_db_" + name + ".npy";
     if (!utility::test_file(corner_name))
     {
-      generate_pattern_database_multithreaded(corner_name, start_state, corner_max_count, corner_max_depth, get_corner_index);
+      generate_pattern_database_multithreaded(corner_name, start_state, corner_max_count, corner_max_depth, get_corner_index, restore_corner);
     }
     std::vector<uint64_t> shape{ 1 };
     npy::LoadArrayFromNumpy<uint8_t>(corner_name, shape, vectors->corner_db);
@@ -278,7 +306,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_a))
       {
-        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_6_max_count, inconsistent_max_depth, get_edge_index6a);
+        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_6_max_count, inconsistent_max_depth, get_edge_index6a, restore_index6a);
       }
     }
     else if (type == PDB::a888)
@@ -287,18 +315,18 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_a))
       {
-        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_8_max_count, inconsistent_max_depth, get_edge_index8a);
+        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_8_max_count, inconsistent_max_depth, get_edge_index8a, restore_index8a);
       }
     }
     else if (type == PDB::a12) {
       edge_name_a = "edge_db_12_pos_" + name + ".npy";
       if (!utility::test_file(edge_name_a))
       {
-        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_12_pos_max_count, edge_12_pos_max_depth, get_new_edge_pos_index);
+        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_12_pos_max_count, edge_12_pos_max_depth, get_new_edge_pos_index, restore_new_edge_pos_index);
       }
     }
 
-    npy::LoadArrayFromNumpy<uint8_t>(edge_name_a, shape, vectors->edge_a);
+    //npy::LoadArrayFromNumpy<uint8_t>(edge_name_a, shape, vectors->edge_a);
 
 
     shape.clear();
@@ -310,7 +338,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_b))
       {
-        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_6_max_count, inconsistent_max_depth, get_edge_index6b);
+        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_6_max_count, inconsistent_max_depth, get_edge_index6b, restore_index6b);
       }
     }
     else if (type == PDB::a888)
@@ -319,7 +347,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_b))
       {
-        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_8_max_count, inconsistent_max_depth, get_edge_index8b);
+        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_8_max_count, inconsistent_max_depth, get_edge_index8b, restore_index8b);
       }
     }
     else if (type == PDB::a12)
@@ -328,7 +356,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_b))
       {
-        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_20_rot_max_count, edge_20_rot_max_depth, get_new_edge_rot_index);
+        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_20_rot_max_count, edge_20_rot_max_depth, get_new_edge_rot_index, restore_new_edge_rot_index);
       }
     }
     npy::LoadArrayFromNumpy<uint8_t>(edge_name_b, shape, vectors->edge_b);
@@ -485,16 +513,16 @@ void Rubiks::pdb_expand_nodes(
       for (int rotation = 0; rotation < 3; ++rotation)
       {
         RubiksIndex next_ri(prev_ri.state, new_state_depth, face, rotation);
+        if (new_state_depth == id_depth - 1 || new_state_depth == id_depth) {
+          next_ri.index = lookup_func(next_ri.state);
+        }
         if (new_state_depth < id_depth)
         {
-          if (new_state_depth == id_depth - 1) {
-            next_ri.index = lookup_func(next_ri.state);
-          }
           stack.push(next_ri);
         }
         else
         {
-          local_results_buffer.emplace_back(lookup_func(next_ri.state), next_db_val);
+          local_results_buffer.emplace_back(next_ri.index, next_db_val);
         }
       }
     }
@@ -511,7 +539,8 @@ void Rubiks::generate_pattern_database_multithreaded(
   const uint8_t* state,
   const size_t max_count,
   const uint8_t max_depth,
-  const std::function<size_t(const uint8_t* state)> lookup_func
+  const std::function<size_t(const uint8_t* state)> lookup_func,
+  const std::function<void(const size_t hash, uint8_t* state)> reverse_func
 )
 {
   using namespace std::chrono_literals;
@@ -526,7 +555,11 @@ void Rubiks::generate_pattern_database_multithreaded(
     pattern_lookup[i] = pdb_initialization_value;
   }
 
-  pattern_lookup[lookup_func(state)] = 0;
+  uint8_t reduced_starting_state[40];
+  memcpy(reduced_starting_state, state, 40);
+  reverse_func(lookup_func(reduced_starting_state), reduced_starting_state);
+
+  pattern_lookup[lookup_func(reduced_starting_state)] = 0;
   count += 1;
 
   assert(max_depth > 3);
@@ -541,7 +574,7 @@ void Rubiks::generate_pattern_database_multithreaded(
   {
     for (int rotation = 0; rotation < 3; ++rotation)
     {
-      RubiksIndex ri = RubiksIndex(state, 1, face, rotation);
+      RubiksIndex ri = RubiksIndex(reduced_starting_state, 1, face, rotation);
       ri.index = lookup_func(ri.state);
       if (pattern_lookup[ri.index] == pdb_initialization_value) {
         pattern_lookup[ri.index] = 1;
@@ -553,7 +586,7 @@ void Rubiks::generate_pattern_database_multithreaded(
   {
     for (int rotation = 0; rotation < 3; ++rotation)
     {
-      RubiksIndex ri = RubiksIndex(state, 1, face, rotation);
+      RubiksIndex ri = RubiksIndex(reduced_starting_state, 1, face, rotation);
       ri.index = lookup_func(ri.state);
       for (int face2 = 0; face2 < 6; ++face2)
       {

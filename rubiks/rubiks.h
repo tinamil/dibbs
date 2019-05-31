@@ -17,6 +17,32 @@
 #include "hash.hpp"
 #include "cameron314/blockingconcurrentqueue.h"
 
+/*
+ 6 center cubies are fixed position (rotation doesn't change) and define the solution color for that face
+ 8 corner cubies are defined by an integer defining their rotation: 0 to 2186 (3^7-1, 8th cube is defined by the other 7) and an integer defining their positions: 0 to 40319 (8! - 1)
+ 12 edge cubies have rotation integer 0 to 2047 (2^11-1) and position integer 0 to 12!-1
+
+ A cube state is an array of 20 sets of (position, rotation), values ranging from 0-19 and 0-2 respectively, values of 20 and 3 denote a blank cubie.  
+ Rotations are 0-1 for edge pieces.  Center face pieces are fixed and not included.
+ Cubies are numbered from 0 to 19 throughout the code, as shown here ( credit to https://github.com/brownan/Rubiks-Cube-Solver/blob/master/cube.h )
+     5----6----7
+     |         |\
+     3    Y    4 \
+     |         |  \
+     0----1----2   \
+      \             \
+       \   10---R---11
+        \  |         |\
+         \ B    X    G \
+          \|         |  \
+           8----O----9   \
+            \             \
+             \   17--18---19
+              \  |         |
+               \ 15   W   16
+                \|         |
+                 12--13---14
+*/
 namespace Rubiks
 {
 
@@ -49,8 +75,8 @@ namespace Rubiks
 
   enum Rotation
   {
-    clockwise = 0,
-    counterclockwise = 1,
+    counterclockwise = 0,
+    clockwise = 1,
     half = 2
   };
   const std::string _face_mapping[] = { "F", "U", "L", "B", "D", "R" };
@@ -98,7 +124,7 @@ namespace Rubiks
   const uint8_t edge_pos_indices_12[] = { 1, 3, 4, 6, 8, 9, 10, 11, 13, 15, 16, 18 };
   const uint8_t edge_rot_indices_12[] = { 21, 23, 24, 26, 28, 29, 30, 31, 33, 35, 36, 38 };
 
-  const uint8_t __cube_translations[] = { 0, 0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 4, 8, 5, 9, 10, 6, 11, 7 };
+  const uint8_t __cube_translations[] = { 0, 0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 4, 8, 5, 9, 10, 6, 11, 7, 12 };
   const uint8_t edges_6a[] = { 0, 1, 2, 3, 4, 5 };
   const uint8_t edges_6b[] = { 6, 7, 8, 9, 10, 11 };
   const uint8_t edges_8a[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
@@ -121,10 +147,10 @@ namespace Rubiks
     size_t index;
 
     RubiksIndex() : state(), depth(0), last_face(0), index(0) {  }
-    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t last_face) : depth(depth), last_face(last_face), index(18446744073709551615UL) {
+    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t last_face) : depth(depth), last_face(last_face), index(UINT64_MAX) {
       memcpy(state, original_state, 40);
     }
-    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t face, const uint8_t rotation) : state(), depth(depth), last_face(face), index(18446744073709551615UL) {
+    RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t face, const uint8_t rotation) : state(), depth(depth), last_face(face), index(UINT64_MAX) {
       memcpy(state, original_state, 40);
       rotate(state, face, rotation);
     }
@@ -186,6 +212,7 @@ namespace Rubiks
   }
 
   extern uint32_t get_corner_index(const uint8_t* state);
+  extern uint32_t restore_corner(const size_t index, uint8_t* state);
 
   extern uint64_t get_edge_index(const uint8_t* state, const bool a, const PDB type);
   extern uint64_t get_edge_index(const uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
@@ -195,8 +222,18 @@ namespace Rubiks
   inline uint64_t get_edge_index8a(const uint8_t* state) { return get_edge_index(state, 8, edges_8a, edge_rot_indices_8a); }
   inline uint64_t get_edge_index8b(const uint8_t* state) { return get_edge_index(state, 8, edges_8b, edge_rot_indices_8b); }
 
+
   extern uint64_t get_new_edge_pos_index(const uint8_t* state);
+  extern void restore_new_edge_pos_index(const size_t index, uint8_t* state);
   extern uint64_t get_new_edge_rot_index(const uint8_t* state);
+  extern void restore_new_edge_rot_index(const size_t index, uint8_t* state);
+
+  extern void restore_state_from_index(const size_t hash_index, uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
+  inline void restore_index6a(const size_t index, uint8_t* state) { restore_state_from_index(index, state, 6, edges_6a, edge_rot_indices_6a); }
+  inline void restore_index6b(const size_t index, uint8_t* state) { restore_state_from_index(index, state, 6, edges_6b, edge_rot_indices_6b); }
+  inline void restore_index8a(const size_t index, uint8_t* state) { restore_state_from_index(index, state, 8, edges_8a, edge_rot_indices_8a); }
+  inline void restore_index8b(const size_t index, uint8_t* state) { restore_state_from_index(index, state, 8, edges_8b, edge_rot_indices_8b); }
+
   extern bool is_solved(const uint8_t* state);
   extern uint8_t pattern_lookup(const uint8_t* state, const uint8_t* start_state, PDB type);
   inline uint8_t pattern_lookup(const uint8_t* state, PDB type)
@@ -204,7 +241,14 @@ namespace Rubiks
     return pattern_lookup(state, __goal, type);
   }
   extern void generate_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth, const size_t max_count, const std::function<size_t(const uint8_t* state)> func);
-  extern void generate_pattern_database_multithreaded(std::string filename, const uint8_t* state, const size_t max_count, const uint8_t max_depth, const std::function<size_t(const uint8_t* state)> func);
+  extern void generate_pattern_database_multithreaded(
+    std::string filename,
+    const uint8_t* state,
+    const size_t max_count,
+    const uint8_t max_depth,
+    const std::function<size_t(const uint8_t* state)> func,
+    const std::function<void(const size_t hash, uint8_t* state)> reverse_func
+  );
   extern void process_buffer(std::vector<uint8_t>& pattern_lookup, std::atomic_size_t& count, std::vector<PDB_Value> local_results_buffer, const size_t max_count);
 
   extern void pdb_expand_nodes(

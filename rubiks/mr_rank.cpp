@@ -65,7 +65,7 @@ uint64_t mr::get_rank(int n, uint8_t *vec)
   return r;
 }
 
-uint64_t mr::k_rank(uint8_t *locs, uint8_t *dual, const int distinctSize, const int puzzleSize)
+uint64_t mr::k_rank(uint8_t *locs, uint8_t *dual, const size_t distinctSize, const size_t puzzleSize)
 {
   uint64_t result2 = 0;
   uint64_t multiplier = 1;
@@ -85,4 +85,21 @@ uint64_t mr::k_rank(uint8_t *locs, uint8_t *dual, const int distinctSize, const 
   }
 
   return result2;
+}
+
+void mr::unrank(uint64_t hash, uint8_t* puzzle, uint8_t* dual, const size_t distinctSize, const size_t puzzleSize)
+{
+  for (int x = 0; x < puzzleSize; x++)
+    dual[x] = x;
+  
+  for (size_t i = 0; i < puzzleSize; ++i) {
+    puzzle[i] = UINT8_MAX;
+  }
+
+  for (int i = 0; i < distinctSize; i++)
+  {
+    swap(dual[i + hash % (puzzleSize - i)], dual[i]);
+    hash = hash / (puzzleSize - i);
+    puzzle[dual[i]] = i;
+  }
 }
