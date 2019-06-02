@@ -212,7 +212,7 @@ namespace Rubiks
   }
 
   extern uint32_t get_corner_index(const uint8_t* state);
-  extern uint32_t restore_corner(const size_t index, uint8_t* state);
+  extern void restore_corner(const size_t index, uint8_t* state);
 
   extern uint64_t get_edge_index(const uint8_t* state, const bool a, const PDB type);
   extern uint64_t get_edge_index(const uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices);

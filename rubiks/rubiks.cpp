@@ -90,7 +90,7 @@ uint32_t Rubiks::get_corner_index(const uint8_t* state)
 {
   constexpr int size = 8;
   uint8_t vec[size];
-  uint8_t inv[size + 1];
+  uint8_t inv[size];
 
   for (uint8_t i = 0; i < size; ++i)
   {
@@ -108,6 +108,30 @@ uint32_t Rubiks::get_corner_index(const uint8_t* state)
     corner_index += state[__corner_rot_indices[i]] * base3[i];
   }
   return corner_index;
+}
+
+void Rubiks::restore_corner(const size_t hash_index, uint8_t* state) {
+  uint8_t puzzle[12];
+  uint8_t dual[12];
+  const size_t pos_index = hash_index / 2187ui64;
+  mr::unrank(pos_index, puzzle, dual, 8, 8);
+  for (int i = 0; i < 20; ++i) {
+    state[i] = 20ui8;
+  }
+  for (int i = 20; i < 40; ++i) {
+    state[i] = 3ui8;
+  }
+
+  for (int i = 0; i < 8; ++i) {
+    state[__corner_pos_indices[i]] = __corner_pos_indices[dual[i]];
+  }
+
+  size_t rot_index = hash_index % 2187ui64;
+  for (int i = 7; i >= 0; --i)
+  {
+    state[__corner_rot_indices[i]] = rot_index % 3ui8;
+    rot_index /= 3;
+  }
 }
 
 uint64_t FactorialUpperK(const int n, const int k)
@@ -157,14 +181,17 @@ uint64_t Rubiks::get_edge_index(const uint8_t* state, const bool is_a, const Rub
   throw std::runtime_error("Failed to find edge_index type");
 }
 
+
 uint64_t Rubiks::get_edge_index(const uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices)
 {
   uint8_t puzzle[12] = { UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
-  uint8_t dual[13];
-  uint8_t newdual[13];
-  for (uint8_t x = 0; x < 12; x++) {
-    dual[x] = __cube_translations[state[edge_pos_indices_12[x]]];
+  uint8_t dual[12];
+  uint8_t newdual[12];
+
+  for (uint8_t i = 0; i < 12; ++i) {
+    dual[i] = __cube_translations[state[edge_pos_indices_12[i]]];
   }
+
   for (int x = 0; x < size; x++)
   {
     newdual[x] = dual[edges[x]];
@@ -188,14 +215,14 @@ void Rubiks::restore_state_from_index(const size_t hash_index, uint8_t* state, c
   const size_t pos_index = hash_index / (1i64 << size);
   mr::unrank(pos_index, puzzle, dual, size, 12);
   for (int i = 0; i < 20; ++i) {
-    state[i] = 20ui8; 
+    state[i] = 20ui8;
   }
   for (int i = 20; i < 40; ++i) {
-    state[i] = 4ui8; 
+    state[i] = 3ui8;
   }
 
   for (int i = 0; i < size; ++i) {
-    state[edge_pos_indices_12[dual[i]]] = edge_pos_indices_12[edges[i]];
+    state[edge_pos_indices_12[edges[i]]] = edge_pos_indices_12[dual[i]];
   }
 
   size_t rot_index = hash_index % (1i64 << size);
@@ -326,7 +353,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
       }
     }
 
-    //npy::LoadArrayFromNumpy<uint8_t>(edge_name_a, shape, vectors->edge_a);
+    npy::LoadArrayFromNumpy<uint8_t>(edge_name_a, shape, vectors->edge_a);
 
 
     shape.clear();
@@ -466,6 +493,7 @@ void Rubiks::process_buffer(
   }
 }
 
+//TODO: Switch from node to hash_value to implement reverse searching
 void Rubiks::pdb_expand_nodes(
   moodycamel::ConcurrentQueue<RubiksIndex>& input_queue,
   std::atomic_size_t& count,
@@ -556,8 +584,8 @@ void Rubiks::generate_pattern_database_multithreaded(
   }
 
   uint8_t reduced_starting_state[40];
-  memcpy(reduced_starting_state, state, 40);
-  reverse_func(lookup_func(reduced_starting_state), reduced_starting_state);
+  reverse_func(lookup_func(state), reduced_starting_state);
+  assert(lookup_func(state) == lookup_func(reduced_starting_state));
 
   pattern_lookup[lookup_func(reduced_starting_state)] = 0;
   count += 1;
