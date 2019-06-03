@@ -11,9 +11,14 @@
 using namespace std;
 using namespace Rubiks;
 
-#define ASTAR 
+//#define ASTAR 
 //#define DIBBS 
 //#define GBFHS
+
+void generate_pdbs(const uint8_t* start_state, const Rubiks::PDB pdb_type) {
+  Rubiks::pattern_lookup(Rubiks::__goal, pdb_type);
+  Rubiks::pattern_lookup(__goal, start_state, pdb_type);
+}
 
 void search_cubes()
 {
@@ -26,6 +31,8 @@ void search_cubes()
   int64_t time_elapsed_ms;
   for (size_t i = 0; i < cubes.size(); ++i)
   {
+    generate_pdbs(cubes[i], type);
+
     #ifdef ASTAR
     c_start = clock();
     count_results.push_back(search::a_star(cubes[i], type));
@@ -50,6 +57,7 @@ void search_cubes()
     time_results.push_back(time_elapsed_ms);
     cout << "GBFHS CPU time used: " << time_elapsed_ms << " s" << endl;
     #endif
+    Rubiks::pattern_lookup(nullptr, cubes[i], Rubiks::PDB::clear_state);
   }
 
   for (size_t i = 0; i < count_results.size(); ++i) {

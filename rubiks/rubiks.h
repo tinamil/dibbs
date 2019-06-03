@@ -22,7 +22,7 @@
  8 corner cubies are defined by an integer defining their rotation: 0 to 2186 (3^7-1, 8th cube is defined by the other 7) and an integer defining their positions: 0 to 40319 (8! - 1)
  12 edge cubies have rotation integer 0 to 2047 (2^11-1) and position integer 0 to 12!-1
 
- A cube state is an array of 20 sets of (position, rotation), values ranging from 0-19 and 0-2 respectively, values of 20 and 3 denote a blank cubie.  
+ A cube state is an array of 20 sets of (position, rotation), values ranging from 0-19 and 0-2 respectively, values of 20 and 3 denote a blank cubie.
  Rotations are 0-1 for edge pieces.  Center face pieces are fixed and not included.
  Cubies are numbered from 0 to 19 throughout the code, as shown here ( credit to https://github.com/brownan/Rubiks-Cube-Solver/blob/master/cube.h )
      5----6----7
@@ -60,7 +60,7 @@ namespace Rubiks
 
   enum PDB
   {
-    a1997, a888, zero, a12
+    a1997, a888, zero, a12, clear_state
   };
 
   enum Face
@@ -139,6 +139,7 @@ namespace Rubiks
   };
 
   extern void rotate(uint8_t* __restrict new_state, const uint8_t face, const uint8_t rotation);
+
   struct RubiksIndex
   {
     uint8_t state[40];
@@ -240,6 +241,7 @@ namespace Rubiks
   {
     return pattern_lookup(state, __goal, type);
   }
+
   extern void generate_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth, const size_t max_count, const std::function<size_t(const uint8_t* state)> func);
   extern void generate_pattern_database_multithreaded(
     std::string filename,
@@ -249,15 +251,17 @@ namespace Rubiks
     const std::function<size_t(const uint8_t* state)> func,
     const std::function<void(const size_t hash, uint8_t* state)> reverse_func
   );
-  extern void process_buffer(std::vector<uint8_t>& pattern_lookup, std::atomic_size_t& count, std::vector<PDB_Value> local_results_buffer, const size_t max_count);
+  extern void process_buffer(std::vector<uint8_t>& pattern_lookup, std::atomic_size_t& count, const std::vector<uint64_t>& local_results_buffer, const uint8_t id_depth, const size_t max_count);
 
   extern void pdb_expand_nodes(
-    moodycamel::ConcurrentQueue<RubiksIndex>& input_queue,
+    moodycamel::ConcurrentQueue<std::pair<uint64_t, uint64_t>>& input_queue,
     std::atomic_size_t& count,
     const size_t max_count,
     std::mutex& pattern_lookup_mutex,
     std::vector<uint8_t>& pattern_lookup,
     const std::function<size_t(const uint8_t* state)> lookup_func,
-    const uint8_t id_depth
+    const std::function<void(const size_t hash, uint8_t* state)> reverse_func,
+    const uint8_t id_depth,
+    const bool reverse_direction
   );
 }

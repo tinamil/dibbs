@@ -89,25 +89,22 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
 uint32_t Rubiks::get_corner_index(const uint8_t* state)
 {
   constexpr int size = 8;
-  uint8_t vec[size];
-  uint8_t inv[size];
+  uint8_t puzzle[size];
+  uint8_t dual[size];
 
-  for (uint8_t i = 0; i < size; ++i)
-  {
-    const uint8_t corner = __cube_translations[state[__corner_pos_indices[i]]];
-    vec[i] = corner;
-    inv[corner] = i;
+  for (uint8_t i = 0; i < 8; ++i) {
+    dual[i] = __cube_translations[state[__corner_pos_indices[i]]];
+    puzzle[dual[i]] = i;
   }
 
-  uint32_t corner_index = (uint32_t)mr::k_rank(vec, inv, 8, 8);
+  uint32_t corner_index = (uint32_t)mr::k_rank(puzzle, dual, 8, 8);
 
-  corner_index *= 2187;
-
+  uint32_t rot_index = 0;
   for (int i = 0; i < size - 1; ++i)
   {
-    corner_index += state[__corner_rot_indices[i]] * base3[i];
+    rot_index += state[__corner_rot_indices[i]] * base3[i];
   }
-  return corner_index;
+  return corner_index * 2187 + rot_index;
 }
 
 void Rubiks::restore_corner(const size_t hash_index, uint8_t* state) {
@@ -127,7 +124,7 @@ void Rubiks::restore_corner(const size_t hash_index, uint8_t* state) {
   }
 
   size_t rot_index = hash_index % 2187ui64;
-  for (int i = 7; i >= 0; --i)
+  for (int i = 6; i >= 0; --i)
   {
     state[__corner_rot_indices[i]] = rot_index % 3ui8;
     rot_index /= 3;
@@ -287,7 +284,6 @@ bool Rubiks::is_solved(const uint8_t* cube)
   return true;
 }
 
-
 uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state, const PDB type)
 {
   if (type == PDB::zero)
@@ -298,6 +294,17 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
   static std::vector<const uint8_t*> initialized_pdbs_locs;
   static std::vector<std::shared_ptr<PDBVectors>> initialized_pdbs;
   std::shared_ptr<PDBVectors>  vectors = nullptr;
+
+  if (type == PDB::clear_state) {
+    for (int i = 0; i < initialized_pdbs_locs.size(); ++i) {
+      if (memcmp(initialized_pdbs_locs[i], start_state, 40) == 0) {
+        initialized_pdbs_locs.erase(initialized_pdbs_locs.begin() + i);
+        initialized_pdbs.erase(initialized_pdbs.begin() + i);
+      }
+    }
+    return 0;
+  }
+
   for (int i = 0; i < initialized_pdbs_locs.size(); ++i) {
     if (memcmp(initialized_pdbs_locs[i], start_state, 40) == 0) {
       vectors = initialized_pdbs[i];
@@ -319,7 +326,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
     std::string corner_name = "corner_db_" + name + ".npy";
     if (!utility::test_file(corner_name))
     {
-      generate_pattern_database_multithreaded(corner_name, start_state, corner_max_count, corner_max_depth, get_corner_index, restore_corner);
+      generate_pattern_database_multithreaded(corner_name, start_state, corner_max_count, inconsistent_max_depth, get_corner_index, restore_corner);
     }
     std::vector<uint64_t> shape{ 1 };
     npy::LoadArrayFromNumpy<uint8_t>(corner_name, shape, vectors->corner_db);
@@ -469,16 +476,16 @@ void Rubiks::generate_pattern_database(
 void Rubiks::process_buffer(
   std::vector<uint8_t>& pattern_lookup,
   std::atomic_size_t& count,
-  std::vector<PDB_Value> local_results_buffer,
+  const std::vector<uint64_t>& local_results_buffer,
+  const uint8_t id_depth,
   const size_t max_count)
 {
   size_t divisor = 10000000;
   for (size_t i = 0; i < local_results_buffer.size(); ++i) {
-    auto id = local_results_buffer[i].index;
-    auto value = local_results_buffer[i].value;
-    if (pattern_lookup[id] > value) {
+    auto id = local_results_buffer[i];
+    if (pattern_lookup[id] > id_depth) {
       bool new_value = pattern_lookup[id] == pdb_initialization_value;
-      pattern_lookup[id] = value;
+      pattern_lookup[id] = id_depth;
       if (new_value) {
         count++;
         size_t remaining = max_count - count;
@@ -489,75 +496,74 @@ void Rubiks::process_buffer(
           }
         }
       }
+      else {
+        std::cout << "Not a new value\n";
+      }
     }
   }
 }
 
-//TODO: Switch from node to hash_value to implement reverse searching
 void Rubiks::pdb_expand_nodes(
-  moodycamel::ConcurrentQueue<RubiksIndex>& input_queue,
+  moodycamel::ConcurrentQueue<std::pair<uint64_t, uint64_t>>& input_queue,
   std::atomic_size_t& count,
   const size_t max_count,
   std::mutex& pattern_lookup_mutex,
   std::vector<uint8_t>& pattern_lookup,
   const std::function<size_t(const uint8_t* state)> lookup_func,
-  const uint8_t id_depth
+  const std::function<void(const size_t hash, uint8_t* state)> reverse_func,
+  const uint8_t id_depth,
+  const bool reverse_direction
 )
 {
+  using namespace std::chrono_literals;
   const size_t buffer_size = 1024 * 1024;
-  std::stack<RubiksIndex, std::vector<RubiksIndex>> stack;
   moodycamel::ConsumerToken ctok(input_queue);
-  std::vector<PDB_Value> local_results_buffer;
+  std::vector<uint64_t> local_results_buffer;
+
+  std::tuple<uint64_t, uint64_t> pair;
+  uint8_t tmp_state[40], tmp2[40];
 
   while (count < max_count) {
-    if (stack.empty()) {
-      RubiksIndex queue_ri;
-      if (input_queue.try_dequeue(ctok, queue_ri) == false) {
-        break;
-      }
-      else {
-        stack.push(queue_ri);
-      }
+
+    while (input_queue.try_dequeue(ctok, pair) == false) {
+      std::this_thread::sleep_for(10ms);
     }
+
+    if (std::get<0>(pair) == UINT64_MAX && std::get<1>(pair) == UINT64_MAX) {
+      break;
+    }
+
     if (local_results_buffer.size() >= buffer_size) {
       pattern_lookup_mutex.lock();
-      process_buffer(pattern_lookup, count, local_results_buffer, max_count);
+      process_buffer(pattern_lookup, count, local_results_buffer, id_depth, max_count);
       pattern_lookup_mutex.unlock();
       local_results_buffer.clear();
     }
-    const auto prev_ri = stack.top();
-    stack.pop();
-    uint8_t next_db_val = pdb_initialization_value;
-    uint8_t new_state_depth = prev_ri.depth + 1;
-    if (new_state_depth == id_depth) {
-      next_db_val = pattern_lookup[prev_ri.index] + 1;
-    }
-    for (int face = 0; face < 6; ++face)
-    {
-      if (Rubiks::skip_rotations(prev_ri.last_face, face))
+
+    for (auto hash = std::get<0>(pair), end = std::get<1>(pair); hash < end; ++hash) {
+      reverse_func(hash, tmp_state);
+
+      for (int face = 0; face < 6; ++face)
       {
-        continue;
-      }
-      for (int rotation = 0; rotation < 3; ++rotation)
-      {
-        RubiksIndex next_ri(prev_ri.state, new_state_depth, face, rotation);
-        if (new_state_depth == id_depth - 1 || new_state_depth == id_depth) {
-          next_ri.index = lookup_func(next_ri.state);
-        }
-        if (new_state_depth < id_depth)
+        for (int rotation = 0; rotation < 3; ++rotation)
         {
-          stack.push(next_ri);
-        }
-        else
-        {
-          local_results_buffer.emplace_back(next_ri.index, next_db_val);
+          memcpy(tmp2, tmp_state, 40);
+          rotate(tmp2, face, rotation);
+          uint64_t tmp2_hash = lookup_func(tmp2);
+          if (reverse_direction && pattern_lookup[tmp2_hash] == (id_depth - 1)) {
+            local_results_buffer.emplace_back(hash);
+          }
+          else if (!reverse_direction) {
+            local_results_buffer.emplace_back(tmp2_hash);
+          }
         }
       }
     }
   }
+
   if (local_results_buffer.size() > 0) {
     pattern_lookup_mutex.lock();
-    process_buffer(pattern_lookup, count, local_results_buffer, max_count);
+    process_buffer(pattern_lookup, count, local_results_buffer, id_depth, max_count);
     pattern_lookup_mutex.unlock();
   }
 }
@@ -585,14 +591,18 @@ void Rubiks::generate_pattern_database_multithreaded(
 
   uint8_t reduced_starting_state[40];
   reverse_func(lookup_func(state), reduced_starting_state);
-  assert(lookup_func(state) == lookup_func(reduced_starting_state));
+  if (lookup_func(state) != lookup_func(reduced_starting_state)) {
+    std::cerr << "ERROR: lookup function is not reversible\n";
+    exit(-1);
+  }
 
   pattern_lookup[lookup_func(reduced_starting_state)] = 0;
   count += 1;
 
   assert(max_depth > 3);
-  uint8_t id_depth = 3;
-  moodycamel::ConcurrentQueue<RubiksIndex> input_queue;
+  uint8_t id_depth = 2;
+  moodycamel::ConcurrentQueue<std::pair<uint64_t, uint64_t>> input_queue(67108860); // 64 MB
+  moodycamel::ProducerToken ptok(input_queue);
   std::thread* threads = new std::thread[thread_count];
   std::mutex pattern_mutex;
 
@@ -630,27 +640,58 @@ void Rubiks::generate_pattern_database_multithreaded(
             pattern_lookup[ri2.index] = pattern_lookup[ri.index] + 1;
             count += 1;
           }
-          initial_storage.push_back(ri2);
         }
       }
     }
   }
+
   while (count < max_count && id_depth < max_depth)
   {
-    input_queue.enqueue_bulk(initial_storage.begin(), initial_storage.size());
+    uint8_t target_val;
+    bool reverse_direction;
+    if (count < (max_count * .66)) {
+      reverse_direction = false;
+      target_val = id_depth;
+    }
+    else {
+      reverse_direction = true;
+      target_val = pdb_initialization_value;
+    }
 
+    id_depth += 1;
+    std::cout << "Incrementing id-depth to " << unsigned int(id_depth) << "\n";
     //Start threads
     for (unsigned int i = 0; i < thread_count; ++i) {
-      threads[i] = std::thread(Rubiks::pdb_expand_nodes, std::ref(input_queue), std::ref(count), max_count, std::ref(pattern_mutex), std::ref(pattern_lookup), lookup_func, id_depth);
+      threads[i] = std::thread(Rubiks::pdb_expand_nodes, std::ref(input_queue), std::ref(count), max_count, std::ref(pattern_mutex), std::ref(pattern_lookup), lookup_func, reverse_func, id_depth, reverse_direction);
+    }
+
+    uint64_t start;
+    bool set_start(false);
+    for (size_t i = 0; i < pattern_lookup.size(); ++i) {
+      uint8_t val = pattern_lookup[i];
+      if (!set_start && val == target_val) {
+        set_start = true;
+        start = i;
+      }
+      else if (set_start && val != target_val) {
+        set_start = false;
+        while (input_queue.try_enqueue(ptok, { start, i }) == false) {
+          std::this_thread::sleep_for(10ms);
+        }
+      }
+    }
+
+    //Queue a termination notification for each thread
+    for (unsigned int i = 0; i < thread_count; ++i) {
+      while (input_queue.try_enqueue(ptok, { UINT64_MAX, UINT64_MAX }) == false) {
+        std::this_thread::sleep_for(10ms);
+      }
     }
 
     //Wait for all threads to terminate
     for (unsigned int i = 0; i < thread_count; ++i) {
       threads[i].join();
     }
-
-    id_depth += 1;
-    std::cout << "Incrementing id-depth to " << unsigned int(id_depth) << "\n";
   }
   for (size_t i = 0; i < max_count; ++i) {
     if (max_depth < pdb_initialization_value && pattern_lookup[i] == pdb_initialization_value) {
@@ -661,6 +702,9 @@ void Rubiks::generate_pattern_database_multithreaded(
       throw new std::exception("Error: index was not set to a valid value.");
     }
   }
+
+  std::cout << "Saving data to " << filename << '\n';
+
   const uint64_t shape[] = { max_count };
   npy::SaveArrayAsNumpy<uint8_t>(filename, false, 1, shape, pattern_lookup);
 }
