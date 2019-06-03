@@ -598,52 +598,12 @@ void Rubiks::generate_pattern_database_multithreaded(
   pattern_lookup[lookup_func(reduced_starting_state)] = 0;
   count += 1;
 
-  assert(max_depth > 3);
-  uint8_t id_depth = 2;
+  uint8_t id_depth = 0;
   moodycamel::ConcurrentQueue<std::pair<uint64_t, uint64_t>> input_queue(67108860); // 64 MB
   moodycamel::ProducerToken ptok(input_queue);
   std::thread* threads = new std::thread[thread_count];
   std::mutex pattern_mutex;
-
-  //Initialize input queue by exploring down to depth 2 to create up to 252 (18*14) separate work inputs to divide amongst threads
-  std::vector<RubiksIndex> initial_storage;
-  for (int face = 0; face < 6; ++face)
-  {
-    for (int rotation = 0; rotation < 3; ++rotation)
-    {
-      RubiksIndex ri = RubiksIndex(reduced_starting_state, 1, face, rotation);
-      ri.index = lookup_func(ri.state);
-      if (pattern_lookup[ri.index] == pdb_initialization_value) {
-        pattern_lookup[ri.index] = 1;
-        count += 1;
-      }
-    }
-  }
-  for (int face = 0; face < 6; ++face)
-  {
-    for (int rotation = 0; rotation < 3; ++rotation)
-    {
-      RubiksIndex ri = RubiksIndex(reduced_starting_state, 1, face, rotation);
-      ri.index = lookup_func(ri.state);
-      for (int face2 = 0; face2 < 6; ++face2)
-      {
-        if (Rubiks::skip_rotations(face, face2))
-        {
-          continue;
-        }
-        for (int rotation2 = 0; rotation2 < 3; ++rotation2)
-        {
-          RubiksIndex ri2 = RubiksIndex(ri.state, 2, face2, rotation2);
-          ri2.index = lookup_func(ri2.state);
-          if (pattern_lookup[ri2.index] == pdb_initialization_value) {
-            pattern_lookup[ri2.index] = pattern_lookup[ri.index] + 1;
-            count += 1;
-          }
-        }
-      }
-    }
-  }
-
+  
   while (count < max_count && id_depth < max_depth)
   {
     uint8_t target_val;
@@ -664,6 +624,7 @@ void Rubiks::generate_pattern_database_multithreaded(
       threads[i] = std::thread(Rubiks::pdb_expand_nodes, std::ref(input_queue), std::ref(count), max_count, std::ref(pattern_mutex), std::ref(pattern_lookup), lookup_func, reverse_func, id_depth, reverse_direction);
     }
 
+    //Queue work for the threads
     uint64_t start;
     bool set_start(false);
     for (size_t i = 0; i < max_count; ++i) {
