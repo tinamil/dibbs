@@ -542,7 +542,6 @@ void Rubiks::pdb_expand_nodes(
 
     for (auto hash = std::get<0>(pair), end = std::get<1>(pair); hash < end; ++hash) {
       reverse_func(hash, tmp_state);
-
       for (int face = 0; face < 6; ++face)
       {
         for (int rotation = 0; rotation < 3; ++rotation)
@@ -667,7 +666,7 @@ void Rubiks::generate_pattern_database_multithreaded(
 
     uint64_t start;
     bool set_start(false);
-    for (size_t i = 0; i < pattern_lookup.size(); ++i) {
+    for (size_t i = 0; i < max_count; ++i) {
       uint8_t val = pattern_lookup[i];
       if (!set_start && val == target_val) {
         set_start = true;
@@ -678,6 +677,11 @@ void Rubiks::generate_pattern_database_multithreaded(
         while (input_queue.try_enqueue(ptok, { start, i }) == false) {
           std::this_thread::sleep_for(10ms);
         }
+      }
+    }
+    if (set_start) {
+      while (input_queue.try_enqueue(ptok, { start, max_count }) == false) {
+        std::this_thread::sleep_for(10ms);
       }
     }
 
@@ -698,7 +702,7 @@ void Rubiks::generate_pattern_database_multithreaded(
       pattern_lookup[i] = max_depth;
     }
     else if (pattern_lookup[i] == pdb_initialization_value) {
-      std::cerr << "Error: index " << i << " was not set to a valid value.\n";
+      std::cerr << "Error: index " << i << " was not set to a valid value." << std::endl;
       throw new std::exception("Error: index was not set to a valid value.");
     }
   }
