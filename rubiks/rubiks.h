@@ -101,11 +101,7 @@ namespace Rubiks
   const uint8_t __corner_pos_indices[] = { 0, 2, 5, 7, 12, 14, 17, 19 };
   const uint8_t __corner_rot_indices[] = { 20, 22, 25, 27, 32, 34, 37, 39 };
 
-  constexpr uint8_t corner_max_depth = 11;
-  constexpr uint8_t edge_12_pos_max_depth = 10;
-  constexpr uint8_t edge_20_rot_max_depth = 9;
   constexpr uint8_t pdb_initialization_value = 21;
-  constexpr uint8_t inconsistent_max_depth = pdb_initialization_value;
 
   constexpr size_t corner_max_count = 88179840;
   constexpr size_t edge_6_max_count = npr(12, 6) * 64;
@@ -130,7 +126,6 @@ namespace Rubiks
   const uint8_t edges_8a[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
   const uint8_t edges_8b[] = { 4, 5, 6, 7, 8, 9, 10, 11 };
 
-  const static int base2[] = { 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1 };
   const static int base3[] = { 729, 243, 81, 27, 9, 3, 1 };
 
   const uint8_t __goal[] = {
@@ -247,7 +242,6 @@ namespace Rubiks
     std::string filename,
     const uint8_t* state,
     const size_t max_count,
-    const uint8_t max_depth,
     const std::function<size_t(const uint8_t* state)> func,
     const std::function<void(const size_t hash, uint8_t* state)> reverse_func
   );

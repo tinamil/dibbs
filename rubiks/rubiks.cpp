@@ -2,46 +2,46 @@
 
 void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uint8_t rotation)
 {
-  static constexpr unsigned int __turn_position_lookup[18][20] =
+  static constexpr unsigned int __turn_position_lookup[18][21] =
   {
-    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, 15, 12, 18, 13, 19, 16, 14 },
-  { 0, 1, 2, 3, 4, 7, 11, 19, 8, 9, 6, 18, 12, 13, 14, 15, 16, 5, 10, 17 },
-  { 5, 1, 2, 10, 4, 17, 6, 7, 3, 9, 15, 11, 0, 13, 14, 8, 16, 12, 18, 19 },
-  { 2, 4, 7, 1, 6, 0, 3, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 },
-  { 12, 8, 0, 3, 4, 5, 6, 7, 13, 1, 10, 11, 14, 9, 2, 15, 16, 17, 18, 19 },
-  { 0, 1, 14, 3, 9, 5, 6, 2, 8, 16, 10, 4, 12, 13, 19, 15, 11, 17, 18, 7 },
-  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 19, 13, 18, 12, 15, 17 },
-  { 0, 1, 2, 3, 4, 17, 10, 5, 8, 9, 18, 6, 12, 13, 14, 15, 16, 19, 11, 7 },
-  { 12, 1, 2, 8, 4, 0, 6, 7, 15, 9, 3, 11, 17, 13, 14, 10, 16, 5, 18, 19 },
-  { 5, 3, 0, 6, 1, 7, 4, 2, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 },
-  { 2, 9, 14, 3, 4, 5, 6, 7, 1, 13, 10, 11, 0, 8, 12, 15, 16, 17, 18, 19 },
-  { 0, 1, 7, 3, 11, 5, 6, 19, 8, 4, 10, 16, 12, 13, 2, 15, 9, 17, 18, 14 },
-  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 19, 18, 17, 16, 15, 14, 13, 12 },
-  { 0, 1, 2, 3, 4, 19, 18, 17, 8, 9, 11, 10, 12, 13, 14, 15, 16, 7, 6, 5 },
-  { 17, 1, 2, 15, 4, 12, 6, 7, 10, 9, 8, 11, 5, 13, 14, 3, 16, 0, 18, 19 },
-  { 7, 6, 5, 4, 3, 2, 1, 0, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 },
-  { 14, 13, 12, 3, 4, 5, 6, 7, 9, 8, 10, 11, 2, 1, 0, 15, 16, 17, 18, 19 },
-  { 0, 1, 19, 3, 16, 5, 6, 14, 8, 11, 10, 9, 12, 13, 7, 15, 4, 17, 18, 2 }
+    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, 15, 12, 18, 13, 19, 16, 14, 20 },
+  { 0, 1, 2, 3, 4, 7, 11, 19, 8, 9, 6, 18, 12, 13, 14, 15, 16, 5, 10, 17, 20 },
+  { 5, 1, 2, 10, 4, 17, 6, 7, 3, 9, 15, 11, 0, 13, 14, 8, 16, 12, 18, 19, 20 },
+  { 2, 4, 7, 1, 6, 0, 3, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 },
+  { 12, 8, 0, 3, 4, 5, 6, 7, 13, 1, 10, 11, 14, 9, 2, 15, 16, 17, 18, 19, 20 },
+  { 0, 1, 14, 3, 9, 5, 6, 2, 8, 16, 10, 4, 12, 13, 19, 15, 11, 17, 18, 7, 20 },
+  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 19, 13, 18, 12, 15, 17, 20 },
+  { 0, 1, 2, 3, 4, 17, 10, 5, 8, 9, 18, 6, 12, 13, 14, 15, 16, 19, 11, 7, 20 },
+  { 12, 1, 2, 8, 4, 0, 6, 7, 15, 9, 3, 11, 17, 13, 14, 10, 16, 5, 18, 19, 20 },
+  { 5, 3, 0, 6, 1, 7, 4, 2, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 },
+  { 2, 9, 14, 3, 4, 5, 6, 7, 1, 13, 10, 11, 0, 8, 12, 15, 16, 17, 18, 19, 20 },
+  { 0, 1, 7, 3, 11, 5, 6, 19, 8, 4, 10, 16, 12, 13, 2, 15, 9, 17, 18, 14, 20 },
+  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 19, 18, 17, 16, 15, 14, 13, 12, 20 },
+  { 0, 1, 2, 3, 4, 19, 18, 17, 8, 9, 11, 10, 12, 13, 14, 15, 16, 7, 6, 5, 20 },
+  { 17, 1, 2, 15, 4, 12, 6, 7, 10, 9, 8, 11, 5, 13, 14, 3, 16, 0, 18, 19, 20 },
+  { 7, 6, 5, 4, 3, 2, 1, 0, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 },
+  { 14, 13, 12, 3, 4, 5, 6, 7, 9, 8, 10, 11, 2, 1, 0, 15, 16, 17, 18, 19, 20 },
+  { 0, 1, 19, 3, 16, 5, 6, 14, 8, 11, 10, 9, 12, 13, 7, 15, 4, 17, 18, 2, 20 }
   };
 
-  static constexpr uint8_t __corner_rotation[][3] =
+  static constexpr uint8_t __corner_rotation[][4] =
   {
-    { 0, 2, 1 },
-  { 1, 0, 2 },
-  { 2, 1, 0 },
-  { 0, 2, 1 },
-  { 1, 0, 2 },
-  { 2, 1, 0 }
+    { 0, 2, 1, 3 },
+  { 1, 0, 2, 3 },
+  { 2, 1, 0, 3 },
+  { 0, 2, 1, 3 },
+  { 1, 0, 2, 3 },
+  { 2, 1, 0, 3 }
   };
 
-  static constexpr bool __turn_lookup[6][20] =
+  static constexpr bool __turn_lookup[6][21] =
   {
-    { false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true, true, true, true, true },
-  { false, false, false, false, false, true, true, true, false, false, true, true, false, false, false, false, false, true, true, true },
-  { true, false, false, true, false, true, false, false, true, false, true, false, true, false, false, true, false, true, false, false },
-  { true, true, true, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false },
-  { true, true, true, false, false, false, false, false, true, true, false, false, true, true, true, false, false, false, false, false },
-  { false, false, true, false, true, false, false, true, false, true, false, true, false, false, true, false, true, false, false, true },
+    { false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, true, true, true, true, true, false },
+  { false, false, false, false, false, true, true, true, false, false, true, true, false, false, false, false, false, true, true, true, false },
+  { true, false, false, true, false, true, false, false, true, false, true, false, true, false, false, true, false, true, false, false, false },
+  { true, true, true, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false },
+  { true, true, true, false, false, false, false, false, true, true, false, false, true, true, true, false, false, false, false, false, false },
+  { false, false, true, false, true, false, false, true, false, true, false, true, false, false, true, false, true, false, false, true, false },
   };
 
   static constexpr bool __corner_booleans[] = {
@@ -72,7 +72,7 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
         {
           new_state[i] = corner_rotation[new_state[i]];
         }
-        else if (face == 2 || face == 5) // Face left and right
+        else if (face == 2 || face == 5) // Face left and right are only rotations that invert edges
         {
           new_state[i] = 1 - new_state[i];
         }
@@ -89,8 +89,8 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
 uint32_t Rubiks::get_corner_index(const uint8_t* state)
 {
   constexpr int size = 8;
-  uint8_t puzzle[size];
-  uint8_t dual[size];
+  uint8_t puzzle[13];
+  uint8_t dual[13];
 
   for (uint8_t i = 0; i < 8; ++i) {
     dual[i] = __cube_translations[state[__corner_pos_indices[i]]];
@@ -181,8 +181,8 @@ uint64_t Rubiks::get_edge_index(const uint8_t* state, const bool is_a, const Rub
 
 uint64_t Rubiks::get_edge_index(const uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices)
 {
-  uint8_t puzzle[12] = { UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
-  uint8_t dual[12];
+  uint8_t puzzle[13] = { UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
+  uint8_t dual[13];
   uint8_t newdual[12];
 
   for (uint8_t i = 0; i < 12; ++i) {
@@ -232,20 +232,33 @@ void Rubiks::restore_state_from_index(const size_t hash_index, uint8_t* state, c
 
 uint64_t Rubiks::get_new_edge_pos_index(const uint8_t* state)
 {
-  uint8_t edge_pos[12];
-  for (int i = 0; i < 12; ++i)
+  uint8_t puzzle[13];
+  uint8_t dual[13];
+
+  for (int i = 0; i < 12; i++)
   {
-    edge_pos[i] = __cube_translations[state[edge_pos_indices_12[i]]];
+    dual[i] = __cube_translations[state[edge_pos_indices_12[i]]];
+    puzzle[dual[i]] = i;
   }
 
-  return mr::get_rank(12, edge_pos);
+  return mr::k_rank(puzzle, dual, 12, 12);
 }
 
-void Rubiks::restore_new_edge_rot_index(const size_t index, uint8_t* state) {
-
-}
 void Rubiks::restore_new_edge_pos_index(const size_t index, uint8_t* state) {
 
+  uint8_t puzzle[12];
+  uint8_t dual[12];
+  mr::unrank(index, puzzle, dual, 12, 12);
+  for (int i = 0; i < 20; ++i) {
+    state[i] = 20ui8;
+  }
+  for (int i = 20; i < 40; ++i) {
+    state[i] = 3ui8;
+  }
+
+  for (int i = 0; i < 12; ++i) {
+    state[edge_pos_indices_12[i]] = edge_pos_indices_12[dual[i]];
+  }
 }
 
 uint64_t Rubiks::get_new_edge_rot_index(const uint8_t* state) {
@@ -258,20 +271,20 @@ uint64_t Rubiks::get_new_edge_rot_index(const uint8_t* state) {
   uint64_t edge_index(0);
   for (int i = 0; i < 11; ++i)
   {
-    edge_index += uint64_t(edge_rots[i]) * base2[i];
+    edge_index += uint64_t(edge_rots[i]) * 1i64 << (10 - i);
   }
   edge_index *= 2187;
   for (int i = 0; i < 8; ++i)
-  {
     edge_rots[__cube_translations[state[__corner_pos_indices[i]]]] = state[__corner_rot_indices[i]];
-  }
+
   for (int i = 0; i < 7; ++i)
-  {
     edge_index += uint64_t(edge_rots[i]) * base3[i];
-  }
   return edge_index;
 }
 
+void Rubiks::restore_new_edge_rot_index(const size_t hash_index, uint8_t* state) {
+  throw new std::exception("Not implemented - requires position states in some way I think");
+}
 
 bool Rubiks::is_solved(const uint8_t* cube)
 {
@@ -326,7 +339,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
     std::string corner_name = "corner_db_" + name + ".npy";
     if (!utility::test_file(corner_name))
     {
-      generate_pattern_database_multithreaded(corner_name, start_state, corner_max_count, inconsistent_max_depth, get_corner_index, restore_corner);
+      generate_pattern_database_multithreaded(corner_name, start_state, corner_max_count, get_corner_index, restore_corner);
     }
     std::vector<uint64_t> shape{ 1 };
     npy::LoadArrayFromNumpy<uint8_t>(corner_name, shape, vectors->corner_db);
@@ -340,7 +353,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_a))
       {
-        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_6_max_count, inconsistent_max_depth, get_edge_index6a, restore_index6a);
+        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_6_max_count, get_edge_index6a, restore_index6a);
       }
     }
     else if (type == PDB::a888)
@@ -349,14 +362,14 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_a))
       {
-        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_8_max_count, inconsistent_max_depth, get_edge_index8a, restore_index8a);
+        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_8_max_count, get_edge_index8a, restore_index8a);
       }
     }
     else if (type == PDB::a12) {
       edge_name_a = "edge_db_12_pos_" + name + ".npy";
       if (!utility::test_file(edge_name_a))
       {
-        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_12_pos_max_count, edge_12_pos_max_depth, get_new_edge_pos_index, restore_new_edge_pos_index);
+        generate_pattern_database_multithreaded(edge_name_a, start_state, edge_12_pos_max_count, get_new_edge_pos_index, restore_new_edge_pos_index);
       }
     }
 
@@ -372,7 +385,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_b))
       {
-        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_6_max_count, inconsistent_max_depth, get_edge_index6b, restore_index6b);
+        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_6_max_count, get_edge_index6b, restore_index6b);
       }
     }
     else if (type == PDB::a888)
@@ -381,7 +394,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_b))
       {
-        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_8_max_count, inconsistent_max_depth, get_edge_index8b, restore_index8b);
+        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_8_max_count, get_edge_index8b, restore_index8b);
       }
     }
     else if (type == PDB::a12)
@@ -390,7 +403,8 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
       if (!utility::test_file(edge_name_b))
       {
-        generate_pattern_database_multithreaded(edge_name_b, start_state, edge_20_rot_max_count, edge_20_rot_max_depth, get_new_edge_rot_index, restore_new_edge_rot_index);
+        //generate_pattern_database_multithreaded(edge_name_b, start_state, edge_20_rot_max_count, get_new_edge_rot_index, restore_new_edge_rot_index);
+        generate_pattern_database(edge_name_b, start_state, pdb_initialization_value, edge_20_rot_max_count, get_new_edge_rot_index);
       }
     }
     npy::LoadArrayFromNumpy<uint8_t>(edge_name_b, shape, vectors->edge_b);
@@ -424,6 +438,7 @@ void Rubiks::generate_pattern_database(
   uint8_t id_depth = 1;
   uint64_t count = 1;
 
+  size_t divisor = 10000000;
   while (count < max_count && id_depth < max_depth)
   {
     if (stack.empty())
@@ -456,9 +471,12 @@ void Rubiks::generate_pattern_database(
         {
           pattern_lookup[new_state_index] = prev_db_val + 1;
           ++count;
-          if (count % 10000000 == 0)
-          {
-            std::cout << count << "\n";
+          size_t remaining = max_count - count;
+          if (remaining > 0) {
+            while (remaining / divisor == 0) divisor /= 10;
+            if (remaining % divisor == 0) {
+              std::cout << remaining << '\n';
+            }
           }
         }
       }
@@ -571,13 +589,12 @@ void Rubiks::generate_pattern_database_multithreaded(
   const std::string filename,
   const uint8_t* state,
   const size_t max_count,
-  const uint8_t max_depth,
   const std::function<size_t(const uint8_t* state)> lookup_func,
   const std::function<void(const size_t hash, uint8_t* state)> reverse_func
 )
 {
   using namespace std::chrono_literals;
-  const unsigned int thread_count = std::thread::hardware_concurrency() - 1;
+  const unsigned int thread_count = std::thread::hardware_concurrency();
 
 
   std::cout << "Generating PDB\n";
@@ -603,8 +620,8 @@ void Rubiks::generate_pattern_database_multithreaded(
   moodycamel::ProducerToken ptok(input_queue);
   std::thread* threads = new std::thread[thread_count];
   std::mutex pattern_mutex;
-  
-  while (count < max_count && id_depth < max_depth)
+
+  while (count < max_count && id_depth < pdb_initialization_value)
   {
     uint8_t target_val;
     bool reverse_direction;
@@ -659,11 +676,8 @@ void Rubiks::generate_pattern_database_multithreaded(
     }
   }
   for (size_t i = 0; i < max_count; ++i) {
-    if (max_depth < pdb_initialization_value && pattern_lookup[i] == pdb_initialization_value) {
-      pattern_lookup[i] = max_depth;
-    }
-    else if (pattern_lookup[i] == pdb_initialization_value) {
-      std::cerr << "Error: index " << i << " was not set to a valid value." << std::endl;
+    if (pattern_lookup[i] == pdb_initialization_value) {
+      std::cerr << "Error: index " << i << " was not set to a valid value, found count == " << count << std::endl;
       throw new std::exception("Error: index was not set to a valid value.");
     }
   }
