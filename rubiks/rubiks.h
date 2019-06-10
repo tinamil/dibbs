@@ -75,8 +75,8 @@ namespace Rubiks
 
   enum Rotation
   {
-    counterclockwise = 0,
-    clockwise = 1,
+    clockwise = 0,
+    counterclockwise = 1,
     half = 2
   };
   const std::string _face_mapping[] = { "F", "U", "L", "B", "D", "R" };
@@ -126,7 +126,7 @@ namespace Rubiks
   const uint8_t edges_8a[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
   const uint8_t edges_8b[] = { 4, 5, 6, 7, 8, 9, 10, 11 };
 
-  const static int base3[] = { 729, 243, 81, 27, 9, 3, 1 };
+  constexpr uint32_t base3[] = { 729, 243, 81, 27, 9, 3, 1 };
 
   const uint8_t __goal[] = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,

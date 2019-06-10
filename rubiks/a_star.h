@@ -9,5 +9,6 @@
 
 namespace search
 {
-  uint64_t a_star(const uint8_t* state, const Rubiks::PDB pdb_type);
+  uint64_t ida_star(const uint8_t* state, const Rubiks::PDB pdb_type);
+  uint64_t multithreaded_ida_star(const uint8_t* state, const Rubiks::PDB pdb_type);
 }

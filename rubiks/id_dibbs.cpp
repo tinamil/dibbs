@@ -229,7 +229,7 @@ size_t search::id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
 
   std::shared_ptr<Node> best_node(nullptr);
   size_t count = 0;
-  const size_t node_limit = (size_t)1e8;
+  const size_t node_limit = (size_t)2e8;
 
   unsigned int forward_fbar_min(1), backward_fbar_min(1);
   bool reverse = false;

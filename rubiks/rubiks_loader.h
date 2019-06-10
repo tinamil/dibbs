@@ -7,7 +7,7 @@ class RubiksLoader
 {
 public:
   static std::vector<uint8_t*> load_cubes(std::string file);
-  static uint8_t* scramble(std::string notation);
+  static uint8_t* RubiksLoader::scramble(std::string notation, const uint8_t* start_state = Rubiks::__goal);
 
 private:
   struct Cubes

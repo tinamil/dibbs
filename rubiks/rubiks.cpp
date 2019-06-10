@@ -54,34 +54,31 @@ void Rubiks::rotate(uint8_t* __restrict new_state, const uint8_t face, const uin
 
   const uint8_t rotation_index = 6 * rotation + face;
   const unsigned int* __restrict turn_pos = __turn_position_lookup[rotation_index];
-  if (rotation == 2)
-  {
-    for (int i = 0; i < 20; i++)
-    {
-      new_state[i] = turn_pos[new_state[i]];
-    }
-  }
-  else
+  if (rotation != 2)
   {
     const bool* __restrict do_turn = __turn_lookup[face];
     const uint8_t* __restrict corner_rotation = __corner_rotation[face];
     for (int i = 20; i < 40; i++) {
+      assert(new_state[i - 20] <= 20);
       if (do_turn[new_state[i - 20]])
       {
         if (__corner_booleans[i - 20])
         {
+          assert(new_state[i] <= 20);
           new_state[i] = corner_rotation[new_state[i]];
         }
         else if (face == 2 || face == 5) // Face left and right are only rotations that invert edges
         {
+          assert(new_state[i] == 0 || new_state[i] == 1);
           new_state[i] = 1 - new_state[i];
         }
       }
     }
-    for (int i = 0; i < 20; ++i)
-    {
-      new_state[i] = turn_pos[new_state[i]];
-    }
+  }
+  for (int i = 0; i < 20; i++)
+  {
+    assert(new_state[i] <= 20);
+    new_state[i] = turn_pos[new_state[i]];
   }
 }
 
@@ -93,23 +90,29 @@ uint32_t Rubiks::get_corner_index(const uint8_t* state)
   uint8_t dual[13];
 
   for (uint8_t i = 0; i < 8; ++i) {
+    assert(state[__corner_pos_indices[i]] <= 20);
     dual[i] = __cube_translations[state[__corner_pos_indices[i]]];
     puzzle[dual[i]] = i;
   }
 
   uint32_t corner_index = (uint32_t)mr::k_rank(puzzle, dual, 8, 8);
+  assert(corner_index >= 0 && corner_index < 40320);
 
   uint32_t rot_index = 0;
   for (int i = 0; i < size - 1; ++i)
   {
+    assert(state[__corner_rot_indices[i]] <= 2);
     rot_index += state[__corner_rot_indices[i]] * base3[i];
   }
+  assert(rot_index < 2187);
+
   return corner_index * 2187 + rot_index;
 }
 
 void Rubiks::restore_corner(const size_t hash_index, uint8_t* state) {
   uint8_t puzzle[12];
   uint8_t dual[12];
+  assert(hash_index < corner_max_count);
   const size_t pos_index = hash_index / 2187ui64;
   mr::unrank(pos_index, puzzle, dual, 8, 8);
   for (int i = 0; i < 20; ++i) {
@@ -120,6 +123,7 @@ void Rubiks::restore_corner(const size_t hash_index, uint8_t* state) {
   }
 
   for (int i = 0; i < 8; ++i) {
+    assert(dual[i] < 8);
     state[__corner_pos_indices[i]] = __corner_pos_indices[dual[i]];
   }
 
@@ -182,10 +186,11 @@ uint64_t Rubiks::get_edge_index(const uint8_t* state, const bool is_a, const Rub
 uint64_t Rubiks::get_edge_index(const uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices)
 {
   uint8_t puzzle[13] = { UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX };
-  uint8_t dual[13];
+  uint8_t dual[12];
   uint8_t newdual[12];
 
   for (uint8_t i = 0; i < 12; ++i) {
+    assert(state[edge_pos_indices_12[i]] <= 20);
     dual[i] = __cube_translations[state[edge_pos_indices_12[i]]];
   }
 
@@ -196,19 +201,23 @@ uint64_t Rubiks::get_edge_index(const uint8_t* state, const int size, const uint
   }
   uint64_t edge_index = mr::k_rank(puzzle, newdual, size, 12);
 
-  edge_index *= 1i64 << size;
-
+  uint64_t edge_rot_index(0);
   for (int i = 0; i < size; ++i)
   {
-    edge_index += state[edge_rot_indices[i]] * 1i64 << (size - i - 1);
+    assert(state[edge_rot_indices[i]] <= 1);
+    edge_rot_index += state[edge_rot_indices[i]] * 1i64 << (size - i - 1);
   }
-  return edge_index;
+
+  assert(edge_index < npr(12, size));
+  assert(edge_rot_index < (1i64 << size));
+  return edge_index * (1i64 << size) + edge_rot_index;
 }
 
 void Rubiks::restore_state_from_index(const size_t hash_index, uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices)
 {
   uint8_t puzzle[12];
   uint8_t dual[12];
+  assert(hash_index < (npr(12, size) * (1i64 << size)));
   const size_t pos_index = hash_index / (1i64 << size);
   mr::unrank(pos_index, puzzle, dual, size, 12);
   for (int i = 0; i < 20; ++i) {
@@ -219,6 +228,7 @@ void Rubiks::restore_state_from_index(const size_t hash_index, uint8_t* state, c
   }
 
   for (int i = 0; i < size; ++i) {
+    assert(dual[i] < 12);
     state[edge_pos_indices_12[edges[i]]] = edge_pos_indices_12[dual[i]];
   }
 
@@ -237,6 +247,7 @@ uint64_t Rubiks::get_new_edge_pos_index(const uint8_t* state)
 
   for (int i = 0; i < 12; i++)
   {
+    assert(state[edge_pos_indices_12[i]] <= 20);
     dual[i] = __cube_translations[state[edge_pos_indices_12[i]]];
     puzzle[dual[i]] = i;
   }
@@ -246,6 +257,7 @@ uint64_t Rubiks::get_new_edge_pos_index(const uint8_t* state)
 
 void Rubiks::restore_new_edge_pos_index(const size_t index, uint8_t* state) {
 
+  assert(index < __factorial_lookup[12]);
   uint8_t puzzle[12];
   uint8_t dual[12];
   mr::unrank(index, puzzle, dual, 12, 12);
@@ -257,33 +269,74 @@ void Rubiks::restore_new_edge_pos_index(const size_t index, uint8_t* state) {
   }
 
   for (int i = 0; i < 12; ++i) {
+    assert(dual[i] < 12);
     state[edge_pos_indices_12[i]] = edge_pos_indices_12[dual[i]];
   }
 }
 
-uint64_t Rubiks::get_new_edge_rot_index(const uint8_t* state) {
-  uint8_t edge_rots[12];
-  for (int i = 0; i < 12; ++i)
-  {
-    edge_rots[__cube_translations[state[edge_pos_indices_12[i]]]] = state[edge_rot_indices_12[i]];
-  }
+//uint64_t Rubiks::get_new_edge_rot_index(const uint8_t* state) {
+//  uint8_t edge_rots[12];
+//  for (int i = 0; i < 12; ++i)
+//  {
+//    edge_rots[__cube_translations[state[edge_pos_indices_12[i]]]] = state[edge_rot_indices_12[i]];
+//  }
+//
+//  uint64_t edge_index(0);
+//  for (int i = 0; i < 11; ++i)
+//  {
+//    edge_index += uint64_t(edge_rots[i]) * 1i64 << (10 - i);
+//  }
+//  edge_index *= 2187;
+//  for (int i = 0; i < 8; ++i)
+//    edge_rots[__cube_translations[state[__corner_pos_indices[i]]]] = state[__corner_rot_indices[i]];
+//
+//  for (int i = 0; i < 7; ++i)
+//    edge_index += uint64_t(edge_rots[i]) * base3[i];
+//  return edge_index;
+//}
 
-  uint64_t edge_index(0);
+uint64_t Rubiks::get_new_edge_rot_index(const uint8_t* state) {
+
+  uint32_t edge_rot_index(0);
   for (int i = 0; i < 11; ++i)
   {
-    edge_index += uint64_t(edge_rots[i]) * 1i64 << (10 - i);
+    assert(state[edge_rot_indices_12[i]] <= 1);
+    edge_rot_index += state[edge_rot_indices_12[i]] * 1i64 << (10 - i);
   }
-  edge_index *= 2187;
-  for (int i = 0; i < 8; ++i)
-    edge_rots[__cube_translations[state[__corner_pos_indices[i]]]] = state[__corner_rot_indices[i]];
 
+  uint32_t corner_rot_index = 0;
   for (int i = 0; i < 7; ++i)
-    edge_index += uint64_t(edge_rots[i]) * base3[i];
-  return edge_index;
+  {
+    assert(state[__corner_rot_indices[i]] <= 2);
+    corner_rot_index += state[__corner_rot_indices[i]] * base3[i];
+  }
+  assert(corner_rot_index < 2187);
+  assert(edge_rot_index < 2048);
+  return corner_rot_index * 2048 + edge_rot_index;
 }
 
 void Rubiks::restore_new_edge_rot_index(const size_t hash_index, uint8_t* state) {
-  throw new std::exception("Not implemented - requires position states in some way I think");
+
+  assert(hash_index < (2048 * 2187));
+  for (int i = 0; i < 20; ++i) {
+    state[i] = 20;
+  }
+  state[38] = 3;
+  state[39] = 3;
+
+  size_t corner_rot_index = hash_index / 2048;
+  for (int i = 6; i >= 0; --i)
+  {
+    state[__corner_rot_indices[i]] = corner_rot_index % 3ui8;
+    corner_rot_index /= 3;
+  }
+
+  size_t edge_rot_index = hash_index % 2048;
+  for (int i = 10; i >= 0; --i)
+  {
+    state[edge_rot_indices_12[i]] = edge_rot_index % 2;
+    edge_rot_index /= 2;
+  }
 }
 
 bool Rubiks::is_solved(const uint8_t* cube)
@@ -485,6 +538,7 @@ void Rubiks::generate_pattern_database(
   for (int i = 0; i < max_count; ++i) {
     if (pattern_lookup[i] > max_depth) {
       std::cout << "ERROR in PDB Generation, index " << i << " has depth = " << unsigned int(pattern_lookup[i]) << std::endl;
+      throw std::exception("Error in PDB generation");
     }
   }
   const uint64_t shape[] = { max_count };
@@ -502,20 +556,14 @@ void Rubiks::process_buffer(
   for (size_t i = 0; i < local_results_buffer.size(); ++i) {
     auto id = local_results_buffer[i];
     if (pattern_lookup[id] > id_depth) {
-      bool new_value = pattern_lookup[id] == pdb_initialization_value;
       pattern_lookup[id] = id_depth;
-      if (new_value) {
-        count++;
-        size_t remaining = max_count - count;
-        if (remaining > 0) {
-          while (remaining / divisor == 0) divisor /= 10;
-          if (remaining % divisor == 0) {
-            std::cout << remaining << '\n';
-          }
+      count++;
+      size_t remaining = max_count - count;
+      if (remaining > 0) {
+        while (remaining / divisor == 0) divisor /= 10;
+        if (remaining % divisor == 0) {
+          std::cout << remaining << '\n';
         }
-      }
-      else {
-        std::cout << "Not a new value\n";
       }
     }
   }
@@ -534,7 +582,7 @@ void Rubiks::pdb_expand_nodes(
 )
 {
   using namespace std::chrono_literals;
-  const size_t buffer_size = 1024 * 1024;
+  const size_t buffer_size = 65536;
   moodycamel::ConsumerToken ctok(input_queue);
   std::vector<uint64_t> local_results_buffer;
 
@@ -594,7 +642,7 @@ void Rubiks::generate_pattern_database_multithreaded(
 )
 {
   using namespace std::chrono_literals;
-  const unsigned int thread_count = std::thread::hardware_concurrency();
+  const unsigned int thread_count = std::thread::hardware_concurrency() - 1;
 
 
   std::cout << "Generating PDB\n";
@@ -616,7 +664,7 @@ void Rubiks::generate_pattern_database_multithreaded(
   count += 1;
 
   uint8_t id_depth = 0;
-  moodycamel::ConcurrentQueue<std::pair<uint64_t, uint64_t>> input_queue(67108860); // 64 MB
+  moodycamel::ConcurrentQueue<std::pair<uint64_t, uint64_t>> input_queue(65536 * thread_count); 
   moodycamel::ProducerToken ptok(input_queue);
   std::thread* threads = new std::thread[thread_count];
   std::mutex pattern_mutex;

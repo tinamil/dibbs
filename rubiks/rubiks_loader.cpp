@@ -16,13 +16,13 @@ std::vector<uint8_t*> RubiksLoader::load_cubes(std::string file)
 }
 
 
-uint8_t* RubiksLoader::scramble(std::string notation)
+uint8_t* RubiksLoader::scramble(std::string notation, const uint8_t* start_state)
 {
 
   std::vector<std::string> moves = utility::tokenizer(notation, ' ');
   RubiksLoader::Move move = convert(moves[0]);
   uint8_t* state = new uint8_t[40];
-  memcpy(state, Rubiks::__goal, 40);
+  memcpy(state, start_state, 40);
 
   for (size_t i = 0; i < moves.size(); ++i)
   {
@@ -31,6 +31,7 @@ uint8_t* RubiksLoader::scramble(std::string notation)
   }
   return state;
 }
+
 
 
 RubiksLoader::Move RubiksLoader::convert(std::string notation)
