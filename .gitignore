@@ -150,3 +150,13 @@ dmypy.json
 *.exp
 
 *_db*.npy
+
+*.cbp
+*.layout
+*.depend
+
+*/vtune/
+*.vcxproj.user
+.vs/
+Debug/
+Release/

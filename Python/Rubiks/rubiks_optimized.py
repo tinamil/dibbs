@@ -464,7 +464,7 @@ def inverse_rotation(rotation):
         return 1 - rotation
 
 
-@njit
+#@njit
 def generate_edges_pattern_database(state, max_depth, edge_pos_indices, edge_rot_indices):
     print("Generating edges db")
     queue = list()
@@ -716,11 +716,25 @@ def solve(state: np.ndarray, cubie: int, solution: np.ndarray):
                 queue.append((new_state_base, new_state_depth))
 
 
+@njit
 def a_star_with_backward_args(start_state, goal_state, forward_heuristic, reverse_heuristic):
     return a_star(start_state, forward_heuristic)
 
 
+@njit
+def pattern_database_lookup(state, corner_db, edges, pos, rot):
+    new_corner_index = get_corner_index(state)
+    best = corner_db[new_corner_index]
+    for i in range(len(edges)):
+        new_edge_index = get_edge_index(state, pos[i], rot[i])
+        best = max(best, edges[i][new_edge_index])
+    return best
+
+
+@njit
 def a_star(state, heuristic_func):
+    corner_db, edge_dbs, edge_pos_indices, edge_rot_indices = heuristic_func
+    heuristic_func = lambda state: pattern_database_lookup(state, corner_db, edge_dbs, edge_pos_indices, edge_rot_indices)
     queue = list()
     starting_state = state
     queue.append((starting_state, 0, np.empty(0, dtype=np.uint8), np.empty(0, dtype=np.uint8)))
@@ -732,7 +746,7 @@ def a_star(state, heuristic_func):
     print("Minimum number of moves to solve: ", min_moves)
     id_depth = min_moves
     count = 0
-    while True:
+    while count < 1e8:
 
         if len(queue) == 0:
             id_depth += 1
@@ -757,6 +771,8 @@ def a_star(state, heuristic_func):
                 new_state_cost = new_state_depth + new_state_heuristic
 
                 count += 1
+                if count % 1000000 == 0:
+                    print(count)
 
                 if new_state_cost > id_depth:
                     continue
