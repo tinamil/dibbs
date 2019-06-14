@@ -3,11 +3,6 @@
 typedef std::stack<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node> > > stack;
 typedef std::unordered_set<std::shared_ptr<Node>, NodeHash, NodeEqual> hash_set;
 
-//TODO: 
-//Verify H1 <= H2 (vs -1)
-//Implement memory sweep when running out
-//  1) Dump the current frontier when checking the other frontier
-//  2) Sweep fractions of the frontier
 std::shared_ptr<Node> make_node(const hash_set* other_set,
   std::shared_ptr<Node> prev_node,
   const uint8_t* start_state,

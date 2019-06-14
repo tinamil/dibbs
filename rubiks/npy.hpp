@@ -537,8 +537,9 @@ namespace npy
 
 
   template<typename Scalar>
-  inline void LoadArrayFromNumpy(const std::string& filename, std::vector<uint64_t>& shape, std::vector<Scalar>& data)
+  inline std::vector<Scalar> LoadArrayFromNumpy(const std::string& filename, std::vector<uint64_t>& shape)
   {
+    std::vector<Scalar> data;
     std::ifstream stream(filename, std::ifstream::binary);
     if (!stream)
     {
@@ -568,6 +569,8 @@ namespace npy
 
     // read the data
     stream.read(reinterpret_cast<char*> (data.data()), sizeof(Scalar) *size);
+
+    return data;
   }
 
 } // namespace npy

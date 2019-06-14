@@ -60,7 +60,7 @@ namespace Rubiks
 
   enum PDB
   {
-    a1997, a888, zero, a12, clear_state
+    a1997, a888, zero, a12, a81220, clear_state
   };
 
   enum Face
@@ -173,12 +173,6 @@ namespace Rubiks
     PDB_Value(size_t idx, uint8_t val) noexcept : index(idx), value(val) {}
   };
 
-  struct PDBVectors
-  {
-    std::vector<uint8_t> edge_a, edge_b;
-    std::vector<uint8_t> corner_db;
-  };
-
   struct RubiksEdgeStateHash
   {
     inline std::size_t operator() (const uint8_t* s) const {
@@ -207,10 +201,11 @@ namespace Rubiks
       (last_face == 5 && face == 2) || (last_face == 4 && face == 1);
   }
 
+  extern uint64_t get_index(const uint8_t* state, const int order, const Rubiks::PDB type);
+
   extern uint32_t get_corner_index(const uint8_t* state);
   extern void restore_corner(const size_t index, uint8_t* state);
 
-  extern uint64_t get_edge_index(const uint8_t* state, const bool a, const PDB type);
   extern uint64_t get_edge_index(const uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
 
   inline uint64_t get_edge_index6a(const uint8_t* state) { return get_edge_index(state, 6, edges_6a, edge_rot_indices_6a); }
