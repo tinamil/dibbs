@@ -220,11 +220,13 @@ size_t search::id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
   auto start = std::make_shared<Node>(start_state, Rubiks::__goal, pdb_type);
   auto goal = std::make_shared<Node>(Rubiks::__goal, start_state, pdb_type);
 
-  hash_set front_set, back_set;
-
   std::shared_ptr<Node> best_node(nullptr);
   size_t count = 0;
   const size_t node_limit = (size_t)2e8;
+
+  hash_set front_set, back_set;
+  front_set.reserve(node_limit);
+  back_set.reserve(node_limit);
 
   unsigned int forward_fbar_min(1), backward_fbar_min(1);
   bool reverse = false;
