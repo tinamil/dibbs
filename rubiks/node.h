@@ -7,10 +7,14 @@
 #include "hash.hpp"
 #include "rubiks.h"
 
+//#define HISTORY
+
 struct Node
 {
+  #ifdef HISTORY
   std::shared_ptr<Node> parent;
   std::shared_ptr<Node> reverse_parent;
+  #endif
   uint8_t state[40];
   uint8_t face;
 

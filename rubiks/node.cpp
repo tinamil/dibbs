@@ -1,9 +1,17 @@
 #include "Node.h"
 
-Node::Node() : parent(nullptr), reverse_parent(nullptr), state(), face(0), depth(0), combined(0), f_bar(0), heuristic(0),
-reverse_heuristic(0), passed_threshold(false) {}
+Node::Node() :
+  #ifdef HISTORY 
+  parent(nullptr), reverse_parent(nullptr),
+  #endif 
+  state(), face(0), depth(0), combined(0), f_bar(0), heuristic(0),
+  reverse_heuristic(0), passed_threshold(false) {}
 
-Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type) : parent(nullptr), reverse_parent(nullptr), face(0), depth(0), passed_threshold(false)
+Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type) :
+  #ifdef HISTORY 
+  parent(nullptr), reverse_parent(nullptr),
+  #endif 
+  face(0), depth(0), passed_threshold(false)
 {
   memcpy(state, prev_state, 40);
   if (start_state != nullptr)
@@ -16,10 +24,16 @@ Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::
 }
 
 Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
-  const bool reverse, const Rubiks::PDB type) : reverse_parent(nullptr), face(_face * 6 + _rotation), depth(_depth)
+  const bool reverse, const Rubiks::PDB type) :
+  #ifdef HISTORY 
+  reverse_parent(nullptr),
+  #endif 
+  face(_face * 6 + _rotation), depth(_depth)
 {
+  #ifdef HISTORY
   parent = node_parent;
-  memcpy(state, parent->state, 40);
+  #endif
+  memcpy(state, node_parent->state, 40);
   Rubiks::rotate(state, _face, _rotation);
 
   heuristic = Rubiks::pattern_lookup(state, type);
@@ -46,9 +60,12 @@ Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, 
   combined = depth + heuristic;
 }
 
-Node::Node(const Node& old_node) : parent(old_node.parent), reverse_parent(old_node.reverse_parent), state(),
-face(old_node.face), depth(old_node.depth), combined(old_node.combined), f_bar(old_node.f_bar),
-heuristic(old_node.heuristic), reverse_heuristic(old_node.reverse_heuristic), passed_threshold(old_node.passed_threshold)
+Node::Node(const Node& old_node) :
+  #ifdef HISTORY
+  parent(old_node.parent), reverse_parent(old_node.reverse_parent),
+  #endif
+  state(), face(old_node.face), depth(old_node.depth), combined(old_node.combined), f_bar(old_node.f_bar),
+  heuristic(old_node.heuristic), reverse_heuristic(old_node.reverse_heuristic), passed_threshold(old_node.passed_threshold)
 {
   memcpy(state, old_node.state, 40);
 }
@@ -60,7 +77,9 @@ uint8_t Node::get_face() const
 
 void Node::set_reverse(const std::shared_ptr<Node> reverse)
 {
+  #ifdef HISTORY
   reverse_parent = reverse;
+  #endif
 }
 
 std::string Node::print_state() const
@@ -74,7 +93,9 @@ std::string Node::print_state() const
   return result;
 }
 
+#ifdef HISTORY
 std::string generate_solution(const Node* node, const std::function<std::string(const Node*)> func, bool reverse = false) {
+
   const Node* this_parent = node;
   std::string solution;
   while (this_parent != nullptr) {
@@ -103,17 +124,16 @@ std::string get_depth(const Node* x) {
     ss << std::setw(6);
   else
     ss << std::setw(3);
-
   ss << std::setfill(' ') << std::to_string(x->depth);
   return ss.str();
 }
+
 std::string get_h1(const Node* x) {
   std::stringstream ss;
   if (x->parent != nullptr)
     ss << std::setw(6);
   else
     ss << std::setw(3);
-
   ss << std::setfill(' ') << std::to_string(x->heuristic);
   return ss.str();
 }
@@ -123,7 +143,6 @@ std::string get_h2(const Node* x) {
     ss << std::setw(6);
   else
     ss << std::setw(3);
-
   ss << std::setfill(' ') << std::to_string(x->reverse_heuristic);
   return ss.str();
 }
@@ -133,7 +152,6 @@ std::string get_combined(const Node* x) {
     ss << std::setw(6);
   else
     ss << std::setw(3);
-
   ss << std::setfill(' ') << std::to_string(x->combined);
   return ss.str();
 }
@@ -143,7 +161,6 @@ std::string get_fbar(const Node* x) {
     ss << std::setw(6);
   else
     ss << std::setw(3);
-
   ss << std::setfill(' ') << std::to_string(x->f_bar);
   return ss.str();
 }
@@ -153,7 +170,7 @@ std::string generate_bidirectional_solution(const Node* node, std::function<std:
   std::string solution = generate_solution(node, func, true);
   std::reverse(solution.begin(), solution.end());
   solution.append(" |");
-  if(skip_middle && node->reverse_parent != nullptr)
+  if (skip_middle && node->reverse_parent != nullptr)
     solution.append(generate_solution(node->reverse_parent->parent.get(), func));
   else
     solution.append(generate_solution(node->reverse_parent.get(), func));
@@ -162,9 +179,9 @@ std::string generate_bidirectional_solution(const Node* node, std::function<std:
   return solution;
 }
 
-
 std::string Node::print_solution() const
 {
+
   std::string solution;
   solution += "\nmove=" + generate_bidirectional_solution(this, get_face_rotation, false);
   solution += "\ng=   " + generate_bidirectional_solution(this, get_depth);
@@ -173,8 +190,13 @@ std::string Node::print_solution() const
   solution += "\nf=   " + generate_bidirectional_solution(this, get_combined);
   solution += "\nfbar=" + generate_bidirectional_solution(this, get_fbar) + "\n";
   return solution;
-  //return "Solutions disabled.";
 }
+#else
+std::string Node::print_solution() const
+{
+  return "Solutions disabled.";
+}
+#endif
 
 bool NodeCompare::operator() (const Node* a, const Node* b) const
 {
@@ -211,17 +233,17 @@ bool NodeCompare::operator() (const std::shared_ptr<Node> a, const std::shared_p
 
 size_t NodeHash::operator() (const Node* s) const
 {
-  return boost_hash(s->state, 40);
+  return SuperFastHash(s->state, 40);
 }
 
 size_t NodeHash::operator() (const Node& s) const
 {
-  return boost_hash(s.state, 40);
+  return SuperFastHash(s.state, 40);
 }
 
 size_t NodeHash::operator() (const std::shared_ptr<Node> s) const
 {
-  return boost_hash(s->state, 40);
+  return SuperFastHash(s->state, 40);
 }
 
 bool NodeEqual::operator() (const Node* a, const Node* b) const
