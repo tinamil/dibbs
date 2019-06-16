@@ -32,7 +32,7 @@ std::shared_ptr<Node> make_node(const hash_set* other_set,
   return new_node;
 }
 
-void expand_node(std::shared_ptr<Node> next_node,
+void expand_node(std::shared_ptr<Node> prev_node,
   stack& my_stack,
   hash_set* my_set,
   const hash_set* other_set,
@@ -51,25 +51,25 @@ void expand_node(std::shared_ptr<Node> next_node,
 
   for (int face = 0; face < 6; ++face)
   {
-    if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
+    if (prev_node->depth > 0 && Rubiks::skip_rotations(prev_node->get_face(), face))
     {
       continue;
     }
     for (int rotation = 0; rotation < 3; ++rotation)
     {
-      auto new_node = make_node(other_set, next_node, start_state, face, rotation, reverse, type, best_node, upper_bound);
+      auto new_node = make_node(other_set, prev_node, start_state, face, rotation, reverse, type, best_node, upper_bound);
       if (new_node->f_bar <= id_depth) {
         my_stack.push(new_node);
       }
       else if (my_set != nullptr && new_node->passed_threshold) {
-        auto existing = my_set->find(next_node);
+        auto existing = my_set->find(new_node);
         if (existing == my_set->end()) {
-          my_set->insert(next_node);
+          my_set->insert(new_node);
         }
-        else if ((*existing)->depth > next_node->depth) {
+        else if ((*existing)->depth > new_node->depth) {
           //Must check because we are searching in DFS order, not BFS
           my_set->erase(existing);
-          my_set->insert(next_node);
+          my_set->insert(new_node);
         }
       }
     }
