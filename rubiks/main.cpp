@@ -206,6 +206,11 @@ void search_cubes()
   for (size_t i = 0; i < count_results.size(); ++i) {
     std::cout << i << " " << count_results[i] << " nodes expanded; " << time_results[i] << " s to solve\n";
   }
+
+  for each (auto state in cubes)
+  {
+    delete[] state;
+  }
 }
 
 int main()
