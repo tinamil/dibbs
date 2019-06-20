@@ -13,7 +13,7 @@
 using namespace std;
 using namespace Rubiks;
 
-//#define ASTAR 
+#define ASTAR 
 #define DIBBS 
 //#define GBFHS
 
