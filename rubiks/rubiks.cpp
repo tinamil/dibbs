@@ -496,7 +496,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
   }
 
   uint8_t best = 0;
-  for (uint8_t i = 0, end = vectors->size(); i < end; ++i) {
+  for (uint8_t i = 0, end = (uint8_t)vectors->size(); i < end; ++i) {
     const uint8_t val = vectors->at(i).at(get_index(state, i, type));
     if (val > best) {
       best = val;

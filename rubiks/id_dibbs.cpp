@@ -87,13 +87,12 @@ bool expand_layer(stack& my_stack,
   const unsigned int id_depth,
   const unsigned int c_star,
   size_t& count,
-  const int epsilon,
   const size_t node_limit)
 {
   std::cout << "Expanding layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
   my_set->clear();
 
-  while (!my_stack.empty() && upper_bound < c_star) {
+  while (!my_stack.empty() && upper_bound >= c_star) {
     std::shared_ptr<Node> next_node = my_stack.top();
     my_stack.pop();
     expand_node(next_node, my_stack, my_set, other_set, id_depth, upper_bound, best_node, reverse, type, start_state, count);
@@ -116,19 +115,18 @@ bool id_check_layer(stack& my_stack,
   const uint8_t* start_state,
   const unsigned int id_depth,
   const unsigned int c_star,
-  size_t& count,
-  const int epsilon)
+  size_t& count)
 {
   std::cout << "ID checking layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
 
-  while (!my_stack.empty() && upper_bound < c_star) {
+  while (!my_stack.empty() && upper_bound > c_star) {
     std::shared_ptr<Node> next_node = my_stack.top();
     my_stack.pop();
     expand_node(next_node, my_stack, nullptr, other_set, id_depth, upper_bound, best_node, reverse, type, start_state, count);
   }
 
   std::cout << "Finished ID checking layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
-  return upper_bound >= c_star;
+  return upper_bound <= c_star;
 }
 
 bool store_layer(stack& my_stack,
@@ -155,44 +153,31 @@ bool store_layer(stack& my_stack,
   return my_stack.empty();
 }
 
-void expand_or_id(
+bool id_test(
   stack& my_stack,
   stack& other_stack,
   std::shared_ptr<Node> other_stack_initializer,
   hash_set* my_set,
   hash_set* other_set,
-  unsigned int& id_depth,
-  const unsigned int other_depth,
-  const unsigned int current_limit,
+  unsigned int id_depth,
+  unsigned int other_depth,
+  const unsigned int c_star,
   uint8_t& upper_bound,
   std::shared_ptr<Node>& best_node,
   const bool reverse,
   const Rubiks::PDB pdb_type,
   const uint8_t* start_state,
   size_t& count,
-  const uint8_t epsilon,
-  const size_t node_limit,
-  bool& reached_node_limit
-) {
-  if (reached_node_limit == false) {
-    if (!expand_layer(my_stack, my_set, other_set, upper_bound, best_node, reverse, pdb_type, start_state, id_depth, other_depth, count, epsilon, node_limit)) {
-      reached_node_limit = true;
-      other_set->clear();
-      other_stack.push(other_stack_initializer);
-      if (id_check_layer(other_stack, my_set, upper_bound, best_node, !reverse, pdb_type, start_state, id_depth, other_depth, count, epsilon)) {
-        return;
-      }
+  const size_t node_limit)
+{
+  while (store_layer(my_stack, my_set, best_node, reverse, pdb_type, start_state, id_depth, count, node_limit) == false || my_set->size() > 0) {
+    other_stack.push(other_stack_initializer);
+    if (id_check_layer(other_stack, my_set, upper_bound, best_node, !reverse, pdb_type, start_state, other_depth, c_star, count)) {
+      return true;
     }
   }
-  if (reached_node_limit) {
-    while (store_layer(my_stack, my_set, best_node, reverse, pdb_type, start_state, id_depth, count, node_limit) == false || my_set->size() > 0) {
-      other_stack.push(other_stack_initializer);
-      if (id_check_layer(other_stack, my_set, upper_bound, best_node, !reverse, pdb_type, start_state, id_depth, other_depth, count, epsilon)) {
-        return;
-      }
-    }
-    my_set->clear();
-  }
+  my_set->clear();
+  return false;
 }
 
 size_t search::id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
@@ -218,28 +203,23 @@ size_t search::id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
   const size_t node_limit = (size_t)2e8;
 
   hash_set front_set, back_set;
-  front_set.reserve(node_limit);
-  back_set.reserve(node_limit);
 
-  unsigned int a_fbar_min(1), b_fbar_min(1);
-  bool reverse = false;
-  bool reached_memory_limit = false;
-
-  unsigned int iteration_a(1), iteration_b(0);
-  unsigned int current_limit = (a_fbar_min + b_fbar_min) / 2.0f + epsilon;
+  unsigned int iteration = 1;
+  unsigned int c_star = 2;
   //epsilon is the smallest edge cost, must be >0 but can be infinitesmal
-  while (best_node == nullptr || upper_bound < (a_fbar_min + b_fbar_min) / 2.0f + epsilon)
+  while (best_node == nullptr || upper_bound > c_star)
   {
     forward_stack.push(start);
-    expand_or_id(forward_stack, backward_stack, goal, &front_set, &back_set, iteration_a, iteration_b, current_limit, upper_bound, best_node, false, pdb_type, start_state, count, epsilon, node_limit, reached_memory_limit);
+    if (id_test(forward_stack, backward_stack, goal, &front_set, &back_set, iteration - 1, iteration, c_star, upper_bound, best_node, false, pdb_type, start_state, count, node_limit)) {
+      break;
+    }
     backward_stack.push(goal);
-    expand_or_id(backward_stack, forward_stack, start, &back_set, &front_set, iteration_a, iteration_b, current_limit, upper_bound, best_node, true, pdb_type, start_state, count, epsilon, node_limit, reached_memory_limit);
-    reverse = !reverse;
-    a_fbar_min = iteration_a;
-    b_fbar_min = iteration_b;
-    iteration_a += 1;
-    iteration_b += 1;
-    current_limit = (a_fbar_min + b_fbar_min) / 2.0f + epsilon;
+    if (id_test(backward_stack, forward_stack, start, &back_set, &front_set, iteration, iteration - 1, c_star, upper_bound, best_node, true, pdb_type, start_state, count, node_limit)) {
+      break;
+    }
+
+    iteration += 1;
+    c_star = iteration;
   }
 
   std::cout << "Solved DIBBS: " << " Count = " << count << std::endl;
