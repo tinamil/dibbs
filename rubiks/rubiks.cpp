@@ -365,9 +365,14 @@ void Rubiks::restore_new_edge_rot_index(const size_t hash_index, uint8_t* state)
 
 bool Rubiks::is_solved(const uint8_t* cube)
 {
+  return is_solved(cube, __goal);
+}
+
+bool Rubiks::is_solved(const uint8_t* cube, const uint8_t* target)
+{
   for (int i = 0; i < 40; ++i)
   {
-    if (cube[i] != __goal[i]) {
+    if (cube[i] != target[i]) {
       return false;
     }
   }
@@ -497,13 +502,14 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
 
   uint8_t best = 0;
   for (uint8_t i = 0, end = (uint8_t)vectors->size(); i < end; ++i) {
-    const uint8_t val = vectors->at(i).at(get_index(state, i, type));
+    const uint8_t val = get_4byte_value(vectors->at(i), get_index(state, i, type));
     if (val > best) {
       best = val;
     }
   }
   return best;
 }
+
 
 void Rubiks::generate_pattern_database(
   const std::string filename,
@@ -519,10 +525,14 @@ void Rubiks::generate_pattern_database(
   stack.push(ri);
 
   std::cout << "Edges: " << max_count << "\n";
-  std::vector<uint8_t> pattern_lookup(max_count);
-  std::fill(pattern_lookup.begin(), pattern_lookup.end(), max_depth);
+  const size_t pdb_size = max_count / 2 + max_count % 2;
+  std::vector<uint8_t> pattern_lookup;
+  pattern_lookup.resize(pdb_size);
+  for (size_t i = 0; i < max_count; ++i) {
+    set_4byte_value(pattern_lookup, lookup_func(state), max_depth);
+  }
 
-  pattern_lookup[lookup_func(state)] = 0;
+  set_4byte_value(pattern_lookup, lookup_func(state), 0);
 
   uint8_t id_depth = 1;
   uint64_t count = 1;
@@ -539,7 +549,7 @@ void Rubiks::generate_pattern_database(
     auto prev_ri = stack.top();
     stack.pop();
     auto prev_index = lookup_func(prev_ri.state);
-    auto prev_db_val = pattern_lookup[prev_index];
+    auto prev_db_val = get_4byte_value(pattern_lookup, prev_index);
     for (int face = 0; face < 6; ++face)
     {
       if (prev_ri.depth > 0 && Rubiks::skip_rotations(prev_ri.last_face, face))
@@ -556,9 +566,9 @@ void Rubiks::generate_pattern_database(
         {
           stack.push(next_ri);
         }
-        else if (pattern_lookup[new_state_index] == max_depth)
+        else if (get_4byte_value(pattern_lookup, new_state_index) == max_depth)
         {
-          pattern_lookup[new_state_index] = prev_db_val + 1;
+          set_4byte_value(pattern_lookup, new_state_index, prev_db_val + 1);
           ++count;
           size_t remaining = max_count - count;
           if (remaining > 0) {
@@ -572,12 +582,12 @@ void Rubiks::generate_pattern_database(
     }
   }
   for (int i = 0; i < max_count; ++i) {
-    if (pattern_lookup[i] > max_depth) {
-      std::cout << "ERROR in PDB Generation, index " << i << " has depth = " << unsigned int(pattern_lookup[i]) << std::endl;
+    if (get_4byte_value(pattern_lookup, i) > max_depth) {
+      std::cout << "ERROR in PDB Generation, index " << i << " has depth = " << unsigned int(get_4byte_value(pattern_lookup, i)) << std::endl;
       throw std::exception("Error in PDB generation");
     }
   }
-  const uint64_t shape[] = { max_count };
+  const uint64_t shape[] = { pdb_size };
   npy::SaveArrayAsNumpy<uint8_t>(filename, false, 1, shape, pattern_lookup);
 }
 
@@ -591,8 +601,8 @@ void Rubiks::process_buffer(
   size_t divisor = 10000000;
   for (size_t i = 0; i < local_results_buffer.size(); ++i) {
     auto id = local_results_buffer[i];
-    if (pattern_lookup[id] > id_depth) {
-      pattern_lookup[id] = id_depth;
+    if (get_4byte_value(pattern_lookup, id) > id_depth) {
+      set_4byte_value(pattern_lookup, id, id_depth);
       count++;
       size_t remaining = max_count - count;
       if (remaining > 0) {
@@ -651,7 +661,7 @@ void Rubiks::pdb_expand_nodes(
           memcpy(tmp2, tmp_state, 40);
           rotate(tmp2, face, rotation);
           uint64_t tmp2_hash = lookup_func(tmp2);
-          if (reverse_direction && pattern_lookup[tmp2_hash] == (id_depth - 1)) {
+          if (reverse_direction && get_4byte_value(pattern_lookup, tmp2_hash) == (id_depth - 1)) {
             local_results_buffer.emplace_back(hash);
           }
           else if (!reverse_direction) {
@@ -683,10 +693,12 @@ void Rubiks::generate_pattern_database_multithreaded(
 
   std::cout << "Generating PDB\n";
   std::cout << "Count: " << max_count << "\n";
-  std::vector<uint8_t> pattern_lookup(max_count);
+  const size_t pdb_size = max_count / 2 + max_count % 2;
+  std::vector<uint8_t> pattern_lookup;
+  pattern_lookup.resize(pdb_size);
   std::atomic_size_t count = 0;
-  for (size_t i = 0; i < pattern_lookup.size(); ++i) {
-    pattern_lookup[i] = pdb_initialization_value;
+  for (size_t i = 0; i < max_count; ++i) {
+    set_4byte_value(pattern_lookup, i, pdb_initialization_value);
   }
 
   uint8_t reduced_starting_state[40];
@@ -695,8 +707,7 @@ void Rubiks::generate_pattern_database_multithreaded(
     std::cerr << "ERROR: lookup function is not reversible\n";
     exit(-1);
   }
-
-  pattern_lookup[lookup_func(reduced_starting_state)] = 0;
+  set_4byte_value(pattern_lookup, lookup_func(reduced_starting_state), 0);
   count += 1;
 
   uint8_t id_depth = 0;
@@ -729,7 +740,7 @@ void Rubiks::generate_pattern_database_multithreaded(
     uint64_t start;
     bool set_start(false);
     for (size_t i = 0; i < max_count; ++i) {
-      uint8_t val = pattern_lookup[i];
+      uint8_t val = get_4byte_value(pattern_lookup, i);
       if (!set_start && val == target_val) {
         set_start = true;
         start = i;
@@ -760,7 +771,7 @@ void Rubiks::generate_pattern_database_multithreaded(
     }
   }
   for (size_t i = 0; i < max_count; ++i) {
-    if (pattern_lookup[i] == pdb_initialization_value) {
+    if (get_4byte_value(pattern_lookup, i) == pdb_initialization_value) {
       std::cerr << "Error: index " << i << " was not set to a valid value, found count == " << count << std::endl;
       throw new std::exception("Error: index was not set to a valid value.");
     }
@@ -768,6 +779,6 @@ void Rubiks::generate_pattern_database_multithreaded(
 
   std::cout << "Saving data to " << filename << '\n';
 
-  const uint64_t shape[] = { max_count };
+  const uint64_t shape[] = { pdb_size };
   npy::SaveArrayAsNumpy<uint8_t>(filename, false, 1, shape, pattern_lookup);
 }

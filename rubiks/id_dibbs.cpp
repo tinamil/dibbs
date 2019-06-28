@@ -23,8 +23,14 @@ std::shared_ptr<Node> make_node(const hash_set* other_set,
       if (new_node->depth + reverse_cost < upper_bound)
       {
         upper_bound = new_node->depth + reverse_cost;
-        best_node = new_node;
-        best_node->set_reverse(*search);
+        if (reverse == false) {
+          best_node = new_node;
+          best_node->set_reverse(*search);
+        }
+        else {
+          best_node = *search;
+          best_node->set_reverse(new_node);
+        }
         std::cout << "New upper bound: " << unsigned int(upper_bound) << std::endl;
       }
     }
@@ -61,6 +67,17 @@ void expand_node(std::shared_ptr<Node> prev_node,
       if (new_node->f_bar <= id_depth) {
         my_stack.push(new_node);
       }
+      //else if (my_set != nullptr && (new_node->depth < 16 || (prev_node->passed_threshold && new_node->reverse_heuristic == new_node->depth && upper_bound > id_depth + 1))) {
+      //  auto existing = my_set->find(new_node);
+      //  if (existing == my_set->end()) {
+      //    my_set->insert(new_node);
+      //  }
+      //  else if ((*existing)->depth > new_node->depth) {
+      //    //Must check because we are searching in DFS order, not BFS
+      //    my_set->erase(existing);
+      //    my_set->insert(new_node);
+      //  }
+      //}
       else if (my_set != nullptr && prev_node->passed_threshold) {
         auto existing = my_set->find(prev_node);
         if (existing == my_set->end()) {
@@ -92,7 +109,7 @@ bool expand_layer(stack& my_stack,
   std::cout << "Expanding layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
   my_set->clear();
 
-  while (!my_stack.empty() && upper_bound >= c_star) {
+  while (!my_stack.empty() && upper_bound > c_star) {
     std::shared_ptr<Node> next_node = my_stack.top();
     my_stack.pop();
     expand_node(next_node, my_stack, my_set, other_set, id_depth, upper_bound, best_node, reverse, type, start_state, count);
@@ -101,7 +118,6 @@ bool expand_layer(stack& my_stack,
       return false;
     }
   }
-
   std::cout << "Finished expanding layer " << id_depth << "; size= " << my_set->size() << '\n';
   return true;
 }
@@ -135,7 +151,7 @@ bool store_layer(stack& my_stack,
   const bool reverse,
   const Rubiks::PDB type,
   const uint8_t* start_state,
-  unsigned int& id_depth,
+  const unsigned int id_depth,
   size_t& count,
   const size_t node_limit)
 {
@@ -153,14 +169,13 @@ bool store_layer(stack& my_stack,
   return my_stack.empty();
 }
 
-bool id_test(
+bool iterative_expand_then_test(
   stack& my_stack,
   stack& other_stack,
   std::shared_ptr<Node> other_stack_initializer,
   hash_set* my_set,
-  hash_set* other_set,
-  unsigned int id_depth,
-  unsigned int other_depth,
+  const unsigned int id_depth,
+  const unsigned int other_depth,
   const unsigned int c_star,
   uint8_t& upper_bound,
   std::shared_ptr<Node>& best_node,
@@ -179,6 +194,87 @@ bool id_test(
   my_set->clear();
   return false;
 }
+
+bool iterative_layer(stack my_stack,
+  std::shared_ptr<Node> my_stack_initializer,
+  stack other_stack,
+  std::shared_ptr<Node> other_stack_initializer,
+  hash_set* my_set,
+  hash_set* other_set,
+  unsigned int& iteration,
+  unsigned int& c_star,
+  uint8_t& upper_bound,
+  std::shared_ptr<Node>& best_node,
+  const bool reverse,
+  const Rubiks::PDB pdb_type,
+  const uint8_t* start_state,
+  size_t& count,
+  size_t& my_last_count,
+  size_t& other_last_count,
+  const size_t node_limit)
+{
+  size_t start_count;
+  if (iteration < 18) {
+    start_count = count;
+    my_stack.push(my_stack_initializer);
+    expand_layer(my_stack, my_set, other_set, upper_bound, best_node, reverse, pdb_type, start_state, iteration, c_star, count, std::numeric_limits<size_t>::max());
+    my_last_count = count - start_count;
+
+    if (upper_bound <= c_star) return true;
+
+    if (my_set->size() > 0) {
+      other_stack.push(other_stack_initializer);
+      if (id_check_layer(other_stack, my_set, upper_bound, best_node, !reverse, pdb_type, start_state, iteration - 1, c_star, count)) {
+        return true;
+      }
+    }
+
+    iteration += 1;
+    c_star = iteration;
+
+    if (upper_bound <= c_star) return true;
+
+    start_count = count;
+    other_stack.push(other_stack_initializer);
+    store_layer(other_stack, other_set, best_node, !reverse, pdb_type, start_state, iteration - 1, count, std::numeric_limits<size_t>::max());
+    other_last_count = count - start_count;
+
+    if (upper_bound <= c_star) return true;
+
+    //Extra check, unnecessary but might find an early solution for next depth and ~14^2 times faster than checking iteration depth
+    if (other_set->size() > 0) {
+      my_stack.push(my_stack_initializer);
+      if (id_check_layer(my_stack, other_set, upper_bound, best_node, reverse, pdb_type, start_state, iteration - 2, c_star, count)) {
+        return true;
+      }
+    }
+  }
+  else {
+    if (iteration == 18) {
+      my_stack.push(my_stack_initializer);
+      if (id_check_layer(my_stack, other_set, upper_bound, best_node, reverse, pdb_type, start_state, iteration, c_star, count)) {
+        return true;
+      }
+      other_set->clear();
+    }
+    else {
+      other_stack.push(other_stack_initializer);
+      if (iterative_expand_then_test(other_stack, my_stack, my_stack_initializer, my_set, iteration - 1, iteration, c_star, upper_bound, best_node, !reverse, pdb_type, start_state, count, node_limit)) {
+        return true;
+      }
+    }
+
+    my_stack.push(my_stack_initializer);
+    if (iterative_expand_then_test(my_stack, other_stack, other_stack_initializer, my_set, iteration, iteration - 1, c_star, upper_bound, best_node, reverse, pdb_type, start_state, count, node_limit)) {
+      return true;
+    }
+
+    iteration += 1;
+    c_star = iteration;
+  }
+  return false;
+}
+
 
 size_t search::id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
 {
@@ -202,24 +298,36 @@ size_t search::id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
   size_t count = 0;
   const size_t node_limit = (size_t)2e8;
 
-  hash_set front_set, back_set;
+  hash_set forward_set, backward_set;
+  hash_set* storage_set = &forward_set;
+  hash_set* other_set = &backward_set;
 
   unsigned int iteration = 1;
-  unsigned int c_star = 2;
-  //epsilon is the smallest edge cost, must be >0 but can be infinitesmal
+  unsigned int c_star = 1;
+
+  size_t last_forward_size, last_backward_size;
+  size_t start_count;
+
+  start_count = count;
+  forward_stack.push(start);
+  expand_layer(forward_stack, storage_set, other_set, upper_bound, best_node, false, pdb_type, start_state, 0, c_star, count, std::numeric_limits<size_t>::max());
+  last_forward_size = count - start_count;
+
+  start_count = count;
+  backward_stack.push(goal);
+  expand_layer(backward_stack, other_set, storage_set, upper_bound, best_node, true, pdb_type, start_state, 0, c_star, count, std::numeric_limits<size_t>::max());
+  last_backward_size = count - start_count;
+
   while (best_node == nullptr || upper_bound > c_star)
   {
-    forward_stack.push(start);
-    if (id_test(forward_stack, backward_stack, goal, &front_set, &back_set, iteration - 1, iteration, c_star, upper_bound, best_node, false, pdb_type, start_state, count, node_limit)) {
-      break;
+    if (last_forward_size <= last_backward_size) {
+      std::cout << last_forward_size << " <= " << last_backward_size << " ; Searching forward first\n";
+      iterative_layer(forward_stack, start, backward_stack, goal, storage_set, other_set, iteration, c_star, upper_bound, best_node, false, pdb_type, start_state, count, last_forward_size, last_backward_size, node_limit);
     }
-    backward_stack.push(goal);
-    if (id_test(backward_stack, forward_stack, start, &back_set, &front_set, iteration, iteration - 1, c_star, upper_bound, best_node, true, pdb_type, start_state, count, node_limit)) {
-      break;
+    else {
+      std::cout << last_forward_size << " > " << last_backward_size << " ; Searching backward first\n";
+      iterative_layer(backward_stack, goal, forward_stack, start, other_set, storage_set, iteration, c_star, upper_bound, best_node, true, pdb_type, start_state, count, last_backward_size, last_forward_size, node_limit);
     }
-
-    iteration += 1;
-    c_star = iteration;
   }
 
   std::cout << "Solved DIBBS: " << " Count = " << count << std::endl;

@@ -11,16 +11,18 @@ Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::
   #ifdef HISTORY 
   parent(nullptr), reverse_parent(nullptr),
   #endif 
-  face(0), depth(0), passed_threshold(false)
+  face(0), depth(0)
 {
   memcpy(state, prev_state, 40);
   if (start_state != nullptr)
     heuristic = Rubiks::pattern_lookup(state, start_state, type);
-  else
+  else {
     heuristic = 0;
+  }
   reverse_heuristic = 0;
   f_bar = heuristic;
   combined = heuristic;
+  passed_threshold = heuristic <= reverse_heuristic;
 }
 
 Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
@@ -28,7 +30,7 @@ Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, 
   #ifdef HISTORY 
   reverse_parent(nullptr),
   #endif 
-  face(_face * 6 + _rotation), depth(_depth)
+  face(_face * 3 + _rotation), depth(_depth)
 {
   #ifdef HISTORY
   parent = node_parent;
@@ -72,7 +74,7 @@ Node::Node(const Node& old_node) :
 
 uint8_t Node::get_face() const
 {
-  return face / 6;
+  return face / 3;
 }
 
 void Node::set_reverse(const std::shared_ptr<Node> reverse)
@@ -112,7 +114,7 @@ std::string get_face_rotation(const Node* x) {
   std::stringstream ss;
   if (x->parent != nullptr) {
     ss << std::setw(3) << std::setfill(' ');
-    ss << Rubiks::_face_mapping[x->face / 6] + Rubiks::_rotation_mapping[x->face % 3];
+    ss << Rubiks::_face_mapping[x->face / 3] + Rubiks::_rotation_mapping[x->face % 3];
   }
   ss << " **";
   return ss.str();

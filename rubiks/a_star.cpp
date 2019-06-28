@@ -2,22 +2,28 @@
 
 typedef std::stack<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>> node_stack;
 
-uint64_t search::ida_star(const uint8_t* state, const Rubiks::PDB pdb_type)
+uint64_t search::ida_star(const uint8_t* start_state, const Rubiks::PDB pdb_type, bool reverse)
 {
   std::cout << "IDA*" << std::endl;
   node_stack state_stack;
 
-  if (Rubiks::is_solved(state))
+  if (Rubiks::is_solved(start_state))
   {
     std::cout << "Given a solved cube.  Nothing to solve." << std::endl;
     return 0;
   }
 
-  std::shared_ptr<Node> original_node = std::make_shared<Node>();
-  memcpy(original_node->state, state, 40);
-  uint8_t id_depth = Rubiks::pattern_lookup(original_node->state, pdb_type);
-  original_node->heuristic = id_depth;
-  original_node->combined = id_depth;
+  std::shared_ptr<Node> original_node;
+
+  if (reverse) {
+    original_node = std::make_shared<Node>(Rubiks::__goal, start_state, pdb_type);
+  }
+  else {
+    original_node = std::make_shared<Node>(start_state, Rubiks::__goal, pdb_type);
+  }
+
+  uint8_t id_depth = original_node->combined;
+
   state_stack.push(original_node);
   std::cout << "Minimum number of moves to solve: " << unsigned int(id_depth) << std::endl;
   uint64_t count = 0;
@@ -50,7 +56,7 @@ uint64_t search::ida_star(const uint8_t* state, const Rubiks::PDB pdb_type)
 
       for (int rotation = 0; rotation < 3; ++rotation)
       {
-        std::shared_ptr<Node> new_node = std::make_shared<Node>(next_node, state, next_node->depth + 1, face, rotation, false, pdb_type);
+        std::shared_ptr<Node> new_node = std::make_shared<Node>(next_node, start_state, next_node->depth + 1, face, rotation, reverse, pdb_type);
 
         if (new_node->combined < next_node->combined) {
           std::cout << "Consistency error: " << unsigned(new_node->combined) << " < " << unsigned(next_node->combined) << " " << std::endl;
@@ -61,7 +67,7 @@ uint64_t search::ida_star(const uint8_t* state, const Rubiks::PDB pdb_type)
           continue;
         }
 
-        if (Rubiks::is_solved(new_node->state))
+        if ((reverse && Rubiks::is_solved(new_node->state, start_state)) || (!reverse && Rubiks::is_solved(new_node->state, Rubiks::__goal)))
         {
           std::cout << "Solved IDA*: " << unsigned int(id_depth) << " Count = " << unsigned long long(count) << std::endl;
           std::cout << "Solution: " << new_node->print_solution() << std::endl;
@@ -73,8 +79,6 @@ uint64_t search::ida_star(const uint8_t* state, const Rubiks::PDB pdb_type)
   }
   return count;
 }
-
-
 
 bool all_done(const std::atomic_bool* done_array) {
   for (int i = 0; i < omp_get_num_threads(); ++i) {

@@ -101,7 +101,8 @@ namespace Rubiks
   const uint8_t __corner_pos_indices[] = { 0, 2, 5, 7, 12, 14, 17, 19 };
   const uint8_t __corner_rot_indices[] = { 20, 22, 25, 27, 32, 34, 37, 39 };
 
-  constexpr uint8_t pdb_initialization_value = 21;
+  //2^4 - 1, largest possible unsigned 4 bit value, and larger than any PDB ever gets for Rubiks
+  constexpr uint8_t pdb_initialization_value = 15;
 
   constexpr size_t corner_max_count = 88179840;
   constexpr size_t edge_6_max_count = npr(12, 6) * 64;
@@ -226,6 +227,7 @@ namespace Rubiks
   inline void restore_index8b(const size_t index, uint8_t* state) { restore_state_from_index(index, state, 8, edges_8b, edge_rot_indices_8b); }
 
   extern bool is_solved(const uint8_t* state);
+  extern bool is_solved(const uint8_t* cube, const uint8_t* target);
   extern uint8_t pattern_lookup(const uint8_t* state, const uint8_t* start_state, PDB type);
   inline uint8_t pattern_lookup(const uint8_t* state, PDB type)
   {
@@ -253,4 +255,29 @@ namespace Rubiks
     const uint8_t id_depth,
     const bool reverse_direction
   );
+
+
+  inline void set_4byte_value(std::vector<uint8_t>& data, const size_t position, const uint8_t value) {
+    assert(value < 16);
+    if (position % 2 == 0) {
+      //Update the low nybble
+      data[position / 2] = (data[position / 2] & 0xF0) + value;
+    }
+    else {
+      //Update the high nybble
+      data[position / 2] = (data[position / 2] & 0x0F) + (value << 4);
+    }
+  }
+
+  inline uint8_t get_4byte_value(std::vector<uint8_t>& data, const size_t position) {
+    const uint8_t val = data[position / 2];
+    if (position % 2 == 0) {
+      //Retrieve low nybble
+      return val & 0x0F;
+    }
+    else {
+      //Retrieve high nybble
+      return (val & 0xF0) >> 4;
+    }
+  }
 }

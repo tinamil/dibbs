@@ -37,7 +37,7 @@ public:
       storage.pop_back();
     }
     unlock();
-    return std::pair(success, value);
+    return std::pair<bool, T>(success, value);
   }
 
 

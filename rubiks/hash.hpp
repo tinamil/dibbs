@@ -36,7 +36,7 @@ inline void hash_combine_impl(uint64_t& h, uint64_t k)
   h += 0xe6546b64;
 }
 
-inline uint64_t boost_hash(const uint8_t* data, const size_t len) {
+uint64_t inline boost_hash(const uint8_t* data, const size_t len) {
   uint64_t hash = 0;
   for (int i = 0; i < len; ++i) {
     hash_combine_impl(hash, data[i]);
