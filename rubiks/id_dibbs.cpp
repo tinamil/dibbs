@@ -241,26 +241,35 @@ bool iterative_layer(stack my_stack,
 
     if (upper_bound <= c_star) return true;
 
-    //Extra check, unnecessary but might find an early solution for next depth and ~14^2 times faster than checking iteration depth
+    //Extra check, unnecessary but might find an early solution for next depth 
     if (other_set->size() > 0) {
       my_stack.push(my_stack_initializer);
       if (id_check_layer(my_stack, other_set, upper_bound, best_node, reverse, pdb_type, start_state, iteration - 1, c_star, count)) {
         std::cout << "FOUND SOLUTION DURING 2nd EXTRA CHECK!!!!!\n";
         return true;
       }
-    }    
+    }
   }
   else {
-    my_set->clear();
-    other_set->clear();
+    if (iteration == 18) {
+      other_set->clear();
+      if (id_check_layer(other_stack, my_set, upper_bound, best_node, !reverse, pdb_type, start_state, iteration - 1, c_star, count)) {
+        return true;
+      }
+      my_set->clear();
+    }
+    else {
+      my_set->clear();
+      other_set->clear();
+
+      other_stack.push(other_stack_initializer);
+      if (iterative_expand_then_test(other_stack, my_stack, my_stack_initializer, my_set, iteration - 1, iteration, c_star, upper_bound, best_node, !reverse, pdb_type, start_state, count, node_limit)) {
+        return true;
+      }
+    }
 
     my_stack.push(my_stack_initializer);
     if (iterative_expand_then_test(my_stack, other_stack, other_stack_initializer, my_set, iteration, iteration - 1, c_star, upper_bound, best_node, reverse, pdb_type, start_state, count, node_limit)) {
-      return true;
-    }
-
-    other_stack.push(other_stack_initializer);
-    if (iterative_expand_then_test(other_stack, my_stack, my_stack_initializer, my_set, iteration - 1, iteration, c_star, upper_bound, best_node, !reverse, pdb_type, start_state, count, node_limit)) {
       return true;
     }
 

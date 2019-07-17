@@ -1,6 +1,7 @@
 #include "a_star.h"
 
 typedef std::stack<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>> node_stack;
+typedef thread_safe_stack<std::shared_ptr<Node>> thread_safe_node_stack;
 
 uint64_t search::ida_star(const uint8_t* start_state, const Rubiks::PDB pdb_type, bool reverse)
 {
@@ -80,136 +81,146 @@ uint64_t search::ida_star(const uint8_t* start_state, const Rubiks::PDB pdb_type
   return count;
 }
 
-bool all_done(const std::atomic_bool* done_array) {
-  for (int i = 0; i < omp_get_num_threads(); ++i) {
-    if (done_array[i] == false) {
-      return false;
+void expand_node(
+  thread_safe_node_stack& shared_stack,
+  uint8_t id_depth,
+  std::atomic_uint64_t& count,
+  const uint8_t* start_state,
+  const Rubiks::PDB pdb_type,
+  bool reverse,
+  std::shared_ptr<Node>* optimal_node
+) {
+  node_stack state_stack;
+  while (std::atomic_load(optimal_node) == nullptr) {
+    if (state_stack.empty()) {
+      auto [result, node] = shared_stack.pop();
+      if (result == false) { return; }
+      state_stack.push(node);
+    }
+
+    std::shared_ptr<Node> next_node = state_stack.top();
+    state_stack.pop();
+
+    ++count;
+    if (count % 1000000 == 0)
+    {
+      std::cout << count << std::endl;
+    }
+
+    for (int face = 0; face < 6; ++face)
+    {
+      if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
+      {
+        continue;
+      }
+      for (int rotation = 0; rotation < 3; ++rotation)
+      {
+        std::shared_ptr<Node> new_node = std::make_shared<Node>(next_node, start_state, next_node->depth + 1, face, rotation, reverse, pdb_type);
+
+        if (new_node->combined < next_node->combined) {
+          std::cout << "Consistency error: " << unsigned(new_node->combined) << " < " << unsigned(next_node->combined) << " " << std::endl;
+        }
+
+        if (new_node->combined > id_depth)
+        {
+          continue;
+        }
+
+        if ((reverse && Rubiks::is_solved(new_node->state, start_state)) || (!reverse && Rubiks::is_solved(new_node->state, Rubiks::__goal)))
+        {
+          std::atomic_store(optimal_node, new_node);
+          return;
+        }
+        state_stack.push(new_node);
+      }
     }
   }
-  return true;
+
 }
 
-uint64_t search::multithreaded_ida_star(const uint8_t* state, const Rubiks::PDB pdb_type)
+uint64_t search::multithreaded_ida_star(const uint8_t* start_state, const Rubiks::PDB pdb_type, bool reverse)
 {
   std::cout << "IDA*" << std::endl;
-  thread_safe_stack<std::shared_ptr<Node>> shared_stack, base_stack;
+  thread_safe_node_stack state_stack;
+  const unsigned int thread_count = std::thread::hardware_concurrency();
 
-  if (Rubiks::is_solved(state))
+  if (Rubiks::is_solved(start_state))
   {
     std::cout << "Given a solved cube.  Nothing to solve." << std::endl;
     return 0;
   }
 
-  auto original_node = std::make_shared<Node>();
-  memcpy(original_node->state, state, 40);
-  uint8_t id_depth = Rubiks::pattern_lookup(original_node->state, pdb_type);
-  original_node->heuristic = id_depth;
-  original_node->combined = id_depth;
+  std::shared_ptr<Node> original_node;
+  std::shared_ptr<Node> optimal_node;
+
+  if (reverse) {
+    original_node = std::make_shared<Node>(Rubiks::__goal, start_state, pdb_type);
+  }
+  else {
+    original_node = std::make_shared<Node>(start_state, Rubiks::__goal, pdb_type);
+  }
+
+  std::atomic_uint64_t count = 1;
+
+
+  uint8_t id_depth = original_node->combined;
+
   std::cout << "Minimum number of moves to solve: " << unsigned int(id_depth) << std::endl;
-  std::atomic_bool done(false);
-  uint64_t count = 0;
-
-  for (int face = 0; face < 6; ++face)
+  std::thread* thread_array = new std::thread[thread_count];
+  while (optimal_node == nullptr)
   {
-    for (int rotation = 0; rotation < 3; ++rotation)
+    id_depth += 1;
+    std::cout << "Incrementing id-depth to " << unsigned int(id_depth) << std::endl;
+
+    //Expand original node, then expand all 18 of the rotations of that node and store them all in state_stack for threads to process
+    for (int face = 0; face < 6; ++face)
     {
-      auto new_node = std::make_shared<Node>(original_node, state, 1, face, rotation, false, pdb_type);
-      count += 1;
-      if (Rubiks::is_solved(new_node->state))
+      for (int rotation = 0; rotation < 3; ++rotation)
       {
-        std::cout << "Solved IDA*: 1 Count = " << unsigned long long(count) << std::endl;
-        std::cout << "Solution: " << new_node->print_solution() << std::endl;
-        return count;
-      }
-      base_stack.push(new_node);
-    }
-  }
-
-  std::atomic_bool* done_array = new std::atomic_bool[omp_get_max_threads()];
-
-  #pragma omp parallel default(none) reduction(+: count) shared(shared_stack, base_stack, done, id_depth, done_array, std::cout, state)
-  {
-    std::stack<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node> > > my_stack;
-    while (done == false)
-    {
-      if (my_stack.empty()) {
-        //Extract the next result to begin searching
-        auto result = shared_stack.pop();
-        //Check to make sure we received a valid result, only true if shared_stack was not empty and a valid result was returned
-        if (result.first) {
-          my_stack.push(result.second);
+        std::shared_ptr<Node> new_node = std::make_shared<Node>(original_node, start_state, 1, face, rotation, reverse, pdb_type);
+        if ((reverse && Rubiks::is_solved(new_node->state, start_state)) || (!reverse && Rubiks::is_solved(new_node->state, Rubiks::__goal)))
+        {
+          std::cout << "Solved IDA*: 1" << std::endl;
+          std::cout << "Solution: " << new_node->print_solution() << std::endl;
+          return count;
         }
-        else {
-          //Shared_stack was empty, so wait for all threads to finish before searching the next largest id_depth
-          done_array[omp_get_thread_num()] = true;
-          while (all_done(done_array) == false);
-
-          //Check to make sure another thread didn't find the solution while we were waiting,
-          //in which case one or more threads would have already exited the while loop 
-          if (done == false) {
-            //Only have one thread change the id_depth, reset the shared_stack, and reset the done_array.
-            if (omp_get_thread_num() == 0) {
-              id_depth += 1;
-              shared_stack.copy(base_stack);
-              std::cout << "Incrementing id-depth to " << unsigned int(id_depth) << std::endl;
-              for (int i = 0; i < omp_get_num_threads(); ++i) {
-                done_array[i] = false;
-              }
+        if (new_node->combined > id_depth)
+        {
+          continue;
+        }
+        count++;
+        for (int face2 = 0; face2 < 6; ++face2)
+        {
+          for (int rotation2 = 0; rotation2 < 3; ++rotation2)
+          {
+            std::shared_ptr<Node> new_node2 = std::make_shared<Node>(new_node, start_state, 2, face2, rotation2, reverse, pdb_type);
+            if ((reverse && Rubiks::is_solved(new_node2->state, start_state)) || (!reverse && Rubiks::is_solved(new_node2->state, Rubiks::__goal)))
+            {
+              std::cout << "Solved IDA*: 2" << std::endl;
+              std::cout << "Solution: " << new_node2->print_solution() << std::endl;
+              return count;
             }
-            //All threads need to wait until the done_array is finished being reset.
-            while (all_done(done_array) == true);
+            if (new_node2->combined > id_depth)
+            {
+              continue;
+            }
+            state_stack.push(new_node2);
           }
-          //my_stack is still empty, so restart the while loop to try to pull a value from shared_stack again
-          continue;
-        }
-      }
-      auto next_node = my_stack.top();
-      my_stack.pop();
-
-      count += 1;
-
-      if (count % 1000000 == 0) {
-        #pragma omp single nowait
-        {
-          std::cout << "In-progress: " << next_node->print_solution() << std::endl;
-        }
-      }
-
-      for (int face = 0; face < 6; ++face)
-      {
-        if (next_node->depth > 0 && Rubiks::skip_rotations(next_node->get_face(), face))
-        {
-          continue;
-        }
-
-        for (int rotation = 0; rotation < 3; ++rotation)
-        {
-          auto new_node = std::make_shared<Node>(next_node, state, next_node->depth + 1, face, rotation, false, pdb_type);
-
-          if (new_node->combined < next_node->combined) {
-            std::cout << "Consistency error: " << unsigned(new_node->combined) << " < " << unsigned(next_node->combined) << " " << std::endl;
-          }
-
-          if (new_node->combined > id_depth)
-          {
-            continue;
-          }
-
-          if (Rubiks::is_solved(new_node->state))
-          {
-            done = true;
-            std::cout << "Solved IDA*: " << unsigned int(id_depth) << std::endl;
-            std::cout << "Solution: " << new_node->print_solution() << std::endl;
-          }
-
-          my_stack.push(new_node);
         }
       }
     }
-    //Let any waiting threads know that this thread has exited the while loop 
-    done_array[omp_get_thread_num()] = true;
+
+    for (size_t i = 0; i < thread_count; ++i) {
+      thread_array[i] = std::thread(expand_node, std::ref(state_stack), id_depth, std::ref(count), start_state, pdb_type, reverse, &optimal_node);
+    }
+
+    for (size_t i = 0; i < thread_count; ++i) {
+      thread_array[i].join();
+    }
   }
-  //delete[] done_array;
-  std::cout << "Count = " << unsigned long long(count) << std::endl;
+
+  std::cout << "Solved IDA*: " << unsigned int(id_depth) << " Count = " << unsigned long long(count) << std::endl;
+  std::cout << "Solution: " << optimal_node->print_solution() << std::endl;
+  delete[] thread_array;
   return count;
 }

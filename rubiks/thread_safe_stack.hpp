@@ -40,6 +40,10 @@ public:
     return std::pair<bool, T>(success, value);
   }
 
+  size_t size() {
+    return storage.size();
+  }
+
 
 private:
   std::vector<T> storage;
