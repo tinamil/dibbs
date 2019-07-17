@@ -26,6 +26,7 @@
     <ClCompile Include="id_gbfhs.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mr_rank.cpp" />
+    <ClCompile Include="multithreaded_id_dibbs.cpp" />
     <ClCompile Include="node.cpp" />
     <ClCompile Include="rubiks.cpp" />
     <ClCompile Include="rubiks_loader.cpp" />
@@ -43,6 +44,7 @@
     <ClInclude Include="id_dibbs.h" />
     <ClInclude Include="id_gbfhs.h" />
     <ClInclude Include="mr_rank.h" />
+    <ClInclude Include="multithreaded_id_dibbs.h" />
     <ClInclude Include="node.h" />
     <ClInclude Include="npy.hpp" />
     <ClInclude Include="rubiks.h" />

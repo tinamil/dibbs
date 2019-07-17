@@ -178,7 +178,7 @@ void search_cubes()
 
     #ifdef ASTAR
     c_start = clock();
-    count_results.push_back(search::ida_star(cubes[i], type, false));
+    count_results.push_back(search::multithreaded_ida_star(cubes[i], type, false));
     c_end = clock();
     time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
     time_results.push_back(time_elapsed_ms);

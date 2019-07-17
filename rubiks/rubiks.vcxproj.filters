@@ -44,6 +44,9 @@
     <ClCompile Include="id_dibbs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="multithreaded_id_dibbs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="a_star.h">
@@ -95,6 +98,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cameron314\blockingconcurrentqueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="multithreaded_id_dibbs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
