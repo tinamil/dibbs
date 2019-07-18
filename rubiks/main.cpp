@@ -9,6 +9,7 @@
 #include "id_gbfhs.h"
 #include "id_dibbs.h"
 #include "utility.h"
+#include "multithreaded_id_dibbs.h"
 
 using namespace std;
 using namespace Rubiks;
@@ -186,7 +187,7 @@ void search_cubes()
     #endif
     #ifdef DIBBS
     c_start = clock();
-    count_results.push_back(search::id_dibbs(cubes[i], type));
+    count_results.push_back(search::multithreaded_id_dibbs(cubes[i], type));
     c_end = clock();
     time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
     time_results.push_back(time_elapsed_ms);

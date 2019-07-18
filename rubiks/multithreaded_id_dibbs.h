@@ -6,9 +6,12 @@
 #include <queue>
 #include <functional>
 #include <algorithm>
+#include <shared_mutex>
+#include <mutex>
 #include <atomic>
 #include "node.h"
 #include "rubiks.h"
+#include "thread_safe_stack.hpp"
 
 namespace search
 {

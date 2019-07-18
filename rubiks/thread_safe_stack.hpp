@@ -44,6 +44,9 @@ public:
     return storage.size();
   }
 
+  size_t empty() {
+    return storage.empty();
+  }
 
 private:
   std::vector<T> storage;
