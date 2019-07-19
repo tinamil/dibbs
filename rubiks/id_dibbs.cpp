@@ -253,7 +253,7 @@ bool iterative_layer(stack my_stack,
   else {
     if (iteration == 18) {
       other_set->clear();
-      if (id_check_layer(other_stack, my_set, upper_bound, best_node, !reverse, pdb_type, start_state, iteration - 1, c_star, count)) {
+      if (id_check_layer(other_stack, my_set, upper_bound, best_node, !reverse, pdb_type, start_state, iteration, c_star, count)) {
         return true;
       }
       my_set->clear();

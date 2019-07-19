@@ -40,6 +40,10 @@ public:
     return std::pair<bool, T>(success, value);
   }
 
+  T top() {
+    return storage.back();
+  }
+
   size_t size() {
     return storage.size();
   }
