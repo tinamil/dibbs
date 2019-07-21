@@ -52,13 +52,17 @@ unsigned char a_star(unsigned char *seq, int direction, unsigned char initial_UB
                            1 = f = g + h
                            2 = f_bar = f_d + g_d - h_d' = 2*g_d + h_d - h_d'
                            3 = f_d - (g_d /(MAX_DEPTH + 1) Break ties in f_d in favor of states with larger g_d.
+                           4 = f_bar_d - (g_d /(MAX_DEPTH + 1) Break ties in fbar_d in favor of states with larger g_d.
+                           5 = max(2*g_d, f_d) MM priority function.
+                           6 = max(2*g_d + 1, f_d) MMe priority function.
+                           7 = max(2*g_d, f_d) + (g_d /(MAX_DEPTH + 1) MM priority function.  Break ties in favor of states with smaller g_d.
+                           8 = max(2*g_d + 1, f_d) + (g_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with smaller g_d.
+                           9 = max(2*g_d + 1, f_d) - (g_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with larger g_d.
          search_strategy;  -e option: search (exploration) strategy
                            1 = depth first search
                            2 = breadth first search
                            3 = best first search
-                           4 = cyclic best first search
-                           5 = cyclic best first search using min_max_stacks
-                           6 = CBFS: Cylce through LB instead of depth.  Use min-max heaps.
+                           4 = best first search using clusters
                            Note: Only best first search has been implemented for the search.
          cpu_limit:        cpu limit for search process
          prn_info:         Controls level of printed info (def=0)
@@ -86,6 +90,7 @@ unsigned char a_star(unsigned char *seq, int direction, unsigned char initial_UB
    bool           finished;
    int            hash_value, i, status;
    __int64        **F = NULL, **R = NULL, sum1, sum2;
+   __int64        **Fexp = NULL, **Fstored = NULL, **Rexp = NULL, **Rstored = NULL, **Fexp_g_h = NULL, **Fstored_g_h = NULL, **Rexp_g_h = NULL, **Rstored_g_h = NULL, **Fexp_g_f = NULL, **Fstored_g_f = NULL, **Rexp_g_f = NULL, **Rstored_g_f = NULL;
    double         best, cpu;
    Hash_table     hash_table;
    bistate        root_state;			// state for the root problem
@@ -97,7 +102,7 @@ unsigned char a_star(unsigned char *seq, int direction, unsigned char initial_UB
    // Initialize data structures.
 
    info->initialize();
-   initialize_search(parameters, &states, &hash_table);
+   initialize_search(parameters, &states, &hash_table, NULL);
    gap_x = parameters->gap_x;
    UB = initial_UB;
 
@@ -128,7 +133,7 @@ unsigned char a_star(unsigned char *seq, int direction, unsigned char initial_UB
       // Need to add the forward root problem to the list of states and the set of unexplored states.
 
       hash_value = root_state.hash_value;
-      status_index = find_or_insert(&root_state, best, 0, direction, &states, parameters, info, &hash_table, hash_value);
+      status_index = find_or_insert(&root_state, best, 0, direction, &states, parameters, info, &hash_table, hash_value, NULL, { 0,0,0 });
 
    } else {
 
@@ -154,7 +159,7 @@ unsigned char a_star(unsigned char *seq, int direction, unsigned char initial_UB
       // Need to add the reverse root problem to the list of states and the set of unexplored states.
 
       hash_value = root_state.hash_value;
-      status_index = find_or_insert(&root_state, best, 0, direction, &states, parameters, info, &hash_table, hash_value);
+      status_index = find_or_insert(&root_state, best, 0, direction, &states, parameters, info, &hash_table, hash_value, NULL, { 0,0,0 });
    }
 
    // Main loop
@@ -215,8 +220,8 @@ unsigned char a_star(unsigned char *seq, int direction, unsigned char initial_UB
    }
    //if(prn_info > 1) prn_data(info->best_solution, info->best_z);
 
-   //analyze_states(&states, UB + 5, UB, F, R);
-
+   analyze_states(&states, UB + 5, UB, UB, Fexp, Rexp, Fstored, Rstored, Fexp_g_h, Rexp_g_h, Fstored_g_h, Rstored_g_h, Fexp_g_f, Fstored_g_f, Rexp_g_f, Rstored_g_f);
+   
    free_search_memory(parameters, &states);
 
 
@@ -263,9 +268,9 @@ int explore_forward(bistates_array *states, searchparameters *parameters, search
    // Find the next node to explore.  Nodes may be in the heaps more than once, so delete the node with minimum key
    // until an open node has been found.
 
-   index = get_bistate(1, parameters, info);
+   index = get_bistate(states, 1, parameters, info, NULL, { 0,0,0 });
    while((index != -1) && ((*states)[index].open1 == 0)) {
-      index = get_bistate(1, parameters, info);
+      index = get_bistate(states, 1, parameters, info, NULL, { 0,0,0 });
    }
    if(index == -1) {
       f1_min = UCHAR_MAX;
@@ -323,7 +328,7 @@ int explore_forward(bistates_array *states, searchparameters *parameters, search
          new_state.hash_value = hash_value_sub;
          //assert(hash_value_sub == hash_table->hash_seq(new_state.seq)); assert(h1_sub == gap_lb(new_state.seq, 1, gap_x)); assert(h2_sub == gap_lb(new_state.seq, 2, gap_x));
          best = compute_bibest(1, g1_sub, g2_sub, h1_sub, h2_sub, parameters);
-         status_index = find_or_insert(&new_state, best, depth1, 1, states, parameters, info, hash_table, hash_value_sub);
+         status_index = find_or_insert(&new_state, best, depth1, 1, states, parameters, info, hash_table, hash_value_sub, NULL, { 0,0,0 });
          find_status = status_index.first;
          state_index = status_index.second;
 
@@ -403,9 +408,9 @@ int explore_reverse(bistates_array *states, searchparameters *parameters, search
    // Find the next node to explore.  Nodes may be in the heaps more than once, so delete the node with minimum key
    // until an open node has been found.
 
-   index = get_bistate(2, parameters, info);
+   index = get_bistate(states, 2, parameters, info, NULL, { 0,0,0 });
    while ((index != -1) && ((*states)[index].open2 == 0)) {
-      index = get_bistate(2, parameters, info);
+      index = get_bistate(states, 2, parameters, info, NULL, { 0,0,0 });
    }
    if (index == -1) {
       f2_min = UCHAR_MAX;
@@ -464,7 +469,7 @@ int explore_reverse(bistates_array *states, searchparameters *parameters, search
          new_state.hash_value = hash_value_sub;
          //assert(hash_value_sub == hash_table->hash_seq(new_state.seq)); assert(h1_sub == gap_lb(new_state.seq, 1, gap_x)); assert(h2_sub == gap_lb(new_state.seq, 2, gap_x));
          best = compute_bibest(2, g1_sub, g2_sub, h1_sub, h2_sub, parameters);
-         status_index = find_or_insert(&new_state, best, depth1, 2, states, parameters, info, hash_table, hash_value_sub);
+         status_index = find_or_insert(&new_state, best, depth1, 2, states, parameters, info, hash_table, hash_value_sub, NULL, { 0,0,0 });
          find_status = status_index.first;
          state_index = status_index.second;
 
@@ -529,8 +534,7 @@ double compute_bibest(int direction, unsigned char g1, unsigned char g2, unsigne
 		case 1:  // best = f_d = g_d + h_d
          if (direction == 1) {
             best = g1 + h1;
-         }
-         else {
+         } else {
             best = g2 + h2;
          }
 			break;
@@ -544,17 +548,64 @@ double compute_bibest(int direction, unsigned char g1, unsigned char g2, unsigne
       case 3:  // best = f_d - (g_d /(MAX_DEPTH + 1) Break ties in f_d in favor of states with larger g_d.
          if (direction == 1) {
             best = g1 + h1 - (double) g1 / (double) (MAX_DEPTH + 1);
-         }
-         else {
+         } else {
             best = g2 + h2 - (double) g2 / (double)(MAX_DEPTH + 1);
          }
          break;
-      case 4:  // best = f_bar_d - (g_d /(MAX_DEPTH + 1) Break ties in f_d in favor of states with larger g_d.
+      case 4:  // best = f_bar_d - (g_d /(MAX_DEPTH + 1) Break ties in fbar_d in favor of states with larger g_d.
          if (direction == 1) {
             best = 2 * g1 + h1 - h2 - (double) g1 / (double) (MAX_DEPTH + 1);
-         }
-         else {
+         } else {
             best = 2 * g2 + h2 - h1 - (double) g2 / (double) (MAX_DEPTH + 1);
+         }
+         break;
+      case 5:  // best = max(2*g_d, f_d) MM priority function.
+         if (direction == 1) {
+            best = max(2 * g1, g1 + h1);
+         }  else {
+            best = max(2 * g2, g2 + h2);
+         }
+         break;
+      case 6:  // best = max(2*g_d + 1, f_d) MMe priority function.
+         if (direction == 1) {
+            best = max(2 * g1 + 1, g1 + h1);
+         } else {
+            best = max(2 * g2 + 1, g2 + h2);
+         }
+         break;
+      case 7:  // best = max(2*g_d, f_d) + (g_d /(MAX_DEPTH + 1) MM priority function.  Break ties in favor of states with smaller g_d.
+         if (direction == 1) {
+            best = max(2 * g1, g1 + h1) + (double) g1 / (double) (MAX_DEPTH + 1);
+         } else {
+            best = max(2 * g2, g2 + h2) + (double) g2 / (double) (MAX_DEPTH + 1);
+         }
+         break;
+      case 8:  // best = max(2*g_d + 1, f_d) + (g_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with smaller g_d.
+         if (direction == 1) {
+            best = max(2 * g1 + 1, g1 + h1) + (double) g1 / (double) (MAX_DEPTH + 1);
+         } else {
+            best = max(2 * g2 + 1, g2 + h2) + (double) g2 / (double) (MAX_DEPTH + 1);
+         }
+         break;
+      case 9:  // best = max(2*g_d + 1, f_d) - (g_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with larger g_d.
+         if (direction == 1) {
+            best = max(2 * g1 + 1, g1 + h1) - (double)g1 / (double)(MAX_DEPTH + 1);
+         } else {
+            best = max(2 * g2 + 1, g2 + h2) - (double)g2 / (double)(MAX_DEPTH + 1);
+         }
+         break;
+      case 10:  // best = max(2*g_d + 1, f_d) + (f_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with smaller f_d.
+         if (direction == 1) {
+            best = max(2 * g1 + 1, g1 + h1) + (double)(g1 + h1) / (double)(MAX_DEPTH + 1);
+         }  else {
+            best = max(2 * g2 + 1, g2 + h2) + (double)(g2 + h2) / (double)(MAX_DEPTH + 1);
+         }
+         break;
+      case 11:  // best = max(2*g_d + 1, f_d) + (h_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with smaller h_d.
+         if (direction == 1) {
+            best = max(2 * g1 + 1, g1 + h1) + (double)(h1) / (double)(MAX_DEPTH + 1);
+         } else {
+            best = max(2 * g2 + 1, g2 + h2) + (double)(h2) / (double)(MAX_DEPTH + 1);
          }
          break;
       default:
@@ -634,8 +685,9 @@ int backtrack(int direction, bistates_array *states, int index, unsigned char so
 
 //_________________________________________________________________________________________________
 
-void initialize_search(searchparameters *parameters, bistates_array *states, Hash_table *hash_table)
+void initialize_search(searchparameters *parameters, bistates_array *states, Hash_table *hash_table, Clusters *clusters)
 {
+   int   i, j;
 
    // Initialize the heaps
 
@@ -656,6 +708,13 @@ void initialize_search(searchparameters *parameters, bistates_array *states, Has
             }
          }
          break;
+      case 4:  // best first search using clusters
+         if (!clusters->is_initialized()) {
+            clusters->initialize(0, MAX_DEPTH, MAX_DEPTH);
+         } else {
+            clusters->clear();
+         }
+         break;
       default:
 	      fprintf(stderr, "Unknown algorithm: Only best fs has been implemented for bidirectional search.\n");
 		   exit(1);
@@ -671,12 +730,28 @@ void initialize_search(searchparameters *parameters, bistates_array *states, Has
 
    hash_table->initialize(n);
 
+   // Initialize the multisets to contain the g1, g2, f1, f2 values of the open nodes.
+
+   for (i = 0; i <= MAX_DEPTH; i++) {
+      if (open_g1_values[i].is_null()) open_g1_values[i].initialize(MAX_DEPTH); else open_g1_values[i].clear();
+      if (open_g2_values[i].is_null()) open_g2_values[i].initialize(MAX_DEPTH); else open_g2_values[i].clear();
+   }
+   if(open_f1_values.is_null()) open_f1_values.initialize(MAX_DEPTH); else open_f1_values.clear();
+   if(open_f2_values.is_null()) open_f2_values.initialize(MAX_DEPTH); else open_f2_values.clear();
+   for (i = 0; i <= MAX_DEPTH; i++) {
+      for (j = 0; j <= MAX_DEPTH; j++) {
+         if (open_g1_h1_h2_values[i][j].is_null()) open_g1_h1_h2_values[i][j].initialize(MAX_DEPTH); else open_g1_h1_h2_values[i][j].clear();
+         if (open_g2_h1_h2_values[i][j].is_null()) open_g2_h1_h2_values[i][j].initialize(MAX_DEPTH); else open_g2_h1_h2_values[i][j].clear();
+      }
+   }
 }
 
 //_________________________________________________________________________________________________
 
-void reinitialize_search(searchparameters *parameters, searchinfo *info, bistates_array *states, Hash_table *hash_table)
+void reinitialize_search(searchparameters *parameters, searchinfo *info, bistates_array *states, Hash_table *hash_table, Clusters *clusters)
 {
+   int   i, j;
+
    info->initialize();
    states->clear();
 
@@ -685,6 +760,9 @@ void reinitialize_search(searchparameters *parameters, searchinfo *info, bistate
          if((parameters->algorithm == 2) || (parameters->algorithm == 4)) forward_bfs_heap.clear();
          if((parameters->algorithm == 3) || (parameters->algorithm == 4)) reverse_bfs_heap.clear();
 			break;
+      case 4:  // best first search using clusters
+         clusters->clear();
+         break;
       default:
          fprintf(stderr, "Unknown algorithm: Only best fs has been implemented for bidirectional search.\n");
          exit(1);
@@ -694,6 +772,21 @@ void reinitialize_search(searchparameters *parameters, searchinfo *info, bistate
    // If a hash table is used, it needs to be emptied or deleted here.
 
    hash_table->clear();
+
+   // Clear the multisets that contain the g1, g2, f1, f2 values of the open nodes.
+
+   for (i = 0; i <= MAX_DEPTH; i++) {
+      open_g1_values[i].clear();
+      open_g2_values[i].clear();
+   }
+   open_f1_values.clear();
+   open_f2_values.clear();
+   for (i = 0; i <= MAX_DEPTH; i++) {
+      for (j = 0; j <= MAX_DEPTH; j++) {
+         open_g1_h1_h2_values[i][j].clear();
+         open_g2_h1_h2_values[i][j].clear();
+      }
+   }
 }
 
 //_________________________________________________________________________________________________

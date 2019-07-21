@@ -6,8 +6,6 @@
 #include <fstream>
 #include <cassert>
 //#include "heap_record.h"
-#include <cstdlib>
-#include <cstring>
 
 #define  N_LOCATIONS 16             // Number of locations
 
@@ -16,7 +14,7 @@
    1. The array supports the following operations in constant time:
       a. Insert a state into the array.
       b. Replace a state in the array, given the index of the state to be replaced.
-   2. The array is a simple array of states.
+   2. The array is a simple array of states. 
       a. last = the index in states where the last state is stored.
    3. A states_array consists of the following.
       a. last = the index in states where the last state is stored.
@@ -26,22 +24,44 @@
    4. Created 7/21/17 by modifying c:\sewell\research\15puzzle\15puzzle_code2\bistates.h
 */
 
+typedef  int   State_index;      // This should be a signed intger type.
+
 /*************************************************************************************************/
 
 class bistate {
 public:
+   void  fill(const unsigned char g1i, const unsigned char h1i, const unsigned char open1i, const int parent1i, const State_index cluster_index1i,
+      const unsigned char g2i, const unsigned char h2i, const unsigned char open2i, const int parent2i, const State_index cluster_index2i,
+      const int hash_valuei, const unsigned char *seqi, const int n_pancakes)
+   {
+      g1 = g1i;
+      h1 = h1i;
+      open1 = open1i;
+      parent1 = parent1i;
+      cluster_index1 = cluster_index1i;
+      g2 = g2i;
+      h2 = h2i;
+      open2 = open2i;
+      parent2 = parent2i;
+      cluster_index2 = cluster_index2i;
+      hash_value = hash_valuei;
+      memcpy(seq, seqi, n_pancakes + 1);
+   };
+
    unsigned char  g1;                  // = objective function value = number of flips that have been made so far in the forward direction
    unsigned char  h1;                  // = lower bound on the number of moves needed to reach the goal postion
    unsigned char  open1;               // = 2 if this subproblem has not yet been generated in the forward direction
                                        // = 1 if this subproblem is open in the forward direction
                                        // = 0 if this subproblem closed in the forward direction
    int            parent1;             // = index (in states) of the parent subproblem in the forward direction
+   __int64        cluster_index1 = -1; // = index in forward_clusters[g1][h1][h2]
    unsigned char  g2;                  // = objective function value = number of flips that have been made so far in the reverse direction
    unsigned char  h2;                  // = lower bound on the number of moves needed to reach the source postion
    unsigned char  open2;               // = 2 if this subproblem has not yet been generated in the reverse direction
                                        // = 1 if this subproblem is open in the reverse direction
                                        // = 0 if this subproblem closed in the reverse direction
    int            parent2;             // = index (in states) of the parent subproblem in the reverse direction
+   __int64        cluster_index2 = -1; // = index in reverse_clusters[g2][h1][h2]
    int            hash_value;          // = the index in the hash table to begin searching for the state.
    unsigned char  *seq;                // the number of the pancake that is position i (i.e., order of the pancakes)
                                        // seq[0] = the number of pancakes
@@ -77,8 +97,8 @@ public:
    int   n_of_states()  const {return last + 1;}
    void  null()         {last = -1; max_size = 0; n_pancakes = 0; n_stored = 0; bistates = NULL;}
    void  clear()        {  //for(int i = 0; i <= last; i++) delete [] bistates[i].seq;
-                           last = -1;
-                           //n_pancakes = 0;
+                           last = -1; 
+                           //n_pancakes = 0; 
                            n_stored = 0;
                         }
    bool  empty()        const {return(last == -1);}
@@ -102,7 +122,7 @@ public:
                                                    //exit(1);
                                                    return(-1);
                                                 }
-                                                n_stored++;
+                                                n_stored++; 
                                                 bistates[last].g1 = bistate->g1;
                                                 bistates[last].h1 = bistate->h1;
                                                 bistates[last].open1 = bistate->open1;
@@ -125,7 +145,7 @@ public:
                                              }
    void  replace_bistate(const int index, const bistate *bistate) {
                                                                      assert((0 <= index) && (index <= last));
-                                                                     n_stored++;
+                                                                     n_stored++;  
                                                                      bistates[index] = *bistate;
                                                                   }
    void  print_bistate(const int index)   {

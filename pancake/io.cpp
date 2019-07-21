@@ -177,6 +177,117 @@ void prn_a_star_subproblem2(bistate *state, int direction, int status, searchinf
 
 //_________________________________________________________________________________________________
 
+void prn_open_g_h1_h2_values(int direction)
+{
+   int            h1, h2, max_h1, max_h2;
+
+   max_h1 = 0;
+   max_h2 = 0;
+   if (direction == 1) {
+      for (h1 = 0; h1 <= MAX_DEPTH; h1++) {
+         for (h2 = 0; h2 <= MAX_DEPTH; h2++) {
+            if (!open_g1_h1_h2_values[h1][h2].empty()) {
+               if (h1 > max_h1) max_h1 = h1;
+               if (h2 > max_h2) max_h2 = h2;
+            }
+         }
+      }
+      printf("   ");  for (h2 = 0; h2 <= max_h2; h2++) printf(" %2d", h2); printf("\n");
+      for (h1 = 0; h1 <= max_h1; h1++) {
+         printf("%2d:", h1);
+         for (h2 = 0; h2 <= max_h2; h2++ ) {
+            if (open_g1_h1_h2_values[h1][h2].empty()) {
+               printf("  *");
+            }
+            else {
+               printf(" %2d", open_g1_h1_h2_values[h1][h2].get_min());
+            }
+         }
+         printf("\n");
+      }
+   } else {
+      for (h1 = 0; h1 <= MAX_DEPTH; h1++) {
+         for (h2 = 0; h2 <= MAX_DEPTH; h2++) {
+            if (!open_g2_h1_h2_values[h1][h2].empty()) {
+               if (h1 > max_h1) max_h1 = h1;
+               if (h2 > max_h2) max_h2 = h2;
+            }
+         }
+      }
+      printf("   ");  for (h2 = 0; h2 <= max_h2; h2++) printf(" %2d", h2); printf("\n");
+      for (h1 = 0; h1 <= max_h1; h1++) {
+         printf("%2d:", h1);
+         for (h2 = 0; h2 <= max_h2; h2++ ) {
+            if (open_g2_h1_h2_values[h1][h2].empty()) {
+               printf("  *");
+            }
+            else {
+               printf(" %2d", open_g2_h1_h2_values[h1][h2].get_min());
+            }
+         }
+         printf("\n");
+      }
+
+   }
+}
+
+//_________________________________________________________________________________________________
+
+void prn_open_g_h1_h2_values2(int direction)
+{
+   int            g, h1, h2, max_h1, max_h2;
+
+   max_h1 = 0;
+   max_h2 = 0;
+   if (direction == 1) {
+      for (h1 = 0; h1 <= MAX_DEPTH; h1++) {
+         for (h2 = 0; h2 <= MAX_DEPTH; h2++) {
+            if (!open_g1_h1_h2_values[h1][h2].empty()) {
+               if (h1 > max_h1) max_h1 = h1;
+               if (h2 > max_h2) max_h2 = h2;
+            }
+         }
+      }
+      printf("   ");  for (h2 = 0; h2 <= max_h2; h2++) printf("           %2d", h2); printf("\n");
+      for (h1 = 0; h1 <= max_h1; h1++) {
+         printf("%2d:", h1);
+         for (h2 = 0; h2 <= max_h2; h2++) {
+            if (open_g1_h1_h2_values[h1][h2].empty()) {
+               printf("            *");
+            } else {
+               g = open_g1_h1_h2_values[h1][h2].get_min();
+               printf(" (%2d, %6I64d)", g, open_g1_h1_h2_values[h1][h2].n_of_elements(g));
+            }
+         }
+         printf("\n");
+      }
+   } else {
+      for (h1 = 0; h1 <= MAX_DEPTH; h1++) {
+         for (h2 = 0; h2 <= MAX_DEPTH; h2++) {
+            if (!open_g2_h1_h2_values[h1][h2].empty()) {
+               if (h1 > max_h1) max_h1 = h1;
+               if (h2 > max_h2) max_h2 = h2;
+            }
+         }
+      }
+      printf("   ");  for (h2 = 0; h2 <= max_h2; h2++) printf("           %2d", h2); printf("\n");
+      for (h1 = 0; h1 <= max_h1; h1++) {
+         printf("%2d:", h1);
+         for (h2 = 0; h2 <= max_h2; h2++) {
+            if (open_g2_h1_h2_values[h1][h2].empty()) {
+               printf("            *");
+            } else {
+               g = open_g2_h1_h2_values[h1][h2].get_min();
+               printf(" (%2d, %6I64d)", g, open_g2_h1_h2_values[h1][h2].n_of_elements(g));
+            }
+         }
+         printf("\n");
+      }
+   }
+}
+
+//_________________________________________________________________________________________________
+
 //void prn_heap_info()
 //{
 //   int      i;

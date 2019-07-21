@@ -5,7 +5,7 @@
 //#include "states.h"
 #include "bistates.h"
 
-#define  HASH_SIZE 1000000007 // Must be a prime number.  Currently using linear
+#define  HASH_SIZE 400000 // Must be a prime number.  Currently using linear
                               // probing, but if quadratic probing is used, then
                               // it must be a prime of the form 4j+3.  4000039=4*1000009+3  40000003=4*10000000+3   400000043=4*100000010+3   800000011=4*200000002+3   1000000007 = 4*250000001+3
 

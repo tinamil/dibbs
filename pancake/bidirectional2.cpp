@@ -1,16 +1,16 @@
 #include "main.h"
 #include <queue>
 
-static double           f1_bar_min;       // = min {f1_bar(v): v is in open set of nodes in the forward direction}.
-static double           f2_bar_min;       // = min {f2_bar(v): v is in open set of nodes in the reverse direction}.
-static int              gap_x;            // = value of X for the GAP-X heuristic.  See "Bidirectional Search That Is Guaranteed to Meet in the Middle."
-static unsigned char    UB;               // = objective value of best solution found so far.
+static double           f1_min;        // = min {f1(v): v is in open set of nodes in the forward direction}.
+static double           f2_min;        // = min {f2(v): v is in open set of nodes in the reverse direction}.
+static int              gap_x;         // = value of X for the GAP-X heuristic.  See "Bidirectional Search That Is Guaranteed to Meet in the Middle."
+static unsigned char    UB;            // = objective value of best solution found so far.
 
 /*************************************************************************************************/
 
-unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, searchparameters *parameters, searchinfo *info)
+unsigned char bidirectional2(unsigned char *seq, unsigned char initial_UB, searchparameters *parameters, searchinfo *info)
 /*
-   These functions implement the bidirectional algorithm for the pancake problem.
+   These functions implements a traditional (w/o dynamically improved bounds) bidirectional algorithm for the pancake problem.
    1. Algorithm Description
       a. It uses branch and bound to attempt to minimize the objective function.
       b. The depth of a subproblem equals the number of moves that have been made from the source or goal configuration.
@@ -56,11 +56,11 @@ unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, search
                            7 = max(2*g_d, f_d) + (g_d /(MAX_DEPTH + 1) MM priority function.  Break ties in favor of states with smaller g_d.
                            8 = max(2*g_d + 1, f_d) + (g_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with smaller g_d.
                            9 = max(2*g_d + 1, f_d) - (g_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with larger g_d.
-        search_strategy;  -e option: search (exploration) strategy
+         search_strategy;  -e option: search (exploration) strategy
                            1 = depth first search
                            2 = breadth first search
                            3 = best first search
-                           4 = best first search using clusters
+                           4 = best first search using clusters 
                            Note: Only best first search has been implemented for the search.
          cpu_limit:        cpu limit for search process
          prn_info:         Controls level of printed info (def=0)
@@ -72,8 +72,8 @@ unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, search
       e. forward_bfs_heap = min-max heap for the forward best first search.
       f. reverse_bfs_heap = min-max heap for the reverse best first search.
       g. states = stores the states.
-      h. f1_bar_min = min {f1_bar(v): v is in open set of nodes in the forward direction}.
-      i. f2_bar_min = min {f2_bar(v): v is in open set of nodes in the reverse direction}.
+      h. f1_min = min {f1(v): v is in open set of nodes in the forward direction}.
+      i. f2_min = min {f2(v): v is in open set of nodes in the reverse direction}.
       j. gap_x = Value of X for the GAP-X heuristic.  See "Bidirectional Search That Is Guaranteed to Meet in the Middle."
       k. UB = objective value of best solution found so far.
    5. Output Variables
@@ -81,8 +81,7 @@ unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, search
             -1 is returned if an error occurs, such as running out of memory.
       b. info is used to collect information about the search.
          best_solution = the optimal sequence of flips.
-   6. Created 8/3/17 by modifying a_star from c:\sewell\research\pancake\pancake_code\a_star.cpp.
-      a. Used c:\sewell\research\pancake\matlab\bidirectional.m as a guide.
+   6. Created 12/31/18 by modifying bidirectional from c:\sewell\research\pancake\pancake_code\bidirectional.cpp.
 */
 {
    int            hash_value, i, status;
@@ -123,8 +122,8 @@ unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, search
    root_state.seq[0] = n;                                // seq[0] = the number of pancakes
 
    info->h1_root = root_state.h1;
-   best = 2 * root_state.g1 + root_state.h1 - root_state.h2;
-   f1_bar_min = 2*root_state.g1 + root_state.h1 - root_state.h2;
+   best = root_state.g1 + root_state.h1;
+   f1_min = root_state.g1 + root_state.h1;
 
    // Need to add the forward root problem to the list of states and the set of unexplored states.
 
@@ -148,8 +147,8 @@ unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, search
    root_state.seq[0] = n;                                // seq[0] = the number of pancakes
 
    //info->h1_root = root_state.h1;
-   best = 2 * root_state.g2 + root_state.h2 - root_state.h1;
-   f2_bar_min = 2 * root_state.g2 + root_state.h2 - root_state.h1;
+   best = root_state.g2 + root_state.h2;
+   f2_min = root_state.g2 + root_state.h2;
 
    // Need to add the reverse root problem to the list of states and the set of unexplored states.
 
@@ -158,7 +157,7 @@ unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, search
 
    // Main loop
 
-   while ((UB > ceil((f1_bar_min + f2_bar_min) / 2)) && (info->optimal >= 0)) {
+   while ((UB > ceil(max(f1_min,f2_min))) && (info->optimal >= 0)) {
       cpu = (double) (clock() - info->start_time) / CLOCKS_PER_SEC;
       if(cpu > CPU_LIMIT) {
          info->optimal = 0;
@@ -166,14 +165,14 @@ unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, search
       }
 
       if(forward_bfs_heap.n_of_items() <= reverse_bfs_heap.n_of_items()) {
-         status = expand_forward(&states, parameters, info, &hash_table);
+         status = expand_forward2(&states, parameters, info, &hash_table);
          if(status == -1) {
             info->optimal = 0;
             //return(-1);
             break;
          }
       } else {
-         status = expand_reverse(&states, parameters, info, &hash_table);
+         status = expand_reverse2(&states, parameters, info, &hash_table);
          if(status == -1) {
             info->optimal = 0; 
             //return(-1);
@@ -198,8 +197,8 @@ unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, search
    }
    //if(prn_info > 1) prn_data(info->best_solution, info->best_z);
 
-   printf("UB = %2d  f1_bar_min = %4.1f  f1_bar_min = %4.1f\n", UB, f1_bar_min, f2_bar_min); 
-   //analyze_states(&states, UB + 5, UB, UB, Fexp, Rexp, Fstored, Rstored, Fexp_g_h, Rexp_g_h, Fstored_g_h, Rstored_g_h, Fexp_g_f, Fstored_g_f, Rexp_g_f, Rstored_g_f);
+   //printf("UB = %2d  f1_min = %4.1f  f1_min = %4.1f\n", UB, f1_min, f2_min); 
+   analyze_states(&states, UB + 5, UB, UB, Fexp, Rexp, Fstored, Rstored, Fexp_g_h, Rexp_g_h, Fstored_g_h, Rstored_g_h, Fexp_g_f, Fstored_g_f, Rexp_g_f, Rstored_g_f);
 
    free_search_memory(parameters, &states);
 
@@ -209,7 +208,7 @@ unsigned char bidirectional(unsigned char *seq, unsigned char initial_UB, search
 
 //_________________________________________________________________________________________________
 
-int expand_forward(bistates_array *states, searchparameters *parameters, searchinfo *info, Hash_table *hash_table)
+int expand_forward2(bistates_array *states, searchparameters *parameters, searchinfo *info, Hash_table *hash_table)
 /*
    1. This function selects the next state to be explored in the forward direction and then explores it.
    2. Input Variables
@@ -233,12 +232,11 @@ int expand_forward(bistates_array *states, searchparameters *parameters, searchi
          O.w. 1 is returned.
       b. info is used to collect information about the search.
          best_solution = the optimal sequence of flips.
-   6. Created 8/3/17 by modifying explore_forward from c:\sewell\research\pancake\pancake_code\a_star.cpp.
-      a. Used expand_forward in c:\sewell\research\pancake\matlab\bidirectional.m as a guide.
+   6. Created 12/31/18 by modifying explore_forward from c:\sewell\research\pancake\pancake_code\bidirectional.cpp.
 */
 {
-   unsigned char     *cur_seq, f1_sub, f1_bar_sub, g1, g2, g1_sub, g2_sub, h1, h2, h1_sub, h2_sub;
-   int               depth1, find_status, hash_value, hash_value_sub, i, index, state_index, status;
+   unsigned char     *cur_seq, f1_sub, g1, g2, g1_sub, g2_sub, h1, h2, h1_sub, h2_sub;
+   int               cnt = 0, depth1, find_status, hash_value, hash_value_sub, i, index, state_index, status;
    __int64        **Fexp = NULL, **Fstored = NULL, **Rexp = NULL, **Rstored = NULL, **Fexp_g_h = NULL, **Fstored_g_h = NULL, **Rexp_g_h = NULL, **Rstored_g_h = NULL, **Fexp_g_f = NULL, **Fstored_g_f = NULL, **Rexp_g_f = NULL, **Rstored_g_f = NULL;
    double            best;
    bistate           new_state, *state;
@@ -253,21 +251,21 @@ int expand_forward(bistates_array *states, searchparameters *parameters, searchi
       index = get_bistate(states, 1, parameters, info, NULL, { 0,0,0 });
    }
    if(index == -1) {
-      f1_bar_min = UCHAR_MAX;
+      f1_min = UCHAR_MAX;
       return(1);
    } else {
       (*states)[index].open1 = 0;         // Close this subproblem.
    }
    state = &(*states)[index];
    //assert(check_bistate(state, gap_x, states, hash_table));
+   new_state.seq = NULL;
 
    g1 = state->g1;
    h1 = state->h1;
    g2 = state->g2;
    h2 = state->h2;
    cur_seq = state->seq;
-   if(g1 + h1 >= UB) return(1);        // Could apply additional pruning methods here(see summary.pdf), but it does seem likely that they will help
-                                       // much for the pancake problem because the GAP LB is so strong.  g1 - h2 + f2_min >= UB and f1 + min{ g2(w) - h1(w) : w in C2_star }
+   if(g1 + h1 >= UB) return(1);
    hash_value = state->hash_value;
 
    if(state->open2 > 0) {
@@ -302,7 +300,6 @@ int expand_forward(bistates_array *states, searchparameters *parameters, searchi
          h2_sub = update_gap_lb(cur_seq, 2, i, h2, gap_x);
 
          f1_sub = g1_sub + h1_sub;
-         f1_bar_sub = 2 * g1_sub + h1_sub - h2_sub;
          if (f1_sub < UB) {
             reverse_vector2(i, n, cur_seq, new_state.seq);
             hash_value_sub = hash_table->update_hash_value(cur_seq, i, hash_value);
@@ -336,27 +333,28 @@ int expand_forward(bistates_array *states, searchparameters *parameters, searchi
                   return(-1);
                }
                //printf("UB = %2d  f1_bar_min = %4.1f  f1_bar_min = %4.1f  %4.0f\n", UB, f1_bar_min, f2_bar_min, 2*UB - f1_bar_min- f2_bar_min);
-               //analyze_states(states, UB + 5, UB, UB, Fexp, Rexp, Fstored, Rstored, Fexp_g_h, Rexp_g_h, Fstored_g_h, Rstored_g_h, Fexp_g_f, Fstored_g_f, Rexp_g_f, Rstored_g_f);
+               analyze_states(states, UB + 5, UB, UB, Fexp, Rexp, Fstored, Rstored, Fexp_g_h, Rexp_g_h, Fstored_g_h, Rstored_g_h, Fexp_g_f, Fstored_g_f, Rexp_g_f, Rstored_g_f);
             }
          }
       } 
    } else {
-      fprintf(stderr, "Exploring a node that is closed in the opposite direction.\n"); info->optimal = 0; return(-1);
+      cnt++;
+      //fprintf(stderr, "Exploring a node that is closed in the opposite direction.\n"); info->optimal = 0; return(-1);
    }
 
    item = forward_bfs_heap.get_min();
    if (item.key == -1)
-      f1_bar_min = UCHAR_MAX;
+      f1_min = UCHAR_MAX;
    else
-      f1_bar_min = item.key;
+      f1_min = item.key;
 
-   delete[] new_state.seq;
+   if(new_state.seq != NULL) delete[] new_state.seq;
    return(1);
 }
 
 //_________________________________________________________________________________________________
 
-int expand_reverse(bistates_array *states, searchparameters *parameters, searchinfo *info, Hash_table *hash_table)
+int expand_reverse2(bistates_array *states, searchparameters *parameters, searchinfo *info, Hash_table *hash_table)
 /*
    1. This function selects the next state to be explored in the reverse direction and then explores it.
    2. Input Variables
@@ -380,12 +378,11 @@ int expand_reverse(bistates_array *states, searchparameters *parameters, searchi
          O.w. 1 is returned.
       b. info is used to collect information about the search.
          best_solution = the optimal sequence of flips.
-   6. Created 8/3/17 by modifying explore_reverse from c:\sewell\research\pancake\pancake_code\a_star.cpp.
-      a. Used expand_reverse in c:\sewell\research\pancake\matlab\bidirectional.m as a guide.
+   6. Created 1/1/19 by modifying explore_reverse from c:\sewell\research\pancake\pancake_code\bidirectional.cpp.
 */
 {
-   unsigned char     *cur_seq, f2_sub, f2_bar_sub, g1, g2, g1_sub, g2_sub, h1, h2, h1_sub, h2_sub;
-   int               depth1, find_status, hash_value, hash_value_sub, i, index, state_index, status;
+   unsigned char     *cur_seq, f2_sub, g1, g2, g1_sub, g2_sub, h1, h2, h1_sub, h2_sub;
+   int               cnt = 0, depth1, find_status, hash_value, hash_value_sub, i, index, state_index, status;
    __int64        **Fexp = NULL, **Fstored = NULL, **Rexp = NULL, **Rstored = NULL, **Fexp_g_h = NULL, **Fstored_g_h = NULL, **Rexp_g_h = NULL, **Rstored_g_h = NULL, **Fexp_g_f = NULL, **Fstored_g_f = NULL, **Rexp_g_f = NULL, **Rstored_g_f = NULL;
    double            best;
    bistate           new_state, *state;
@@ -400,21 +397,21 @@ int expand_reverse(bistates_array *states, searchparameters *parameters, searchi
       index = get_bistate(states, 2, parameters, info, NULL, { 0,0,0 });
    }
    if(index == -1) {
-      f2_bar_min = UCHAR_MAX;
+      f2_min = UCHAR_MAX;
       return(1);
    } else {
       (*states)[index].open2 = 0;         // Close this subproblem.
    }
    state = &(*states)[index];
    //assert(check_bistate(state, gap_x, states, hash_table));
+   new_state.seq = NULL;
 
    g1 = state->g1;
    h1 = state->h1;
    g2 = state->g2;
    h2 = state->h2;
    cur_seq = state->seq;
-   if (g2 + h2 >= UB) return(1);       // Could apply additional pruning methods here(see summary.pdf), but it does seem likely that they will help
-                                       // much for the pancake problem because the GAP LB is so strong.  g1 - h2 + f2_min >= UB and f1 + min{ g2(w) - h1(w) : w in C2_star }
+   if (g2 + h2 >= UB) return(1);
    hash_value = state->hash_value;
 
    if(state->open1 > 0) {
@@ -449,7 +446,6 @@ int expand_reverse(bistates_array *states, searchparameters *parameters, searchi
          h2_sub = update_gap_lb(cur_seq, 2, i, h2, gap_x);
 
          f2_sub = g2_sub + h2_sub;
-         f2_bar_sub = 2 * g2_sub + h2_sub - h1_sub;
          if (f2_sub < UB) {
             reverse_vector2(i, n, cur_seq, new_state.seq);
             hash_value_sub = hash_table->update_hash_value(cur_seq, i, hash_value);
@@ -483,96 +479,21 @@ int expand_reverse(bistates_array *states, searchparameters *parameters, searchi
                   return(-1);
                }
                //printf("UB = %2d  f1_bar_min = %4.1f  f1_bar_min = %4.1f  %4.0f\n", UB, f1_bar_min, f2_bar_min, 2*UB - f1_bar_min - f2_bar_min);
-               //analyze_states(states, UB + 5, UB, UB, Fexp, Rexp, Fstored, Rstored, Fexp_g_h, Rexp_g_h, Fstored_g_h, Rstored_g_h, Fexp_g_f, Fstored_g_f, Rexp_g_f, Rstored_g_f);
+               analyze_states(states, UB + 5, UB, UB, Fexp, Rexp, Fstored, Rstored, Fexp_g_h, Rexp_g_h, Fstored_g_h, Rstored_g_h, Fexp_g_f, Fstored_g_f, Rexp_g_f, Rstored_g_f);
             }
          }
       } 
    } else {
-      fprintf(stderr, "Exploring a node that is closed in the opposite direction.\n"); info->optimal = 0;  return(-1);
+      cnt++;
+      //fprintf(stderr, "Exploring a node that is closed in the opposite direction.\n"); info->optimal = 0;  return(-1);
    }
 
    item = reverse_bfs_heap.get_min();
    if(item.key == -1)
-      f2_bar_min = UCHAR_MAX;
+      f2_min = UCHAR_MAX;
    else
-      f2_bar_min = item.key;
+      f2_min = item.key;
 
-   delete[] new_state.seq;
+   if(new_state.seq != NULL) delete[] new_state.seq;
    return(1);
-}
-
-//_________________________________________________________________________________________________
-
-int bibacktrack(bistates_array *states, int index, unsigned char solution[MAX_DEPTH + 1])
-/*
-   1. BIBACKTRACK constructs a solution by backtracking through the states.
-   2. Input Variables
-      a. states = array where the states are stored.
-      b. index = the index of the state (in states) from which to begin backtracking.
-   3. Global Variables
-      a. n = number of pancakes.
-      b. source[i] = the number of the pancake that is position i (i.e., order of the pancakes).
-   4. Output Variables
-      a. The number of flips is returned.
-         -1 is returned if an error occurs.
-      b. solution = array containing the moves that were made in this solution.
-   5. Created 8/1/17 by modifying bibacktrack from c:\sewell\research\15puzzle\15puzzle_code2\bidirectional.cpp.
-      a. Used backtrack in c:\sewell\research\pancake\matlab\a_star.m as a guide.
-   6. Created 8/8/17 by modifying backtrach from c:\sewell\research\pancake\pancake_code\a_star.cpp.
-      a. Used backtrack in c:\sewell\research\pancake\matlab\bidirectional.m as a guide.
-*/
-{
-   int            d, d1, d2, i, n_flips, original_index, parent, status;
-
-   original_index = index;
-   d1 = (*states)[index].g1;
-   d2 = (*states)[index].g1;
-   n_flips = 0;
-
-   // Backtrack from the state to the source.
-   
-   d = d1;
-   while(index >= 0) {
-      parent = (*states)[index].parent1;
-
-      // Find the location of the flip.
-
-      if(parent >= 0) {
-         i = n;
-         while ((*states)[index].seq[i] == (*states)[parent].seq[i]) i--;
-         solution[d] = i;
-         n_flips++;
-      }
-      d--;                       assert(-1 <= d);
-      index = parent;
-   }
-   assert(n_flips == (*states)[original_index].g1);
- 
-   // Backtrack from the state to the goal.
-
-   d = d1 + 1;
-   index = original_index;
-   while (index >= 0) {
-      parent = (*states)[index].parent2;
-
-      // Find the location of the flip.
-
-      if (parent >= 0) {
-         i = n;
-         while ((*states)[index].seq[i] == (*states)[parent].seq[i]) i--;
-         solution[d] = i;
-         n_flips++;
-      }
-      d++;                       assert(-1 <= d);
-      index = parent;
-   }
-   assert(n_flips == (*states)[original_index].g1 + (*states)[original_index].g2);
-
-   status = check_solution(source, solution, n_flips);
-   if (status == 1) {
-      return(n_flips);
-   } else {
-      fprintf(stderr, "solution is incorrect\n");
-      return(-1);
-   }
 }

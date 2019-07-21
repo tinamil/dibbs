@@ -52,7 +52,7 @@ int search_bimemory(bistate *new_bistate, bistates_array *bistates, searchparame
 
 //_________________________________________________________________________________________________
 
-pair<int, int> find_or_insert(bistate *new_state, double best, int depth, int direction, bistates_array *bistates, searchparameters *parameters, searchinfo *info, Hash_table *hash_table, int hash_value)
+pair<int, int> find_or_insert(bistate *new_state, double best, int depth, int direction, bistates_array *bistates, searchparameters *parameters, searchinfo *info, Hash_table *hash_table, int hash_value, Clusters *clusters, Cluster_indices indices)
 /*
    1. This routine attempts to find state in bidirectional memory.  
    2. If the subproblem is found, then
@@ -83,11 +83,14 @@ pair<int, int> find_or_insert(bistate *new_state, double best, int depth, int di
                      = -1 unable to add to memory (states, hash table, or heap).
 
    6. Written 7/24/17.
+   7. Modified 1/15/19 to add nodes to open_g1_values, open_g2_values, open_f1_values, open_f2_values.
 */
 {
-   int      hash_index, status, state_index;
-   bistate  *old_state;
-   heap_record record;
+   unsigned char  f1, f2, g1, g2, h1, h2;
+   int            hash_index, status, state_index;
+   __int64        index_in_clusters;
+   bistate        *old_state;
+   heap_record    record;
 
    status = hash_table->find_bistate(new_state->seq, hash_value, &hash_index, bistates);
    if(status == 1) {
@@ -98,23 +101,53 @@ pair<int, int> find_or_insert(bistate *new_state, double best, int depth, int di
       old_state = &(*bistates)[state_index];
       if(direction == 1) {
          if(new_state->g1 < old_state->g1) {
-            assert(old_state->open1 != 0); assert(new_state->h1 == old_state->h1);  assert(new_state->h2 == old_state->h2);
+            g1 = old_state->g1; h1 = old_state->h1; h2 = old_state->h2; f1 = g1 + h1;
+            assert(old_state->open1 != 0);                     // Do not use this assert if you are using an inconsistent heuristic.
+            assert(new_state->h1 == h1);  assert(new_state->h2 == old_state->h2);
+            if (old_state->open1 == 1) {
+               open_g1_values[f1].delete_element(g1);             // Delete an element with value old_state->g1 from the multiset of open g1 values.
+               open_f1_values.delete_element(f1);                 // Delete an element with value old_state->g1 + old_state->h1 from the multiset of open f1 values.
+               open_g1_h1_h2_values[h1][h2].delete_element(g1);   // Delete an element with value old_state->g1 from the multiset of open g1 values for the given values of h1 and h2.
+                                                                  // The number of elements in the multiset will not equal the number of items in the heaps because the item is not being deleted from the heaps.
+               if (clusters != NULL) {
+                  clusters->delete_element(1, g1, h1, h2, state_index, old_state->cluster_index1, bistates);
+               }
+            }
             old_state->g1 = new_state->g1;
             old_state->open1 = 1;
             old_state->parent1 = new_state->parent1;
             record.key = best;
             record.state_index = state_index;
-            insert_bidirectional_unexplored(record, depth, direction, parameters);     // Note: If this subproblem was already open in the forward direction, then this subproblem will be in the heaps twice.
+            index_in_clusters = insert_bidirectional_unexplored(bistates, record, depth, direction, parameters, clusters, indices);     // Note: If this subproblem was already open in the forward direction, then this subproblem will be in the heaps twice.
+            if (index_in_clusters < 0) state_index = -1;
+            open_g1_values[new_state->g1 + new_state->h1].insert(new_state->g1);       // Insert an element with value old_state->g1 into the multiset of open g1 values.
+            open_f1_values.insert(new_state->g1 + new_state->h1);                      // Insert an element with value old_state->g1 + old_state->h1 into the multiset of open f1 values.
+            open_g1_h1_h2_values[new_state->h1][new_state->h2].insert(new_state->g1);  // Insert an element with value old_state->g1 into the multiset of open g1 values for the given values of h1 and h2.
          }
       } else {
          if (new_state->g2 < old_state->g2) {
-            assert(old_state->open2 != 0); assert(new_state->h1 == old_state->h1);  assert(new_state->h2 == old_state->h2);
+            g2 = old_state->g2; h1 = old_state->h1; h2 = old_state->h2; f2 = g2 + h2;
+            assert(old_state->open2 != 0);                     //  Do not use this assert if you are using an inconsistent heuristic. 
+            assert(new_state->h1 == old_state->h1);  assert(new_state->h2 == h2);
+            if (old_state->open2 == 1) {
+               open_g2_values[f2].delete_element(g2);             // Delete an element with value old_state->g1 from the multiset of open g1 values.
+               open_f2_values.delete_element(f2);                 // Delete an element with value old_state->g2 + old_state->h2 from the multiset of open f2 values.
+               open_g2_h1_h2_values[h1][h2].delete_element(g2);   // Delete an element with value old_state->g2 from the multiset of open g2 values for the given values of h1 and h2.
+                                                                  // The number of elements in the multiset will not equal the number of items in the heaps because the item is not being deleted from the heaps.
+               if (clusters != NULL) {
+                  clusters->delete_element(1, g2, h1, h2, state_index, old_state->cluster_index1, bistates);
+               }
+            }
             old_state->g2 = new_state->g2;
             old_state->open2 = 1;
             old_state->parent2 = new_state->parent2;
             record.key = best;
             record.state_index = state_index;
-            insert_bidirectional_unexplored(record, depth, direction, parameters);     // Note: If this subproblem was already open in the forward direction, then this subproblem will be in the heaps twice.
+            index_in_clusters = insert_bidirectional_unexplored(bistates, record, depth, direction, parameters, clusters, indices);     // Note: If this subproblem was already open in the reverse direction, then this subproblem will be in the heaps twice.
+            if (index_in_clusters < 0) state_index = -1;
+            open_g2_values[new_state->g2 + new_state->h2].insert(new_state->g2);       // Insert an element with value old_state->g1 into the multiset of open g1 values.
+            open_f2_values.insert(new_state->g2 + new_state->h2);                      // Insert an element with value old_state->g2 + old_state->h2 into the multiset of open f2 values.
+            open_g2_h1_h2_values[new_state->h1][new_state->h2].insert(new_state->g2);  // Insert an element with value old_state->g2 into the multiset of open g2 values for the given values of h1 and h2.
          }
       }
       return(make_pair(status,state_index));
@@ -122,14 +155,14 @@ pair<int, int> find_or_insert(bistate *new_state, double best, int depth, int di
 
       // The subproblem was not found, so insert it into memory.
 
-      state_index = add_to_bimemory(new_state, best, depth, direction, bistates, parameters, info, hash_table, hash_index);
+      state_index = add_to_bimemory(new_state, best, depth, direction, bistates, parameters, info, hash_table, hash_index, clusters, indices);
       return(make_pair(status,state_index));
    }
 }
 
 //_________________________________________________________________________________________________
 
-int add_to_bimemory(bistate *bistate, double best, int depth, int direction, bistates_array *bistates, searchparameters *parameters, searchinfo *info, Hash_table *hash_table, int hash_index)
+int add_to_bimemory(bistate *bistate, double best, int depth, int direction, bistates_array *bistates, searchparameters *parameters, searchinfo *info, Hash_table *hash_table, int hash_index, Clusters *clusters, Cluster_indices indices)
 /*
    1. This routine attempts to add a new state to memory.
       a. If there is sufficient memory available in states and the appropriate heap, then the
@@ -139,9 +172,11 @@ int add_to_bimemory(bistate *bistate, double best, int depth, int direction, bis
    2. -1 is returned if the new state is not added to memory,
       o.w. the index (in states) is returned.
    3. Written 5/31/07.
+   4. Modified 1/15/19 to add nodes to open_g1_values, open_g2_values, open_f1_values, open_f2_values.
 */
 {
    int         index;
+   __int64     index_in_clusters;
    //clock_t  start_time;
    hash_record hrecord;
    heap_record record;
@@ -161,9 +196,10 @@ int add_to_bimemory(bistate *bistate, double best, int depth, int direction, bis
                hash_table->insert_at_index(index, hash_index);
                record.key = best;
                record.state_index = index;
-               insert_bidirectional_unexplored(record, depth, direction, parameters);
-            }
-            else {
+               insert_bidirectional_unexplored(bistates, record, depth, direction, parameters, NULL, { 0,0,0 });
+               open_f1_values.insert(bistate->g1 + bistate->h1);
+               open_g1_h1_h2_values[bistate->h1][bistate->h2].insert(bistate->g1);
+            } else {
                info->optimal = 0;
                index = -1;
             }
@@ -174,20 +210,49 @@ int add_to_bimemory(bistate *bistate, double best, int depth, int direction, bis
                hash_table->insert_at_index(index, hash_index); 
                record.key = best;
                record.state_index = index;
-               insert_bidirectional_unexplored(record, depth, direction, parameters);
-            }
-            else {
+               insert_bidirectional_unexplored(bistates, record, depth, direction, parameters, NULL, { 0,0,0 });
+               open_g2_values[bistate->g2 + bistate->h2].insert(bistate->g2);
+               open_f2_values.insert(bistate->g2 + bistate->h2);
+               open_g2_h1_h2_values[bistate->h1][bistate->h2].insert(bistate->g2);
+            } else {
                info->optimal = 0;
                index = -1;
             }
          }
 			break;
-		case 4:  //cbfs using min-max heaps
-			break;
-		case 5:  //cbfs using min-max stacks
-			break;
-		case 6:  //CBFS: Cylce through LB instead of depth.  Use min-max heaps.
-			break;
+      case 4:  // best first search using clusters
+         if (direction == 1) {
+            if (bistates->is_not_full()) {
+               index = bistates->add_bistate(bistate);
+               hash_table->insert_at_index(index, hash_index);
+               record.key = best;
+               record.state_index = index;
+               index_in_clusters = insert_bidirectional_unexplored(bistates, record, depth, direction, parameters, clusters, indices);
+               if (index_in_clusters < 0) { info->optimal = 0; index = -1; }
+               open_g1_values[bistate->g1 + bistate->h1].insert(bistate->g1);
+               open_f1_values.insert(bistate->g1 + bistate->h1);
+               open_g1_h1_h2_values[bistate->h1][bistate->h2].insert(bistate->g1);
+            } else {
+               info->optimal = 0;
+               index = -1;
+            }
+         } else {
+            if (bistates->is_not_full()) {
+               index = bistates->add_bistate(bistate);
+               hash_table->insert_at_index(index, hash_index);
+               record.key = best;
+               record.state_index = index;
+               index_in_clusters = insert_bidirectional_unexplored(bistates, record, depth, direction, parameters, clusters, indices);
+               if (index_in_clusters < 0) { info->optimal = 0; index = -1; }
+               open_g2_values[bistate->g2 + bistate->h2].insert(bistate->g2);
+               open_f2_values.insert(bistate->g2 + bistate->h2);
+               open_g2_h1_h2_values[bistate->h1][bistate->h2].insert(bistate->g2);
+            } else {
+               info->optimal = 0;
+               index = -1;
+            }
+         }
+         break;
       default:
          fprintf(stderr, "This method has not been implemented yet\n\n");
          exit(1);
@@ -202,7 +267,7 @@ int add_to_bimemory(bistate *bistate, double best, int depth, int direction, bis
 
 //_________________________________________________________________________________________________
 
-int get_bistate(int direction, searchparameters *parameters, searchinfo *info)
+int get_bistate(bistates_array *states, int direction, searchparameters *parameters, searchinfo *info, Clusters *clusters, Cluster_indices indices)
 /*
    1. This function tries to obtain an un-explored state from the unexplored
       stl container, depending on which algorithm is selected.
@@ -211,7 +276,8 @@ int get_bistate(int direction, searchparameters *parameters, searchinfo *info)
 	   Index to of the next unexplored state in the state list.
 	   o.w. -1 if there are no more unexplored states.
    4. Written 5/31/07.
-*/
+   5. Modified 1/15/19 to delete nodes from open_g1_values, open_g2_values, open_f1_values, open_f2_values.
+   */
 {
 	static int depth = 0, max_depth;
 	int index;
@@ -230,15 +296,24 @@ int get_bistate(int direction, searchparameters *parameters, searchinfo *info)
                if(forward_bfs_heap.empty()) return -1;
 			      item = forward_bfs_heap.delete_min();
 			      index = item.state_index;
+               if((*states)[index].open1 == 1) {
+                  open_g1_values[(*states)[index].g1 + (*states)[index].h1].delete_element((*states)[index].g1);
+                  open_f1_values.delete_element((*states)[index].g1 + (*states)[index].h1);
+                  open_g1_h1_h2_values[(*states)[index].h1][(*states)[index].h2].delete_element((*states)[index].g1);
+               }
                //info->states_cpu += (double) (clock() - start_time) / CLOCKS_PER_SEC;
 			      return(index);
 			      break;
-		      case 4:  //cbfs using min-max heaps
-			      break;
-		      case 5:  //cbfs using min-max stacks
-			      break;
-		      case 6:  //CBFS: Cylce through LB instead of depth.  Use min-max heaps.
-			      break;
+            case 4:  // best first search using clusters
+               if ((*clusters).empty(1, indices.g, indices.h1, indices.h2)) return(-1);
+               index = clusters->pop(1, indices.g, indices.h1, indices.h2, states);
+               if ((*states)[index].open1 == 1) {
+                  open_g1_values[(*states)[index].g1 + (*states)[index].h1].delete_element((*states)[index].g1);
+                  open_f1_values.delete_element((*states)[index].g1 + (*states)[index].h1);
+                  open_g1_h1_h2_values[(*states)[index].h1][(*states)[index].h2].delete_element((*states)[index].g1);
+               }
+               return(index);
+               break;
             default:
                fprintf(stderr, "This method has not been implemented yet\n\n");
                exit(1);
@@ -255,14 +330,23 @@ int get_bistate(int direction, searchparameters *parameters, searchinfo *info)
                if (reverse_bfs_heap.empty()) return -1;
                item = reverse_bfs_heap.delete_min();
                index = item.state_index;
+               if((*states)[index].open2 == 1) {
+                  open_g2_values[(*states)[index].g2 + (*states)[index].h2].delete_element((*states)[index].g2);
+                  open_f2_values.delete_element((*states)[index].g2 + (*states)[index].h2);
+                  open_g2_h1_h2_values[(*states)[index].h1][(*states)[index].h2].delete_element((*states)[index].g2);
+               }
                //info->states_cpu += (double) (clock() - start_time) / CLOCKS_PER_SEC;
                return(index);
                break;
-            case 4:  //cbfs using min-max heaps
-               break;
-            case 5:  //cbfs using min-max stacks
-               break;
-            case 6:  //CBFS: Cylce through LB instead of depth.  Use min-max heaps.
+            case 4:  // best first search using clusters
+               if ((*clusters).empty(2, indices.g, indices.h1, indices.h2)) return(-1);
+               index = clusters->pop(2, indices.g, indices.h1, indices.h2, states);
+               if ((*states)[index].open2 == 1) {
+                  open_g2_values[(*states)[index].g2 + (*states)[index].h2].delete_element((*states)[index].g2);
+                  open_f2_values.delete_element((*states)[index].g2 + (*states)[index].h2);
+                  open_g2_h1_h2_values[(*states)[index].h1][(*states)[index].h2].delete_element((*states)[index].g2);
+               }
+               return(index);
                break;
             default:
                fprintf(stderr, "This method has not been implemented yet\n\n");
@@ -279,8 +363,50 @@ int get_bistate(int direction, searchparameters *parameters, searchinfo *info)
 
 //_________________________________________________________________________________________________
 
-void insert_bidirectional_unexplored(heap_record rec, int depth, int direction, searchparameters *parameters)
+State_index get_bistate_from_cluster(Clusters *clusters, Cluster_indices indices, bistates_array *states, int direction)
+/*
+   1. This function gets an unexplored state from the cluster specified by indices.
+   2. Input arguments
+      a. clusters = stores the clusters of open nodes.
+      b. indices = the indices of the cluster from which to get the node.
+      c. states = store the states.
+   3. Output
+      index = index (in states) of the next unexplored state in the state list.
+      o.w. -1 if there are no more unexplored states.
+   4. Created 5/31/19 by modifying get_bistate from c:\sewell\research\pancake\pancake_code\meet_in_middle.cpp.
+      a. Deleted the various cases that were in get_bistate.  This function is designed only to get a node from a cluster.
+      b. Deleted search_parameters and search_info from the input parameters.
+*/
 {
+   State_index index;
+
+   if (direction == 1) {
+      if ((*clusters).empty(1, indices.g, indices.h1, indices.h2)) return(-1);
+      index = clusters->pop(1, indices.g, indices.h1, indices.h2, states);
+      if ((*states)[index].open1 == 1) {
+         open_g1_values[(*states)[index].g1 + (*states)[index].h1].delete_element((*states)[index].g1);
+         open_f1_values.delete_element((*states)[index].g1 + (*states)[index].h1);
+         open_g1_h1_h2_values[(*states)[index].h1][(*states)[index].h2].delete_element((*states)[index].g1);
+      }
+      return(index);
+   } else {
+      if ((*clusters).empty(1, indices.g, indices.h1, indices.h2)) return(-1);
+      index = clusters->pop(2, indices.g, indices.h1, indices.h2, states);
+      if ((*states)[index].open2 == 1) {
+         open_g2_values[(*states)[index].g2 + (*states)[index].h2].delete_element((*states)[index].g2);
+         open_f2_values.delete_element((*states)[index].g2 + (*states)[index].h2);
+         open_g2_h1_h2_values[(*states)[index].h1][(*states)[index].h2].delete_element((*states)[index].g2);
+      }
+      return(index);
+   }
+}
+
+//_________________________________________________________________________________________________
+
+__int64 insert_bidirectional_unexplored(bistates_array *states, heap_record rec, int depth, int direction, searchparameters *parameters, Clusters *clusters, Cluster_indices indices)
+{
+   __int64     index_in_clusters = 0;
+
    switch(direction) {
       case 1:  // Forward Direction
 	      switch(parameters->search_strategy){
@@ -295,18 +421,8 @@ void insert_bidirectional_unexplored(heap_record rec, int depth, int direction, 
 		      case 3:  // best fs
 			      forward_bfs_heap.insert(rec);
 			      break;
-		      case 4:  //cbfs using min-max heaps
-               //forward_cbfs_heaps[depth].insert(rec);
-               fprintf(stderr, "This method has not been implemented yet\n\n");
-			      break;
-		      case 5:  //cbfs using min-max stacks
-               //forward_cbfs_stacks->insert(depth, (int) rec.key, rec.state_index);
-               //cbfs_stacks->check_stacks();
-               fprintf(stderr, "This method has not been implemented yet\n\n");
-			      break;
-		      case 6:  //CBFS: Cylce through LB instead of depth.  Use min-max heaps.
-               //forward_cbfs_heaps[LB].insert(rec);
-               fprintf(stderr, "This method has not been implemented yet\n\n");
+		      case 4:  // best first search using clusters
+               index_in_clusters = clusters->insert(1, indices.g, indices.h1, indices.h2, rec.state_index, states);
 			      break;
          }
          break;
@@ -323,20 +439,11 @@ void insert_bidirectional_unexplored(heap_record rec, int depth, int direction, 
 		      case 3:  // best fs
 			      reverse_bfs_heap.insert(rec);
 			      break;
-		      case 4:  //cbfs using min-max heaps
-               //reverse_cbfs_heaps[depth].insert(rec);
-               fprintf(stderr, "This method has not been implemented yet\n\n");
-			      break;
-		      case 5:  //cbfs using min-max stacks
-               //reverse_cbfs_stacks->insert(depth, (int) rec.key, rec.state_index);
-               //cbfs_stacks->check_stacks();
-               fprintf(stderr, "This method has not been implemented yet\n\n");
-			      break;
-		      case 6:  //CBFS: Cylce through LB instead of depth.  Use min-max heaps.
-               //reverse_cbfs_heaps[LB].insert(rec);
-               fprintf(stderr, "This method has not been implemented yet\n\n");
-			      break;
+            case 4:  // best first search using clusters
+               index_in_clusters = clusters->insert(2, indices.g, indices.h1, indices.h2, rec.state_index, states);
+               break;
          }
          break;
    }
+   return(index_in_clusters);
 }

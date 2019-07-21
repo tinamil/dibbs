@@ -7,7 +7,6 @@
 */
 
 #include "main.h"
-#include <limits>
 
 bistates_array states;                 // Stores the states
 unsigned char  *goal;                  // goal sequence of pancakes
@@ -24,15 +23,19 @@ int      algorithm;           /* -a option: algorithm
 int      best_measure = 1;    /* -b option: best_measure
                                  1 = f = g + h
                                  2 = f_bar = f_d + g_d - h_d' = 2*g_d + h_d - h_d'
-                                 3 = f_d - (g_d /(MAX_DEPTH + 1) Break ties in f_d in favor of states with larger g_d.*/
+                                 3 = f_d - (g_d /(MAX_DEPTH + 1) Break ties in f_d in favor of states with larger g_d.
+                                 4 = f_bar_d - (g_d /(MAX_DEPTH + 1) Break ties in fbar_d in favor of states with larger g_d.
+                                 5 = max(2*g_d, f_d) MM priority function.
+                                 6 = max(2*g_d + 1, f_d) MMe priority function.
+                                 7 = max(2*g_d, f_d) + (g_d /(MAX_DEPTH + 1) MM priority function.  Break ties in favor of states with smaller g_d.
+                                 8 = max(2*g_d + 1, f_d) + (g_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with smaller g_d.
+                                 9 = max(2*g_d + 1, f_d) - (g_d /(MAX_DEPTH + 1) MMe priority function.  Break ties in favor of states with larger g_d.*/
 int      gap_x = 0;           // -g option: Value of X for the GAP-X heuristic.  See "Bidirectional Search That Is Guaranteed to Meet in the Middle."
 int      search_strategy = 3; /* -e option: search (exploration) strategy
                                  1 = depth first search
                                  2 = breadth first search
                                  3 = best first search
-                                 4 = cyclic best first search
-                                 5 = cyclic best first search using min_max_stacks
-                                 6 = CBFS: Cylce through LB instead of depth.  Use min-max heaps. */
+                                 4 = best first search using clusters */
 int      prn_info;            // -p option: controls level of printed info
 double   seed = 3.1567;       // -s option: random seed (def = 3.1567)
 
@@ -41,17 +44,29 @@ double   seed = 3.1567;       // -s option: random seed (def = 3.1567)
 min_max_heap   forward_bfs_heap;          // min-max heap for the forward best first search
 min_max_heap   reverse_bfs_heap;          // min-max heap for the reverse best first search
 
+// Data strutures for keeping track of g1_min, g2_min, f1_min, f2_min.
+
+min_max_multiset  open_g1_values[MAX_DEPTH + 1];   // open_g1_values[f] is a multiset representation of the g1 values of the open nodes in the forward direction with f1(v) = f.  It is designed for keeping track of the minimum value of g among the open nodes.
+min_max_multiset  open_g2_values[MAX_DEPTH + 1];   // open_g2_values[f] is a multiset representation of the g2 values of the open nodes in the reverse direction with f2(v) = f.  It is designed for keeping track of the minimum value of g among the open nodes.
+min_max_multiset  open_f1_values;                  // This is a multiset representation of the f1 values of the open nodes in the forward direction.  It is designed for keeping track of the minimum value of f among the open nodes.
+min_max_multiset  open_f2_values;                  // This is a multiset representation of the f2 values of the open nodes in the reverse direction.  It is designed for keeping track of the minimum value of f among the open nodes.
+min_max_multiset  open_g1_h1_h2_values[MAX_DEPTH + 1][MAX_DEPTH + 1];   // open_g1_h1_h2_values[a][b] is a multiset representation of the g1 values of the open nodes in the forward direction with h1(v) = a and h2(v) = b.  It is designed for keeping track of the minimum value of g among the open nodes.
+min_max_multiset  open_g2_h1_h2_values[MAX_DEPTH + 1][MAX_DEPTH + 1];   // open_g2_h1_h2_values[a][b] is a multiset representation of the g2 values of the open nodes in the forward direction with h1(v) = a and h2(v) = b.  It is designed for keeping track of the minimum value of g among the open nodes.
+
+
 int main(int ac, char **av)
 {
-   int               direction;
+   int               direction, status;
    searchparameters  parameters;
    searchinfo        a_star_info, bidirectional_info, info;
-   unsigned char     UB, z;
+   unsigned char     f_lim, f_bar_lim, g_lim, h_lim, UB, z;
    //unsigned char     seq[6] = {5, 1, 3, 2, 5, 4};   // Simple test problem.
    //unsigned char     seq[6] = {5, 2, 4, 3, 5, 1};   // Simple test problem.
    //unsigned char     seq[11] = {10,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10};  // Allocate a sequence with 10 pancakes.
-   unsigned char     seq[21] = { 20,  4,  5,  2,  6, 13, 20, 19, 14, 17, 12,  3, 11, 15,  1, 18,  7,  9,  8, 10, 16 };  // A randomly generated instance that is hard for reverse A*.
+   unsigned char     seq[11] = {10,  9,  1, 10,  7,  8,  2,  5,  6,  3,  4};  // A sequence that caused an error in MM.
+   //unsigned char     seq[21] = { 20,  4,  5,  2,  6, 13, 20, 19, 14, 17, 12,  3, 11, 15,  1, 18,  7,  9,  8, 10, 16 };  // A randomly generated instance that is hard for reverse A*.
    //unsigned char     seq[31] = {30, 20, 13,  2, 24, 28, 26,  1,  6, 29, 23, 10, 22,  3, 12,  9,  5,  7, 30, 27,  4, 11, 19, 25, 21, 18, 16, 17, 14, 15,  8}; // A randomly generated instance that is hard for forward A*.
+
    parseargs(ac, av);
 
    //read_data(prob_file);
@@ -79,13 +94,24 @@ int main(int ac, char **av)
    //parameters.best_measure = 1;
    //parameters.algorithm = 3;
    //z = a_star(seq, 2, UB, &parameters, &a_star_info);
-   parameters.best_measure = 2;
-   parameters.algorithm = 4;
-   parameters.gap_x = 5;
-   z = bidirectional(seq, UB, &parameters, &bidirectional_info);
+   //parameters.best_measure = 2;
+   //parameters.algorithm = 4;
+   //parameters.gap_x = 5;
+   //UB = z;
+   //z = bidirectional(seq, UB, &parameters, &bidirectional_info);
+   //z = bidirectional2(seq, UB, &parameters, &bidirectional_info);
+   //z = MM(seq, UB, &parameters, &bidirectional_info);
+   //UB = z;
+   //status = bi_expansions(seq, UB, &parameters, &bidirectional_info);
+   //f_lim = z; f_bar_lim = z + 5; g_lim = z; h_lim = 2 * z;
+   //min_expansions(seq, z, f_lim, f_bar_lim, g_lim, h_lim, &parameters, &bidirectional_info);
+   z = FtF(seq, 0, UB, &parameters, &bidirectional_info);
 
-   //random_instances();
+   random_instances();
    //problems();
+
+   //test_vec();
+   //test_clusters();
 
    // Keep the console window open.
    printf("Press ENTER to continue");
@@ -177,8 +203,7 @@ unsigned char gap_lb(unsigned char *cur_seq, int direction, int x)
          if (abs(cur_seq[i] - cur_seq[i - 1]) > 1) LB = LB + 1;
       }
       if ((abs(n + 1 - cur_seq[n]) > 1) && (cur_seq[n] > x)) LB = LB + 1;
-   }
-   else {
+   } else {
       for (i = 2; i <= n; i++) {
          if ((cur_seq[i] <= x) || (cur_seq[i - 1] <= x)) continue;
          if (abs(inv_source[cur_seq[i]] - inv_source[cur_seq[i - 1]]) > 1) LB = LB + 1;
@@ -226,8 +251,7 @@ unsigned char update_gap_lb(unsigned char *cur_seq, int direction, int i, unsign
 
       if ((pi <= x) || (pi1 <= x) || (abs(pi1 - pi) <= 1)) LB = LB + 1;
       if ((p1 <= x) || (pi1 <= x) || (abs(pi1 - p1) <= 1)) LB = LB - 1;
-   }
-   else {
+   } else {
       p1 = cur_seq[1];
       pi = cur_seq[i];
       inv_p1 = inv_source[p1];
@@ -235,8 +259,7 @@ unsigned char update_gap_lb(unsigned char *cur_seq, int direction, int i, unsign
       if (i < n) {
          pi1 = cur_seq[i + 1];
          inv_pi1 = inv_source[cur_seq[i + 1]];
-      }
-      else {
+      } else {
          pi1 = n + 1;
          inv_pi1 = n + 1;
       }
@@ -292,12 +315,12 @@ void random_instances()
    __int64        n_explored_sum_a_star_reverse, n_generated_sum_a_star_reverse;
    __int64        n_explored_sum_b, n_generated_sum_b, n_explored_sum_ida, n_generated_sum_ida;
    double         cpu_sum_a_star_forward, cpu_sum_a_star_reverse, cpu_sum_b, cpu_sum_ida;
-   unsigned char  *seq, UB;
+   unsigned char  f_lim, f_bar_lim, g_lim, h_lim, *seq, UB;
    searchparameters  a_star_parameters, b_parameters, ida_parameters;
    searchinfo        a_star_forward_info, a_star_reverse_info, b_info, ida_info;
 
-   n = 40;
-   n_reps = 1000;
+   n = 20;
+   n_reps = 1;
    seq = new unsigned char[n + 1];
 
    ida_parameters.algorithm = 1;
@@ -315,7 +338,7 @@ void random_instances()
 
    a_star_parameters.algorithm = 2;
    a_star_parameters.best_measure = 1;
-   a_star_parameters.gap_x = 0;
+   a_star_parameters.gap_x = 1;
    a_star_parameters.search_strategy = search_strategy;
    a_star_parameters.cpu_limit = CPU_LIMIT;
    a_star_parameters.prn_info = prn_info;
@@ -331,8 +354,8 @@ void random_instances()
    z_sum_a_star_reverse = 0;
 
    b_parameters.algorithm = 4;
-   b_parameters.best_measure = 2;
-   b_parameters.gap_x = 0;
+   b_parameters.best_measure = 6;
+   b_parameters.gap_x = 1;
    b_parameters.search_strategy = search_strategy;
    b_parameters.cpu_limit = CPU_LIMIT;
    b_parameters.prn_info = prn_info;
@@ -358,6 +381,7 @@ void random_instances()
       for (i = 1; i <= n; i++) seq[i] = i;
       random_permutation2(n, seq, &seed);
       initialize(seq, n);
+      //if (rep <= 2) continue;
 
       z_ida = iterative_deepening(seq, &ida_parameters, &ida_info);
       //if(ida_info.best_z == ida_info.h1_root + 0) {
@@ -391,14 +415,19 @@ void random_instances()
       //n_generated_sum_a_star_reverse += a_star_reverse_info.n_generated_reverse;
       //z_sum_a_star_reverse += a_star_reverse_info.best_z;
 
-      UB = z_ida;
-      z_b = bidirectional(seq, UB, &b_parameters, &b_info);
-      //if ((z_b == -1) || (b_info.optimal == 0)) printf("Warning: z_b == -1 or b_info.optmial == 0\n");
-      ///if (z_b != z_ida) printf("Error: z_b != z_ida\n");
+      //UB = z_ida;
+      //z_b = bidirectional(seq, UB, &b_parameters, &b_info);
+      //z_b = bidirectional2(seq, UB, &b_parameters, &b_info);
+      //prn_sequence(seq, n);
+      z_b = MM(seq, UB, &b_parameters, &b_info);
+      if ((z_b == -1) || (b_info.optimal == 0)) printf("Warning: z_b == -1 or b_info.optmial == 0\n");
+      if (z_b != z_ida) printf("Error: z_b != z_ida\n");
       cpu_sum_b += b_info.cpu;
       n_explored_sum_b += b_info.n_explored;
       n_generated_sum_b += b_info.n_generated;
       z_sum_b += b_info.best_z;
+      f_lim = z_ida; f_bar_lim = 2 * z_ida; g_lim = z_ida; h_lim = 2 * z_ida;
+      //min_expansions(seq, z_ida, f_lim, f_bar_lim, g_lim, h_lim, &b_parameters, &b_info);
 
       ////prn_sequence(seq, n);
    }
@@ -420,13 +449,13 @@ void problems()
    __int64        n_explored_sum_a_star_reverse, n_generated_sum_a_star_reverse;
    __int64        n_explored_sum_b, n_generated_sum_b, n_explored_sum_ida, n_generated_sum_ida;
    double         cpu_sum_a_star_forward, cpu_sum_a_star_reverse, cpu_sum_b, cpu_sum_ida;
-   unsigned char  *seq, UB;
+   unsigned char  f_lim, f_bar_lim, g_lim, h_lim, *seq, UB;
    searchparameters  a_star_parameters, b_parameters, ida_parameters;
    searchinfo        a_star_forward_info, a_star_reverse_info, b_info, ida_info;
 
-   n = 20;
+   n = 16;
    gap = 0;
-   n_reps = 100;
+   n_reps = 50;
    seq = new unsigned char[n + 1];
 
    ida_parameters.algorithm = 1;
@@ -460,7 +489,7 @@ void problems()
    z_sum_a_star_reverse = 0;
 
    b_parameters.algorithm = 4;
-   b_parameters.best_measure = 2;
+   b_parameters.best_measure = 1;
    b_parameters.gap_x = 3;
    b_parameters.search_strategy = search_strategy;
    b_parameters.cpu_limit = CPU_LIMIT;
@@ -472,7 +501,7 @@ void problems()
 
 
    for (rep = 1; rep <= n_reps; rep++) {
-      printf("rep = %3d\n", rep);
+      //printf("rep = %3d\n", rep);
 
       // Get the next problem.
 
@@ -492,34 +521,38 @@ void problems()
       n_generated_sum_ida += ida_info.n_generated;
       z_sum_ida += ida_info.best_z;
 
-      a_star_parameters.algorithm = 2;
-      UB = z_ida;
-      z_a_star_forward = a_star(seq, 1, UB, &a_star_parameters, &a_star_forward_info);
-      if ((z_a_star_forward == -1) || (a_star_forward_info.optimal == 0)) printf("Warning: z_a_star_forward == -1 or a_star_forward_info.optmial == 0\n");
-      if (z_a_star_forward != z_ida) printf("Error: z_a_star_forward != z_ida\n");
-      cpu_sum_a_star_forward += a_star_forward_info.cpu;
-      n_explored_sum_a_star_forward += a_star_forward_info.n_explored_forward;
-      n_generated_sum_a_star_forward += a_star_forward_info.n_generated_forward;
-      z_sum_a_star_forward += a_star_forward_info.best_z;
+      //a_star_parameters.algorithm = 2;
+      //UB = z_ida;
+      //z_a_star_forward = a_star(seq, 1, UB, &a_star_parameters, &a_star_forward_info);
+      //if ((z_a_star_forward == -1) || (a_star_forward_info.optimal == 0)) printf("Warning: z_a_star_forward == -1 or a_star_forward_info.optmial == 0\n");
+      //if (z_a_star_forward != z_ida) printf("Error: z_a_star_forward != z_ida\n");
+      //cpu_sum_a_star_forward += a_star_forward_info.cpu;
+      //n_explored_sum_a_star_forward += a_star_forward_info.n_explored_forward;
+      //n_generated_sum_a_star_forward += a_star_forward_info.n_generated_forward;
+      //z_sum_a_star_forward += a_star_forward_info.best_z;
 
-      a_star_parameters.algorithm = 3;
-      UB = z_ida;
-      z_a_star_reverse = a_star(seq, 2, UB, &a_star_parameters, &a_star_reverse_info);
-      if ((z_a_star_reverse == -1) || (a_star_reverse_info.optimal == 0)) printf("Warning: z_a_star_reverse == -1 or a_star_reverse_info.optmial == 0\n");
-      if (z_a_star_reverse != z_ida) printf("Error: z_a_star_reverse != z_ida\n");
-      cpu_sum_a_star_reverse += a_star_reverse_info.cpu;
-      n_explored_sum_a_star_reverse += a_star_reverse_info.n_explored_reverse;
-      n_generated_sum_a_star_reverse += a_star_reverse_info.n_generated_reverse;
-      z_sum_a_star_reverse += a_star_reverse_info.best_z;
+      //a_star_parameters.algorithm = 3;
+      //UB = z_ida;
+      //z_a_star_reverse = a_star(seq, 2, UB, &a_star_parameters, &a_star_reverse_info);
+      //if ((z_a_star_reverse == -1) || (a_star_reverse_info.optimal == 0)) printf("Warning: z_a_star_reverse == -1 or a_star_reverse_info.optmial == 0\n");
+      //if (z_a_star_reverse != z_ida) printf("Error: z_a_star_reverse != z_ida\n");
+      //cpu_sum_a_star_reverse += a_star_reverse_info.cpu;
+      //n_explored_sum_a_star_reverse += a_star_reverse_info.n_explored_reverse;
+      //n_generated_sum_a_star_reverse += a_star_reverse_info.n_generated_reverse;
+      //z_sum_a_star_reverse += a_star_reverse_info.best_z;
 
-      UB = z_ida;
-      z_b = bidirectional(seq, UB, &b_parameters, &b_info);
-      if ((z_b == -1) || (b_info.optimal == 0)) printf("Warning: z_b == -1 or b_info.optmial == 0\n");
-      if (z_b != z_ida) printf("Error: z_b != z_ida\n");
+      //UB = z_ida;
+      //z_b = bidirectional(seq, UB, &b_parameters, &b_info);
+      //z_b = bidirectional2(seq, UB, &b_parameters, &b_info);
+      //z_b = MM(seq, UB, &b_parameters, &b_info);
+      //if ((z_b == -1) || (b_info.optimal == 0)) printf("Warning: z_b == -1 or b_info.optmial == 0\n");
+      //if (z_b != z_ida) printf("Error: z_b != z_ida\n");
       cpu_sum_b += b_info.cpu;
       n_explored_sum_b += b_info.n_explored;
       n_generated_sum_b += b_info.n_generated;
       z_sum_b += b_info.best_z;
+      f_lim = z_ida; f_bar_lim = 2 * z_ida; g_lim = z_ida; h_lim = 2 * z_ida;
+      min_expansions(seq, z_ida, f_lim, f_bar_lim, g_lim, h_lim, &b_parameters, &b_info);
 
       ////prn_sequence(seq, n);
    }
@@ -534,7 +567,7 @@ void problems()
 
 //_________________________________________________________________________________________________
 
-void analyze_states(bistates_array *states, int max_f, int max_e, int max_g, __int64 **Fexp, __int64 **Rexp, __int64 **Fstored, __int64 **Rstored, __int64 **Fexp_g_h, __int64 **Rexp_g_h, __int64 **Fstored_g_h, __int64 **Rstored_g_h)
+void analyze_states(bistates_array *states, int max_f, int max_e, int max_g, __int64 **Fexp, __int64 **Rexp, __int64 **Fstored, __int64 **Rstored, __int64 **Fexp_g_h, __int64 **Rexp_g_h, __int64 **Fstored_g_h, __int64 **Rstored_g_h, __int64 **Fexp_g_f, __int64 **Rexp_g_f, __int64 **Fstored_g_f, __int64 **Rstored_g_f)
 /*
    1. This function analyzes the list of states.
    2. Input Variables
@@ -542,10 +575,21 @@ void analyze_states(bistates_array *states, int max_f, int max_e, int max_g, __i
       b. max_f = number of rows to allocate to F and R.
       c. max_e = number of columns to allocate to F and R.
    3. Ouptut Variables
-      a. F(l,e+1) = |{v: f1(v) = l, g1(v)-h2(v) = e}|.
-      b. R(l,e+1) = |{v: f2(v) = l, g2(v)-h1(v) = e}|.
+      a. Fexp(l,e+1) = |{v expanded in forward direction: f1(v) = l, g1(v)-h2(v) = e}|.
+      b. Rexp(l,e+1) = |{v expanded in reverse direction: f2(v) = l, g2(v)-h1(v) = e}|.
+      c. Fstored(l,e+1) = |{v stored in forward direction: f1(v) = l, g1(v)-h2(v) = e}|.
+      d. Rstored(l,e+1) = |{v stored in reverse direction: f2(v) = l, g2(v)-h1(v) = e}|.
+      e. Fexp_g_h(g,h)  = |{v expanded in forward direction: g1(v) = g, h1(v)-h2(v) = h}|.
+      f. Rexp_g_h(g,h)  = |{v expanded in reverse direction: g2(v) = g, h2(v)-h1(v) = h}|.
+      e. Fstored_g_h(g,h)  = |{v stored in forward direction: g1(v) = g, h1(v)-h2(v) = h}|.
+      f. Rstored_g_h(g,h)  = |{v stored in reverse direction: g2(v) = g, h2(v)-h1(v) = h}|.
+      g. Fexp_g_f(g,f)  = |{v expanded in forward direction: g1(v) = g, f1(v) = f}|.
+      h. Rexp_g_f(g,f)  = |{v expanded in reverse direction: g2(v) = g, f2(v) = f}|.
+      i. Fstored_g_f(g,f)  = |{v stored in forward direction: g1(v) = g, f1(v) = f}|.
+      j. Rstored_g_f(g,f)  = |{v stored in reverse direction: g2(v) = g, f2(v) = f}|.
    4. Created 8/8/17 by modifying c:\sewell\research\pancake\matlab\analyze_states.m.
    5. Modified 4/30/18 to distinguish between expanded nodes and stored nodes.
+   6. Modified 1/24/19 to compute Fexp_g_f, Rexp_g_f, Fstored_g_f, Rstored_g_f.
 */
 {
    int               i, e, e1, e2, f1, f2, g, h, max_e1, max_e2, max_g1, max_g2, max_h_diff1, max_h_diff2, max_l1, max_l2, min_h_diff1, min_h_diff2, min_l1, min_l2;
@@ -567,6 +611,10 @@ void analyze_states(bistates_array *states, int max_f, int max_e, int max_g, __i
    Fstored_g_h = new __int64*[max_g + 1];
    Rexp_g_h    = new __int64*[max_g + 1];
    Rstored_g_h = new __int64*[max_g + 1];
+   Fexp_g_f = new __int64*[max_g + 1];
+   Fstored_g_f = new __int64*[max_g + 1];
+   Rexp_g_f = new __int64*[max_g + 1];
+   Rstored_g_f = new __int64*[max_g + 1];
    for (i = 0; i <= max_g; i++) {
       Fexp_g_h[i]    = new __int64[2*max_g + 1];
       Fstored_g_h[i] = new __int64[2*max_g + 1];
@@ -574,6 +622,14 @@ void analyze_states(bistates_array *states, int max_f, int max_e, int max_g, __i
       Rexp_g_h[i]    = new __int64[2*max_g + 1];
       Rstored_g_h[i] = new __int64[2*max_g + 1];
       for (h = 0; h <= 2*max_g; h++) { Rexp_g_h[i][h] = 0; Rstored_g_h[i][h] = 0; }
+
+      Fexp_g_f[i] = new __int64[max_f + 1];
+      Fstored_g_f[i] = new __int64[max_f + 1];
+      for (h = 0; h <= max_f; h++) { Fexp_g_f[i][h] = 0; Fstored_g_f[i][h] = 0; }
+      Rexp_g_f[i] = new __int64[max_f + 1];
+      Rstored_g_f[i] = new __int64[max_f + 1];
+      for (h = 0; h <= max_f; h++) { Rexp_g_f[i][h] = 0; Rstored_g_f[i][h] = 0; }
+
    }
    max_e1 = 0;
    max_e2 = 0;
@@ -597,7 +653,8 @@ void analyze_states(bistates_array *states, int max_f, int max_e, int max_g, __i
          Fstored[f1][e1]++;
          if ((*states)[i].open1 == 0) Fexp[f1][e1]++;
          Fstored_g_h[g1][h1-h2+max_g+1]++;
-         if ((*states)[i].open1 == 0) Fexp_g_h[g1][h1-h2+max_g+1]++;
+         Fstored_g_f[g1][f1]++;
+         if ((*states)[i].open1 == 0) { Fexp_g_h[g1][h1 - h2 + max_g + 1]++; Fexp_g_f[g1][f1]++; }
          max_e1 = max(max_e1, e1);  max_g1 = max(max_g1, (int)g1);  max_h_diff1 = max(max_h_diff1, (int)h1 - (int)h2);  max_l1 = max(max_l1, f1);  min_h_diff1 = min(min_h_diff1, (int)h1 - (int)h2);  min_l1 = min(min_l1, f1);
       }
       if (((*states)[i].open2 == 0) || ((*states)[i].open2 == 1)) {
@@ -605,7 +662,8 @@ void analyze_states(bistates_array *states, int max_f, int max_e, int max_g, __i
          Rstored[f2][e2]++;
          if ((*states)[i].open2 == 0) Rexp[f2][e2]++;
          Rstored_g_h[g2][h2 - h1 + max_g + 1]++;
-         if ((*states)[i].open2 == 0) Rexp_g_h[g2][h2 - h1 + max_g + 1]++;
+         Rstored_g_f[g2][f2]++;
+         if ((*states)[i].open2 == 0) { Rexp_g_h[g2][h2 - h1 + max_g + 1]++; Rexp_g_f[g2][f2]++; }
          max_e2 = max(max_e2, e2);  max_g2 = max(max_g2, (int) g2);  max_h_diff2 = max(max_h_diff2, (int)h2 - (int)h1);  max_l2 = max(max_l2, f2);  min_h_diff2 = min(min_h_diff2, (int) h2 - (int) h1);  min_l2 = min(min_l2, f2);
       }
    }
@@ -722,6 +780,63 @@ void analyze_states(bistates_array *states, int max_f, int max_e, int max_g, __i
    } else {
       printf("Reverse Stored: Rstored_g_h(g,h) = |{v: g2(v) = g, h2(v)-h1(v) = h}| is empty\n");
    }
+
+   // Print Fexp_g_f.
+
+   if (min_l1 <= max_l1) {
+      printf("Forward Expanded: Fexp_g_f(g,f) = |{v: g1(v) = g, f1(v) = f}|\n");
+      printf("    "); for (f1 = min_l1; f1 <= max_l1; f1++) printf("%8d ", f1); printf("\n");
+      for (g = 0; g <= max_g1; g++) {
+         printf("%2d: ", g);
+         for (f1 = min_l1; f1 <= max_l1; f1++) printf("%8I64d ", Fexp_g_f[g][f1]);
+         printf("\n");
+      }
+   } else {
+      printf("Forward Expanded: Fexp_g_f(g,f) = |{v: g1(v) = g, f1(v) = f}| is empty\n");
+   }
+
+   // Print Rexp_g_f.
+
+   if (min_l2 <= max_l2) {
+      printf("Reverse Expanded: Rexp_g_f(g,f) = |{v: g2(v) = g, f2(v) = f}|\n");
+      printf("    "); for (f2 = min_l2; f2 <= max_l2; f2++) printf("%8d ", f2); printf("\n");
+      for (g = 0; g <= max_g2; g++) {
+         printf("%2d: ", g);
+         for (f2 = min_l2; f2 <= max_l2; f2++) printf("%8I64d ", Rexp_g_f[g][f2]);
+         printf("\n");
+      }
+   } else {
+      printf("Reverse Expanded: Rexp_g_f(g,f) = |{v: g2(v) = g, f2(v) = f}| is empty\n");
+   }
+
+   // Print Fstored_g_f.
+
+   if (min_l1 <= max_l1) {
+      printf("Forward Stored: Fstored_g_f(g,f) = |{v: g1(v) = g, f1(v) = f}|\n");
+      printf("    "); for (f1 = min_l1; f1 <= max_l1; f1++) printf("%8d ", f1); printf("\n");
+      for (g = 0; g <= max_g1; g++) {
+         printf("%2d: ", g);
+         for (f1 = min_l1; f1 <= max_l1; f1++) printf("%8I64d ", Fstored_g_f[g][f1]);
+         printf("\n");
+      }
+   } else {
+      printf("Forward Stored: Fstored_g_f(g,f) = |{v: g1(v) = g, f1(v) = f}| is empty\n");
+   }
+
+   // Print Rstored_g_f.
+
+   if (min_l2 <= max_l2) {
+      printf("Reverse Stored: Rstored_g_f(g,f) = |{v: g2(v) = g, f2(v) = f}|\n");
+      printf("    "); for (f2 = min_l2; f2 <= max_l2; f2++) printf("%8d ", f2); printf("\n");
+      for (g = 0; g <= max_g2; g++) {
+         printf("%2d: ", g);
+         for (f2 = min_l2; f2 <= max_l2; f2++) printf("%8I64d ", Rstored_g_f[g][f2]);
+         printf("\n");
+      }
+   } else {
+      printf("Reverse Stored: Rstored_g_f(g,f) = |{v: g2(v) = g, f2(v) = f}| is empty\n");
+   }
+
 }
 
 //_________________________________________________________________________________________________
@@ -772,6 +887,68 @@ void reverse_vector2(int j, int n, unsigned char *x, unsigned char *y)
       y[i] = x[j];
       i++;
       j--;
+   }
+}
+
+//_________________________________________________________________________________________________
+
+unsigned char max(const unsigned char a, const unsigned char b)
+/*
+   1. This routine returns the maximum of two unsigned char.
+   2. Written 5/30/19.
+*/
+{
+   if (a >= b) return(a); else return(b);
+}
+
+//_________________________________________________________________________________________________
+
+unsigned char max(const unsigned char a, const unsigned char b, const unsigned char c)
+/*
+   1. This routine returns the maximum of three unsigned char.
+   2. Written 5/30/19.
+*/
+{
+   if (a >= b) {
+      if (a >= c) {
+         return(a);
+      } else {
+         if (b >= c) return(b); else return(c);
+      }
+   } else {
+      if (b >= c) return(b); else return(c);
+   }
+}
+
+//_________________________________________________________________________________________________
+
+unsigned char min(const unsigned char a, const unsigned char b)
+/*
+   1. This routine returns the minimum of two unsigned char.
+   2. Written 5/30/19.
+*/
+{
+   if (a <= b) return(a); else return(b);
+}
+
+//_________________________________________________________________________________________________
+
+unsigned char min(const unsigned char a, const unsigned char b, const unsigned char c)
+/*
+   1. This routine returns the minimum of three unsigned char.
+   2. Written 5/30/19.
+*/
+{
+   if (a <= b) {
+      if (a <= c) {
+         return(a);
+      }
+      else {
+         if (b <= c) return(b); else return(c);
+      }
+   }
+   else {
+      if (b <= c) return(b); else return(c);
    }
 }
 
@@ -853,4 +1030,115 @@ int check_solution(unsigned char *seq, unsigned char *solution, unsigned char z)
    delete[] seq2;
 
    return(1);
+}
+
+//_________________________________________________________________________________________________
+
+void test_vec()
+{
+   __int64              n;
+   double               cpu;
+   clock_t              start_time;
+   Cluster_indices      indices;
+   typedef  int         element;
+   vec<element>         v;
+   //vec<cluster_indices>   v;
+
+   n = 100000000;
+   //v.allocate(n);
+
+   start_time = clock();
+   for (int i = 1; i <= n; i++) {
+      //indices.g = 1;   indices.h1 = 2;   indices.h2 = 3;
+      v.push(i);
+      if (i % 1000000 == 0) printf("%10d  %10I64d  %10I64d\n", i, v.size(), v.n_alloc());
+   }
+   cpu = (double)(clock() - start_time) / CLOCKS_PER_SEC;
+   printf("%8.2f\n", cpu);
+   //v.print();
+
+   //for (__int64 i = 1; i <= n/2; i++) {
+   //   v.remove(i);
+   //   if (i % 1000000 == 0) printf("%10I64d  %10I64d  %10I64d\n", i, v.size(), v.n_alloc());
+   //}
+   //v.print();
+
+   start_time = clock();
+   for (__int64 i = 1; i <= n; i++) {
+      v.pop();
+      if (i % 1000000 == 0) printf("%10I64d  %10I64d  %10I64d\n", i, v.size(), v.n_alloc());
+   }
+   cpu = (double)(clock() - start_time) / CLOCKS_PER_SEC;
+   printf("%8.2f\n", cpu);
+   //v.print();
+
+   // Keep the console window open.
+   printf("Press ENTER to continue");
+   cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+   v.release_memory();
+
+   // Keep the console window open.
+   printf("Press ENTER to continue");
+   cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+//_________________________________________________________________________________________________
+
+void test_clusters()
+{
+   unsigned char        g, h1, h2;
+   __int64              n;
+   double               cpu;
+   clock_t              start_time;
+   Cluster_indices      indices;
+   set<Cluster_indices> s;
+   Clusters             clustrs;
+
+   n = 100;
+   //v.allocate(n);
+
+   //start_time = clock();
+   //for (int i = 1; i <= n; i++) {
+   //   indices.g = i % 17;   indices.h1 = 2 * i % 19;   indices.h2 = 3 * i % 23;
+   //   s.insert(indices);
+   //   if (i % 1000000 == 0) printf("%10d  %10I64d\n", i, s.size());
+   //}
+   //cpu = (double)(clock() - start_time) / CLOCKS_PER_SEC;
+   //printf("%8.2f\n", cpu);
+   ////v.print();
+
+   //for (auto p = s.begin(); p != s.end(); p++) {
+   //   printf("%3d  %3d  %3d\n", p->g, p->h1, p->h2);
+   //}
+
+   clustrs.initialize(0, MAX_DEPTH, MAX_DEPTH);
+   start_time = clock();
+   for (int i = 1; i <= n; i++) {
+      //g = i % 17;   h1 = 2 * i % 19;   h2 = 3 * i % 23;
+      g = i % 11;   h1 = 2 * i % 13;   h2 = 3 * i % 17;
+      clustrs.insert(1, g, h1, h2, i, NULL);
+      clustrs.insert(2, g, h1, h2, i, NULL);
+      if (i % 1000000 == 0) printf("%10d  %10I64d\n", i, s.size());
+   }
+   cpu = (double)(clock() - start_time) / CLOCKS_PER_SEC;
+   printf("%8.2f\n", cpu);
+   clustrs.compute_LBs();
+   clustrs.print_min_g();
+   clustrs.print_LBs();
+   //clustrs.print_min_g_n_open();
+   //clustrs.print_nonempty_clusters();
+   clustrs.check_clusters();
+
+   //for (int i = 1; i <= n / 2; i++) {
+   //   //g = i % 17;   h1 = 2 * i % 19;   h2 = 3 * i % 23;
+   //   g = i % 11;   h1 = 2 * i % 13;   h2 = 3 * i % 17;
+   //   clustrs.pop(1, g, h1, h2);
+   //   clustrs.pop(2, g, h1, h2);
+   //}
+   clustrs.check_clusters();
+
+   // Keep the console window open.
+   printf("Press ENTER to continue");
+   cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
