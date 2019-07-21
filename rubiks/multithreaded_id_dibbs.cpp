@@ -171,7 +171,7 @@ bool expand_layer(stack& my_stack,
     my_stack.pop();
   }
 
-  moodycamel::BlockingConcurrentQueue <std::shared_ptr<Node>> buffer(10000);
+  moodycamel::BlockingConcurrentQueue <std::shared_ptr<Node>> buffer(100000, thread_count, thread_count);
   moodycamel::ProducerToken initial_ptok(buffer);
   while (tstack.size() < thread_count) {
     while (!tstack.empty()) {
@@ -337,7 +337,7 @@ bool store_layer(stack& my_stack,
     my_stack.pop();
   }
 
-  moodycamel::BlockingConcurrentQueue <std::shared_ptr<Node>> buffer(10000);
+  moodycamel::BlockingConcurrentQueue <std::shared_ptr<Node>> buffer(100000, thread_count, thread_count);
   moodycamel::ProducerToken initial_ptok(buffer);
   while (tstack.size() < thread_count) {
     while (!tstack.empty()) {
@@ -419,7 +419,7 @@ bool store_layer(stack& my_stack,
 }
 
 
-bool iterative_expand_then_test(
+bool iterative_store_then_check(
   stack& my_stack,
   stack& other_stack,
   std::shared_ptr<Node> other_stack_initializer,
@@ -507,28 +507,25 @@ bool iterative_layer(stack my_stack,
   }
   else {
     if (iteration == 18) {
-      other_set->clear();
-      other_stack.push(other_stack_initializer);
-      if (id_check_layer(other_stack, my_set, my_set_mutex, upper_bound, best_node, !reverse, pdb_type, start_state, iteration, c_star, count, thread_count)) {
+      //Depth 17 already stored in memory in both directions.  If forward was smaller, then iteratively expand forward and check against backward.
+      my_set->clear();
+      my_stack.push(my_stack_initializer);
+      if (id_check_layer(my_stack, other_set, other_set_mutex, upper_bound, best_node, reverse, pdb_type, start_state, iteration, c_star, count, thread_count)) {
         return true;
       }
-      my_set->clear();
+      other_set->clear();
     }
     else {
-      my_set->clear();
-      other_set->clear();
-
       other_stack.push(other_stack_initializer);
-      if (iterative_expand_then_test(other_stack, my_stack, my_stack_initializer, my_set, my_set_mutex, iteration - 1, iteration, c_star, upper_bound, best_node, !reverse, pdb_type, start_state, count, node_limit, thread_count)) {
+      if (iterative_store_then_check(other_stack, my_stack, my_stack_initializer, my_set, my_set_mutex, iteration - 1, iteration, c_star, upper_bound, best_node, !reverse, pdb_type, start_state, count, node_limit, thread_count)) {
         return true;
       }
     }
 
     my_stack.push(my_stack_initializer);
-    if (iterative_expand_then_test(my_stack, other_stack, other_stack_initializer, my_set, my_set_mutex, iteration, iteration - 1, c_star, upper_bound, best_node, reverse, pdb_type, start_state, count, node_limit, thread_count)) {
+    if (iterative_store_then_check(my_stack, other_stack, other_stack_initializer, my_set, my_set_mutex, iteration, iteration - 1, c_star, upper_bound, best_node, reverse, pdb_type, start_state, count, node_limit, thread_count)) {
       return true;
     }
-
     iteration += 1;
     c_star = iteration;
   }
