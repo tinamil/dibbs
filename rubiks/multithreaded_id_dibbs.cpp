@@ -1,8 +1,15 @@
+#include <limits>
+#include <shared_mutex>
+#include <atomic>
+#include <concurrent_unordered_set.h>
+#include "rubiks.h"
+#include "node.h"
+#include "thread_safe_stack.hpp"
 #include "multithreaded_id_dibbs.h"
 
 typedef std::stack<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node> > > stack;
 typedef thread_safe_stack<std::shared_ptr<Node> > tstack;
-typedef std::unordered_set<std::shared_ptr<Node>, NodeHash, NodeEqual> hash_set;
+typedef concurrency::concurrent_unordered_set<std::shared_ptr<Node>, NodeHash, NodeEqual> hash_set;
 
 template <class a, class b>
 void move_nodes(a& origin, b& destination) {
@@ -19,16 +26,17 @@ void move_nodes(a& origin, b& destination) {
 
 std::shared_ptr<Node> make_node(const hash_set* other_set,
   std::shared_mutex* other_set_mutex,
-  std::shared_ptr<Node> prev_node,
+  const std::shared_ptr<Node>& prev_node,
   const uint8_t* start_state,
   const int face,
   const int rotation,
   const bool reverse,
   const Rubiks::PDB type,
-  std::shared_ptr<Node>& best_node,
+  std::shared_ptr<Node>& best_node, 
   std::atomic_uint8_t& upper_bound)
 {
   auto new_node = std::make_shared<Node>(prev_node, start_state, prev_node->depth + 1, face, rotation, reverse, type);
+
   if (other_set != nullptr) {
     other_set_mutex->lock_shared();
     uint8_t reverse_cost = 0;
@@ -55,58 +63,10 @@ std::shared_ptr<Node> make_node(const hash_set* other_set,
   return new_node;
 }
 
-//void expand_node(std::shared_ptr<Node> prev_node,
-//  stack& my_stack,
-//  hash_set* my_set,
-//  std::shared_mutex* my_set_mutex,
-//  const hash_set* other_set,
-//  std::shared_mutex* other_set_mutex,
-//  const unsigned int id_depth,
-//  std::atomic_uint8_t& upper_bound,
-//  std::shared_ptr<Node>& best_node,
-//  const bool reverse,
-//  const Rubiks::PDB type,
-//  const uint8_t* start_state,
-//  std::atomic_uint64_t& count) {
-//
-//  ++count;
-//  if (count % 1000000 == 0) {
-//    std::cout << count << "\n";
-//  }
-//
-//  for (int face = 0; face < 6; ++face)
-//  {
-//    if (prev_node->depth > 0 && Rubiks::skip_rotations(prev_node->get_face(), face))
-//    {
-//      continue;
-//    }
-//    for (int rotation = 0; rotation < 3; ++rotation)
-//    {
-//      auto new_node = make_node(other_set, other_set_mutex, prev_node, start_state, face, rotation, reverse, type, best_node, upper_bound);
-//      if (new_node->f_bar <= id_depth) {
-//        my_stack.push(new_node);
-//      }
-//      else if (my_set != nullptr && prev_node->passed_threshold) {
-//        my_set_mutex->lock();
-//        auto existing = my_set->find(prev_node);
-//        if (existing == my_set->end()) {
-//          my_set->insert(prev_node);
-//        }
-//        else if ((*existing)->depth > prev_node->depth) {
-//          //Must check because we are searching in DFS order, not BFS
-//          my_set->erase(existing);
-//          my_set->insert(prev_node);
-//        }
-//        my_set_mutex->unlock();
-//      }
-//    }
-//  }
-//}
-
-void expand_node_with_buffer(std::shared_ptr<Node> prev_node,
+void expand_node(std::shared_ptr<Node> prev_node,
   stack& my_stack,
-  moodycamel::BlockingConcurrentQueue <std::shared_ptr<Node>>* buffer,
-  const moodycamel::ProducerToken* ptok,
+  hash_set* my_set,
+  std::shared_mutex* my_set_mutex,
   const hash_set* other_set,
   std::shared_mutex* other_set_mutex,
   const unsigned int id_depth,
@@ -121,7 +81,6 @@ void expand_node_with_buffer(std::shared_ptr<Node> prev_node,
   if (count % 1000000 == 0) {
     std::cout << count << "\n";
   }
-  using namespace std::chrono_literals;
 
   for (int face = 0; face < 6; ++face)
   {
@@ -135,9 +94,14 @@ void expand_node_with_buffer(std::shared_ptr<Node> prev_node,
       if (new_node->f_bar <= id_depth) {
         my_stack.push(new_node);
       }
-      else if (buffer != nullptr && prev_node->passed_threshold) {
-        while (!buffer->try_enqueue(*ptok, prev_node)) {
-          std::this_thread::sleep_for(1ms);
+      else if (my_set != nullptr && prev_node->passed_threshold) {
+        auto result = my_set->insert(new_node); //[existing, success]
+        while (!result.second && (*result.first)->depth > new_node->depth) {
+          my_set_mutex->lock();
+          //Must check because we are searching in DFS order, not BFS
+          my_set->unsafe_erase(*result.first);
+          my_set_mutex->unlock();
+          result = my_set->insert(new_node);
         }
       }
     }
@@ -160,8 +124,10 @@ bool expand_layer(stack& my_stack,
   const size_t node_limit,
   const size_t thread_count)
 {
-  std::cout << "Expanding layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
-  my_set->clear();
+  std::cout << (my_set == nullptr ? "ID-Checking" : (other_set == nullptr ? "Storing" : "Expanding")) << " layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
+  if (my_set != nullptr) {
+    my_set->clear();
+  }
 
   if (my_stack.empty() || upper_bound <= c_star) return true;
 
@@ -171,47 +137,21 @@ bool expand_layer(stack& my_stack,
     my_stack.pop();
   }
 
-  moodycamel::BlockingConcurrentQueue <std::shared_ptr<Node>> buffer(100000, thread_count, thread_count);
-  moodycamel::ProducerToken initial_ptok(buffer);
   while (tstack.size() < thread_count) {
     while (!tstack.empty()) {
       auto [success, node] = tstack.pop();
-      expand_node_with_buffer(node, my_stack, &buffer, &initial_ptok, other_set, other_set_mutex, id_depth, upper_bound, best_node, reverse, type, start_state, count);
+      expand_node(node, my_stack, my_set, my_set_mutex, other_set, other_set_mutex, id_depth, upper_bound, best_node, reverse, type, start_state, count);
     }
     move_nodes(my_stack, tstack);
     if (tstack.empty()) break;
   }
 
   std::thread* thread_array = new std::thread[thread_count];
-  std::thread buffer_writer = std::thread([&buffer, &my_set, &my_set_mutex]() {
-    moodycamel::ConsumerToken ctok(buffer);
-    std::shared_ptr<Node> output_buffer[1000];
-    while (true) {
-      auto size = buffer.wait_dequeue_bulk(ctok, output_buffer, 1000);
-      my_set_mutex->lock();
-      for (int i = 0; i < size; ++i) {
-        if (output_buffer[i] == nullptr) {
-          my_set_mutex->unlock();
-          return;
-        }
-        auto existing = my_set->find(output_buffer[i]);
-        if (existing == my_set->end()) {
-          my_set->insert(output_buffer[i]);
-        }
-        else if ((*existing)->depth > output_buffer[i]->depth) {
-          //Must check because we are searching in DFS order, not BFS
-          my_set->erase(existing);
-          my_set->insert(output_buffer[i]);
-        }
-      }
-      my_set_mutex->unlock();
-    }
-    });
 
+  std::shared_mutex stack_mutex;
   for (size_t i = 0; i < thread_count; ++i) {
-    thread_array[i] = std::thread([&my_stack, &tstack, &buffer, my_set, my_set_mutex, other_set, other_set_mutex, &upper_bound, &best_node, reverse, type, start_state, id_depth, c_star, &count, node_limit]() {
+    thread_array[i] = std::thread([&my_stack, &tstack, my_set, my_set_mutex, other_set, other_set_mutex, &upper_bound, &best_node, reverse, type, start_state, id_depth, c_star, &count, node_limit, &stack_mutex]() {
       stack this_stack;
-      moodycamel::ProducerToken ptok(buffer);
       while (upper_bound > c_star) {
         if (this_stack.empty()) {
           auto [success, node] = tstack.pop();
@@ -220,12 +160,12 @@ bool expand_layer(stack& my_stack,
         }
         std::shared_ptr<Node> next_node = this_stack.top();
         this_stack.pop();
-        expand_node_with_buffer(next_node, this_stack, &buffer, &ptok, other_set, other_set_mutex, id_depth, upper_bound, best_node, reverse, type, start_state, count);
+        expand_node(next_node, this_stack, my_set, my_set_mutex, other_set, other_set_mutex, id_depth, upper_bound, best_node, reverse, type, start_state, count);
 
-        if ((my_set->size() + other_set->size()) > node_limit) {
-          my_set_mutex->lock();
+        if (my_set != nullptr && my_set->size() > node_limit) {
+          stack_mutex.lock();
           move_nodes(this_stack, my_stack);
-          my_set_mutex->unlock();
+          stack_mutex.unlock();
           return;
         }
       }
@@ -237,9 +177,6 @@ bool expand_layer(stack& my_stack,
   }
   delete[] thread_array;
 
-  buffer.enqueue(nullptr);
-  buffer_writer.join();
-
   while (!tstack.empty()) {
     auto [success, node] = tstack.pop();
     my_stack.push(node);
@@ -249,7 +186,7 @@ bool expand_layer(stack& my_stack,
     return false;
   }
 
-  std::cout << "Finished expanding layer " << id_depth << "; size= " << my_set->size() << '\n';
+  std::cout << "Finished " << (my_set == nullptr ? "ID-checking" : (other_set == nullptr ? "storing" : "expanding")) << " layer " << id_depth << '\n';
   return true;
 }
 
@@ -266,50 +203,7 @@ bool id_check_layer(stack& my_stack,
   std::atomic_uint64_t& count,
   const size_t thread_count)
 {
-  std::cout << "ID checking layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
-
-  if (my_stack.empty() || upper_bound <= c_star) return true;
-
-  tstack tstack;
-  while (!my_stack.empty()) {
-    tstack.push(my_stack.top());
-    my_stack.pop();
-  }
-
-  while (tstack.size() < thread_count) {
-    while (!tstack.empty()) {
-      auto [success, node] = tstack.pop();
-      expand_node_with_buffer(node, my_stack, nullptr, nullptr, other_set, other_set_mutex, id_depth, upper_bound, best_node, reverse, type, start_state, count);
-    }
-    move_nodes(my_stack, tstack);
-    if (tstack.empty()) break;
-  }
-
-  std::thread* thread_array = new std::thread[thread_count];
-  for (size_t i = 0; i < thread_count; ++i) {
-    thread_array[i] = std::thread([&my_stack, &tstack, other_set, other_set_mutex, &upper_bound, &best_node, reverse, type, start_state, id_depth, c_star, &count]() {
-
-      stack this_stack;
-      while (upper_bound > c_star) {
-        if (this_stack.empty()) {
-          auto [success, node] = tstack.pop();
-          if (success == false) { return; }
-          this_stack.push(node);
-        }
-
-        std::shared_ptr<Node> next_node = this_stack.top();
-        this_stack.pop();
-        expand_node_with_buffer(next_node, this_stack, nullptr, nullptr, other_set, other_set_mutex, id_depth, upper_bound, best_node, reverse, type, start_state, count);
-      }
-      });
-  }
-
-  for (size_t i = 0; i < thread_count; ++i) {
-    thread_array[i].join();
-  }
-  delete[] thread_array;
-
-  std::cout << "Finished ID checking layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
+  expand_layer(my_stack, nullptr, nullptr, other_set, other_set_mutex, upper_bound, best_node, reverse, type, start_state, id_depth, c_star, count, std::numeric_limits<size_t>::max(), thread_count);
   return upper_bound <= c_star;
 }
 
@@ -319,103 +213,15 @@ bool store_layer(stack& my_stack,
   std::shared_mutex* my_set_mutex,
   std::shared_ptr<Node>& best_node,
   const bool reverse,
-  const Rubiks::PDB type,
+  const Rubiks::PDB pdb_type,
   const uint8_t* start_state,
   const unsigned int id_depth,
   std::atomic_uint64_t& count,
   const size_t node_limit,
   const size_t thread_count)
 {
-  std::cout << "Storing layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
   std::atomic_uint8_t tmp;
-  my_set->clear();
-  if (my_stack.empty()) return true;
-
-  tstack tstack;
-  while (!my_stack.empty()) {
-    tstack.push(my_stack.top());
-    my_stack.pop();
-  }
-
-  moodycamel::BlockingConcurrentQueue <std::shared_ptr<Node>> buffer(100000, thread_count, thread_count);
-  moodycamel::ProducerToken initial_ptok(buffer);
-  while (tstack.size() < thread_count) {
-    while (!tstack.empty()) {
-      auto [success, node] = tstack.pop();
-      expand_node_with_buffer(node, my_stack, &buffer, &initial_ptok, nullptr, nullptr, id_depth, tmp, best_node, reverse, type, start_state, count);
-    }
-    move_nodes(my_stack, tstack);
-    if (tstack.empty()) break;
-  }
-
-  std::thread* thread_array = new std::thread[thread_count];
-  std::thread buffer_writer = std::thread([&buffer, &my_set, &my_set_mutex]() {
-    moodycamel::ConsumerToken ctok(buffer);
-    std::shared_ptr<Node> output_buffer[1000];
-    while (true) {
-      auto size = buffer.wait_dequeue_bulk(ctok, output_buffer, 1000);
-      my_set_mutex->lock();
-      for (int i = 0; i < size; ++i) {
-        if (output_buffer[i] == nullptr) {
-          my_set_mutex->unlock();
-          return;
-        }
-        auto existing = my_set->find(output_buffer[i]);
-        if (existing == my_set->end()) {
-          my_set->insert(output_buffer[i]);
-        }
-        else if ((*existing)->depth > output_buffer[i]->depth) {
-          //Must check because we are searching in DFS order, not BFS
-          my_set->erase(existing);
-          my_set->insert(output_buffer[i]);
-        }
-      }
-      my_set_mutex->unlock();
-    }
-    });
-
-
-  for (size_t i = 0; i < thread_count; ++i) {
-    thread_array[i] = std::thread([&my_stack, &my_set, &my_set_mutex, &tstack, &buffer, &best_node, reverse, type, start_state, id_depth, &count, node_limit]() {
-      std::atomic_uint8_t tmp;
-      moodycamel::ProducerToken ptok(buffer);
-      stack this_stack;
-      while (true) {
-        if (this_stack.empty()) {
-          auto [success, node] = tstack.pop();
-          if (success == false) { return; }
-          this_stack.push(node);
-        }
-
-        std::shared_ptr<Node> next_node = this_stack.top();
-        this_stack.pop();
-        expand_node_with_buffer(next_node, this_stack, &buffer, &ptok, nullptr, nullptr, id_depth, tmp, best_node, reverse, type, start_state, count);
-
-        if (my_set->size() > node_limit) {
-          my_set_mutex->lock();
-          move_nodes(this_stack, my_stack);
-          my_set_mutex->unlock();
-          return;
-        }
-      }
-      });
-  }
-
-  for (size_t i = 0; i < thread_count; ++i) {
-    thread_array[i].join();
-  }
-  delete[] thread_array;
-
-  buffer.enqueue(nullptr);
-  buffer_writer.join();
-
-  while (!tstack.empty()) {
-    auto [success, node] = tstack.pop();
-    my_stack.push(node);
-  }
-
-  std::cout << "Finished storing layer " << id_depth << "; size= " << my_set->size() << '\n';
-  return my_stack.empty();
+  return expand_layer(my_stack, my_set, my_set_mutex, nullptr, nullptr, tmp, best_node, reverse, pdb_type, start_state, id_depth, 0, count, node_limit, thread_count);
 }
 
 

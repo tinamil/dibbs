@@ -7,7 +7,7 @@
 #include "hash.hpp"
 #include "rubiks.h"
 
-#define HISTORY
+//#define HISTORY
 
 struct Node
 {

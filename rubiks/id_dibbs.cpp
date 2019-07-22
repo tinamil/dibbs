@@ -1,4 +1,9 @@
+#include <limits>
+#include <unordered_set>
+#include <algorithm>
+#include "node.h"
 #include "id_dibbs.h"
+#include "rubiks.h"
 
 typedef std::stack<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node> > > stack;
 typedef std::unordered_set<std::shared_ptr<Node>, NodeHash, NodeEqual> hash_set;

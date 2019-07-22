@@ -1,4 +1,11 @@
+#include <stdint.h>
+#include <stack>
+#include <queue>
+#include <atomic>
 #include "a_star.h"
+#include "rubiks.h"
+#include "node.h"
+#include "thread_safe_stack.hpp"
 
 typedef std::stack<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>> node_stack;
 typedef thread_safe_stack<std::shared_ptr<Node>> thread_safe_node_stack;

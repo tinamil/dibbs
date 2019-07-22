@@ -1,11 +1,5 @@
 #pragma once
-#include <stdint.h>
-#include <stack>
-#include <queue>
-#include <atomic>
-#include "node.h"
 #include "rubiks.h"
-#include "thread_safe_stack.hpp"
 
 namespace search
 {
