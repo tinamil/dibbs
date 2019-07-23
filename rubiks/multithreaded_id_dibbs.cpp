@@ -15,11 +15,11 @@ template <class a, class b>
 void move_nodes(a& origin, b& destination) {
   std::vector<std::shared_ptr<Node>> list;
   while (!origin.empty()) {
-    list.push_back(origin.top());
+    list.push_back(std::move(origin.top()));
     origin.pop();
   }
   for (int i = (int)list.size() - 1; i >= 0; --i) {
-    destination.push(list[i]);
+    destination.push(std::move(list[i]));
   }
   return;
 }
@@ -32,7 +32,7 @@ std::shared_ptr<Node> make_node(const hash_set* other_set,
   const int rotation,
   const bool reverse,
   const Rubiks::PDB type,
-  std::shared_ptr<Node>& best_node, 
+  std::shared_ptr<Node>& best_node,
   std::atomic_uint8_t& upper_bound)
 {
   auto new_node = std::make_shared<Node>(prev_node, start_state, prev_node->depth + 1, face, rotation, reverse, type);
@@ -92,16 +92,20 @@ void expand_node(std::shared_ptr<Node> prev_node,
     {
       auto new_node = make_node(other_set, other_set_mutex, prev_node, start_state, face, rotation, reverse, type, best_node, upper_bound);
       if (new_node->f_bar <= id_depth) {
-        my_stack.push(new_node);
+        my_stack.push(std::move(new_node));
       }
       else if (my_set != nullptr && prev_node->passed_threshold) {
-        auto result = my_set->insert(new_node); //[existing, success]
-        while (!result.second && (*result.first)->depth > new_node->depth) {
+        auto insertion_node = prev_node;
+        if ((new_node->reverse_heuristic - new_node->heuristic) > 1) {
+          insertion_node = new_node;
+        }
+        auto [existing, success] = my_set->insert(insertion_node);
+        if (!success && (*existing)->depth > insertion_node->depth) {
           my_set_mutex->lock();
           //Must check because we are searching in DFS order, not BFS
-          my_set->unsafe_erase(*result.first);
+          my_set->unsafe_erase(*existing);
+          my_set->insert(insertion_node);
           my_set_mutex->unlock();
-          result = my_set->insert(new_node);
         }
       }
     }
@@ -140,7 +144,7 @@ bool expand_layer(stack& my_stack,
   while (tstack.size() < thread_count) {
     while (!tstack.empty()) {
       auto [success, node] = tstack.pop();
-      expand_node(node, my_stack, my_set, my_set_mutex, other_set, other_set_mutex, id_depth, upper_bound, best_node, reverse, type, start_state, count);
+      expand_node(std::move(node), my_stack, my_set, my_set_mutex, other_set, other_set_mutex, id_depth, upper_bound, best_node, reverse, type, start_state, count);
     }
     move_nodes(my_stack, tstack);
     if (tstack.empty()) break;
@@ -156,9 +160,9 @@ bool expand_layer(stack& my_stack,
         if (this_stack.empty()) {
           auto [success, node] = tstack.pop();
           if (success == false) { return; }
-          this_stack.push(node);
+          this_stack.push(std::move(node));
         }
-        std::shared_ptr<Node> next_node = this_stack.top();
+        std::shared_ptr<Node> next_node = std::move(this_stack.top());
         this_stack.pop();
         expand_node(next_node, this_stack, my_set, my_set_mutex, other_set, other_set_mutex, id_depth, upper_bound, best_node, reverse, type, start_state, count);
 
@@ -179,7 +183,7 @@ bool expand_layer(stack& my_stack,
 
   while (!tstack.empty()) {
     auto [success, node] = tstack.pop();
-    my_stack.push(node);
+    my_stack.push(std::move(node));
   }
 
   if (my_stack.size() > 0) {
@@ -228,7 +232,7 @@ bool store_layer(stack& my_stack,
 bool iterative_store_then_check(
   stack& my_stack,
   stack& other_stack,
-  std::shared_ptr<Node> other_stack_initializer,
+  const std::shared_ptr<Node>& other_stack_initializer,
   hash_set* my_set,
   std::shared_mutex* my_set_mutex,
   const unsigned int id_depth,
@@ -254,9 +258,9 @@ bool iterative_store_then_check(
 }
 
 bool iterative_layer(stack my_stack,
-  std::shared_ptr<Node> my_stack_initializer,
+  const std::shared_ptr<Node>& my_stack_initializer,
   stack other_stack,
-  std::shared_ptr<Node> other_stack_initializer,
+  const std::shared_ptr<Node>& other_stack_initializer,
   hash_set* my_set,
   std::shared_mutex* my_set_mutex,
   hash_set* other_set,
@@ -339,15 +343,16 @@ bool iterative_layer(stack my_stack,
 }
 
 
-size_t search::multithreaded_id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
+std::pair<uint64_t, double> search::multithreaded_id_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
 {
+  auto c_start = clock();
   const unsigned int thread_count = std::thread::hardware_concurrency();
 
   std::cout << "ID-DIBBS" << std::endl;
   if (Rubiks::is_solved(start_state))
   {
     std::cout << "Given a solved cube.  Nothing to solve." << std::endl;
-    return 0;
+    return std::make_pair(0, 0);
   }
 
   std::atomic_uint8_t upper_bound = std::numeric_limits<uint8_t>::max();
@@ -387,7 +392,7 @@ size_t search::multithreaded_id_dibbs(const uint8_t* start_state, const Rubiks::
 
   while (best_node == nullptr || upper_bound > c_star)
   {
-    if (last_forward_size <= last_backward_size) {
+    if (forward_set.size() <= backward_set.size()){
       std::cout << last_forward_size << " <= " << last_backward_size << " ; Searching forward first\n";
       iterative_layer(forward_stack, start, backward_stack, goal, storage_set, my_set_mutex, other_set, other_set_mutex, iteration, c_star, upper_bound, best_node, false, pdb_type, start_state, count, last_forward_size, last_backward_size, node_limit, thread_count);
     }
@@ -399,5 +404,8 @@ size_t search::multithreaded_id_dibbs(const uint8_t* start_state, const Rubiks::
 
   std::cout << "Solved DIBBS: " << " Count = " << count << std::endl;
   std::cout << "Solution: " << best_node->print_solution() << std::endl;
-  return count;
+
+  auto c_end = clock();
+  auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
+  return std::make_pair(count, time_elapsed);
 }

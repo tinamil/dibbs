@@ -3,5 +3,5 @@
 
 namespace search
 {
-  size_t id_dibbs(const uint8_t* state, const Rubiks::PDB pdb_type);
+  std::pair<uint64_t, double> id_dibbs(const uint8_t* state, const Rubiks::PDB pdb_type);
 }

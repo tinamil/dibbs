@@ -102,15 +102,16 @@ void expand_level(const uint8_t g_lim,
 
 }
 
-size_t search::gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
+std::pair<uint64_t, double> search::gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
 {
+  auto c_start = clock();
   std::cout << "GBFHS" << std::endl;
   const uint8_t epsilon = 1;
 
   if (Rubiks::is_solved(start_state))
   {
     std::cout << "Given a solved cube.  Nothing to solve." << std::endl;
-    return 0;
+    return std::make_pair(0, 0);
   }
 
   hash_set front_open, back_open;
@@ -141,5 +142,8 @@ size_t search::gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
 
   std::cout << "Solved GBFHS: " << " Count = " << count << std::endl;
   std::cout << "Solution: " << best_node->print_solution() << std::endl;
-  return count;
+ 
+  auto c_end = clock();
+  auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
+  return std::make_pair(count, time_elapsed);
 }

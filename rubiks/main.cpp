@@ -14,9 +14,9 @@
 using namespace std;
 using namespace Rubiks;
 
-//#define ASTAR 
+#define ASTAR 
 #define DIBBS 
-//#define GBFHS
+#define GBFHS
 
 void search_cubes()
 {
@@ -25,8 +25,6 @@ void search_cubes()
   vector<uint64_t> count_results;
   vector<int64_t> time_results;
 
-  clock_t c_start, c_end;
-  int64_t time_elapsed_ms;
   for (size_t i = 0; i < cubes.size(); ++i)
   {
     //Trigger PDB generation before beginning search to remove from timing
@@ -34,28 +32,22 @@ void search_cubes()
     Rubiks::pattern_lookup(__goal, cubes[i], type);
 
     #ifdef ASTAR
-    c_start = clock();
-    count_results.push_back(search::multithreaded_ida_star(cubes[i], type, false));
-    c_end = clock();
-    time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
-    time_results.push_back(time_elapsed_ms);
-    cout << "IDA* CPU time used: " << time_elapsed_ms << " s" << endl;
+    auto [count, time_elapsed] = search::multithreaded_ida_star(cubes[i], type, false);
+    count_results.push_back(count);
+    time_results.push_back(time_elapsed);
+    cout << "IDA* CPU time used: " << time_elapsed << " s" << endl;
     #endif
     #ifdef DIBBS
-    c_start = clock();
-    count_results.push_back(search::multithreaded_id_dibbs(cubes[i], type));
-    c_end = clock();
-    time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
-    time_results.push_back(time_elapsed_ms);
-    cout << "DIBBS CPU time used: " << time_elapsed_ms << " s" << endl;
+    auto [count, time_elapsed] = search::multithreaded_id_dibbs(cubes[i], type);
+    count_results.push_back(count);
+    time_results.push_back(time_elapsed);
+    cout << "DIBBS CPU time used: " << time_elapsed << " s" << endl;
     #endif
     #ifdef GBFHS
-    c_start = clock();
-    count_results.push_back(search::id_gbfhs(cubes[i], type));
-    c_end = clock();
-    time_elapsed_ms = (c_end - c_start) / CLOCKS_PER_SEC;
-    time_results.push_back(time_elapsed_ms);
-    cout << "GBFHS CPU time used: " << time_elapsed_ms << " s" << endl;
+    auto [count, time_elapsed] = search::id_gbfhs(cubes[i], type);
+    count_results.push_back(count);
+    time_results.push_back(time_elapsed);
+    cout << "ID-GBFHS CPU time used: " << time_elapsed << " s" << endl;
     #endif
     Rubiks::pattern_lookup(nullptr, cubes[i], Rubiks::PDB::clear_state);
   }

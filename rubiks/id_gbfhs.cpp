@@ -127,8 +127,9 @@ void id_gbfhs_expand_level(const uint8_t g_lim,
 
 //TODO: Reverse directions to put the smaller size into the frontier and iterative deepening the larger size
 //TODO: Use DIBBS, 2G
-size_t search::id_gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
+std::pair<uint64_t, double> search::id_gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
 {
+  auto c_start = clock();
   std::cout << "ID-GBFHS" << std::endl;
 
   const uint64_t max_nodes = 200000000Ui64; //200 million 
@@ -137,7 +138,7 @@ size_t search::id_gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
   if (Rubiks::is_solved(start_state))
   {
     std::cout << "Given a solved cube.  Nothing to solve." << std::endl;
-    return 0;
+    return std::make_pair(0,0);
   }
 
   hash_set frontier;
@@ -183,5 +184,7 @@ size_t search::id_gbfhs(const uint8_t * start_state, const Rubiks::PDB pdb_type)
 
   std::cout << "Solved GBFHS: " << " Count = " << count << std::endl;
   std::cout << "Solution: " << best_node->print_solution() << std::endl;
-  return count;
+  auto c_end = clock();
+  auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
+  return std::make_pair(count, time_elapsed);
 }

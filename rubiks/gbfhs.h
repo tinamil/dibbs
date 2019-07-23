@@ -11,5 +11,5 @@
 
 namespace search
 {
-  size_t gbfhs(const uint8_t* state, const Rubiks::PDB pdb_type);
+  std::pair<uint64_t, double> gbfhs(const uint8_t* state, const Rubiks::PDB pdb_type);
 }

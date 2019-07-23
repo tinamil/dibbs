@@ -10,15 +10,16 @@
 typedef std::stack<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>> node_stack;
 typedef thread_safe_stack<std::shared_ptr<Node>> thread_safe_node_stack;
 
-uint64_t search::ida_star(const uint8_t* start_state, const Rubiks::PDB pdb_type, bool reverse)
+std::pair<uint64_t, double> search::ida_star(const uint8_t* start_state, const Rubiks::PDB pdb_type, bool reverse)
 {
+  auto c_start = clock();
   std::cout << "IDA*" << std::endl;
   node_stack state_stack;
 
   if (Rubiks::is_solved(start_state))
   {
     std::cout << "Given a solved cube.  Nothing to solve." << std::endl;
-    return 0;
+    return std::make_pair(0, 0);
   }
 
   std::shared_ptr<Node> original_node;
@@ -85,7 +86,9 @@ uint64_t search::ida_star(const uint8_t* start_state, const Rubiks::PDB pdb_type
       }
     }
   }
-  return count;
+  auto c_end = clock();
+  auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
+  return std::make_pair(count, time_elapsed);
 }
 
 void expand_node(
@@ -145,8 +148,9 @@ void expand_node(
 
 }
 
-uint64_t search::multithreaded_ida_star(const uint8_t* start_state, const Rubiks::PDB pdb_type, bool reverse)
+std::pair<uint64_t, double> search::multithreaded_ida_star(const uint8_t* start_state, const Rubiks::PDB pdb_type, bool reverse)
 {
+  auto c_start = clock();
   std::cout << "IDA*" << std::endl;
   thread_safe_node_stack state_stack;
   const unsigned int thread_count = std::thread::hardware_concurrency();
@@ -189,7 +193,9 @@ uint64_t search::multithreaded_ida_star(const uint8_t* start_state, const Rubiks
         {
           std::cout << "Solved IDA*: 1" << std::endl;
           std::cout << "Solution: " << new_node->print_solution() << std::endl;
-          return count;
+          auto c_end = clock();
+          auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
+          return std::make_pair(count, time_elapsed);
         }
         if (new_node->combined > id_depth)
         {
@@ -205,7 +211,9 @@ uint64_t search::multithreaded_ida_star(const uint8_t* start_state, const Rubiks
             {
               std::cout << "Solved IDA*: 2" << std::endl;
               std::cout << "Solution: " << new_node2->print_solution() << std::endl;
-              return count;
+              auto c_end = clock();
+              auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
+              return std::make_pair(count, time_elapsed);
             }
             if (new_node2->combined > id_depth)
             {
@@ -229,5 +237,7 @@ uint64_t search::multithreaded_ida_star(const uint8_t* start_state, const Rubiks
   std::cout << "Solved IDA*: " << unsigned int(id_depth) << " Count = " << unsigned long long(count) << std::endl;
   std::cout << "Solution: " << optimal_node->print_solution() << std::endl;
   delete[] thread_array;
-  return count;
+  auto c_end = clock();
+  auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
+  return std::make_pair(count, time_elapsed);
 }
