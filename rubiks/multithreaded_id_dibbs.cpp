@@ -392,12 +392,10 @@ std::pair<uint64_t, double> search::multithreaded_id_dibbs(const uint8_t* start_
 
   while (best_node == nullptr || upper_bound > c_star)
   {
-    if (forward_set.size() <= backward_set.size()){
-      std::cout << last_forward_size << " <= " << last_backward_size << " ; Searching forward first\n";
+    if (forward_set.size() >= backward_set.size()){
       iterative_layer(forward_stack, start, backward_stack, goal, storage_set, my_set_mutex, other_set, other_set_mutex, iteration, c_star, upper_bound, best_node, false, pdb_type, start_state, count, last_forward_size, last_backward_size, node_limit, thread_count);
     }
     else {
-      std::cout << last_forward_size << " > " << last_backward_size << " ; Searching backward first\n";
       iterative_layer(backward_stack, goal, forward_stack, start, other_set, other_set_mutex, storage_set, my_set_mutex, iteration, c_star, upper_bound, best_node, true, pdb_type, start_state, count, last_backward_size, last_forward_size, node_limit, thread_count);
     }
   }
@@ -407,5 +405,5 @@ std::pair<uint64_t, double> search::multithreaded_id_dibbs(const uint8_t* start_
 
   auto c_end = clock();
   auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
-  return std::make_pair(count, time_elapsed);
+  return std::make_pair(uint64_t(count), time_elapsed);
 }

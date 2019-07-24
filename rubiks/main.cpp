@@ -14,16 +14,16 @@
 using namespace std;
 using namespace Rubiks;
 
-#define ASTAR 
+//#define ASTAR 
 #define DIBBS 
-#define GBFHS
+//#define GBFHS
 
 void search_cubes()
 {
   vector<uint8_t*> cubes = RubiksLoader::load_cubes("korf1997.txt");
   PDB type = PDB::a888;
   vector<uint64_t> count_results;
-  vector<int64_t> time_results;
+  vector<double> time_results;
 
   for (size_t i = 0; i < cubes.size(); ++i)
   {
@@ -32,22 +32,28 @@ void search_cubes()
     Rubiks::pattern_lookup(__goal, cubes[i], type);
 
     #ifdef ASTAR
-    auto [count, time_elapsed] = search::multithreaded_ida_star(cubes[i], type, false);
-    count_results.push_back(count);
-    time_results.push_back(time_elapsed);
-    cout << "IDA* CPU time used: " << time_elapsed << " s" << endl;
+    {
+      auto [count, time_elapsed] = search::multithreaded_ida_star(cubes[i], type, false);
+      count_results.push_back(count);
+      time_results.push_back(time_elapsed);
+      cout << "IDA* CPU time used: " << time_elapsed << " s" << endl;
+    }
     #endif
     #ifdef DIBBS
-    auto [count, time_elapsed] = search::multithreaded_id_dibbs(cubes[i], type);
-    count_results.push_back(count);
-    time_results.push_back(time_elapsed);
-    cout << "DIBBS CPU time used: " << time_elapsed << " s" << endl;
+    {
+      auto [count, time_elapsed] = search::multithreaded_id_dibbs(cubes[i], type);
+      count_results.push_back(count);
+      time_results.push_back(time_elapsed);
+      cout << "DIBBS CPU time used: " << time_elapsed << " s" << endl;
+    }
     #endif
     #ifdef GBFHS
-    auto [count, time_elapsed] = search::id_gbfhs(cubes[i], type);
-    count_results.push_back(count);
-    time_results.push_back(time_elapsed);
-    cout << "ID-GBFHS CPU time used: " << time_elapsed << " s" << endl;
+    {
+      auto [count, time_elapsed] = search::id_gbfhs(cubes[i], type);
+      count_results.push_back(count);
+      time_results.push_back(time_elapsed);
+      cout << "ID-GBFHS CPU time used: " << time_elapsed << " s" << endl;
+    }
     #endif
     Rubiks::pattern_lookup(nullptr, cubes[i], Rubiks::PDB::clear_state);
   }

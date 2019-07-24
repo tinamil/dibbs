@@ -158,7 +158,7 @@ std::pair<uint64_t, double> search::multithreaded_ida_star(const uint8_t* start_
   if (Rubiks::is_solved(start_state))
   {
     std::cout << "Given a solved cube.  Nothing to solve." << std::endl;
-    return 0;
+    return std::make_pair<uint64_t, double>(0, 0);
   }
 
   std::shared_ptr<Node> original_node;
@@ -195,7 +195,7 @@ std::pair<uint64_t, double> search::multithreaded_ida_star(const uint8_t* start_
           std::cout << "Solution: " << new_node->print_solution() << std::endl;
           auto c_end = clock();
           auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
-          return std::make_pair(count, time_elapsed);
+          return std::make_pair(uint64_t(count), time_elapsed);
         }
         if (new_node->combined > id_depth)
         {
@@ -213,7 +213,7 @@ std::pair<uint64_t, double> search::multithreaded_ida_star(const uint8_t* start_
               std::cout << "Solution: " << new_node2->print_solution() << std::endl;
               auto c_end = clock();
               auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
-              return std::make_pair(count, time_elapsed);
+              return std::make_pair(uint64_t(count), time_elapsed);
             }
             if (new_node2->combined > id_depth)
             {
@@ -239,5 +239,5 @@ std::pair<uint64_t, double> search::multithreaded_ida_star(const uint8_t* start_
   delete[] thread_array;
   auto c_end = clock();
   auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
-  return std::make_pair(count, time_elapsed);
+  return std::make_pair(uint64_t(count), time_elapsed);
 }
