@@ -72,26 +72,19 @@ void expand_node(std::shared_ptr<Node> prev_node,
       if (new_node->f_bar <= id_depth) {
         my_stack.push(new_node);
       }
-      //else if (my_set != nullptr && (new_node->depth < 16 || (prev_node->passed_threshold && new_node->reverse_heuristic == new_node->depth && upper_bound > id_depth + 1))) {
-      //  auto existing = my_set->find(new_node);
-      //  if (existing == my_set->end()) {
-      //    my_set->insert(new_node);
-      //  }
-      //  else if ((*existing)->depth > new_node->depth) {
-      //    //Must check because we are searching in DFS order, not BFS
-      //    my_set->erase(existing);
-      //    my_set->insert(new_node);
-      //  }
-      //}
       else if (my_set != nullptr && prev_node->passed_threshold) {
-        auto existing = my_set->find(prev_node);
-        if (existing == my_set->end()) {
-          my_set->insert(prev_node);
+        auto insertion_node = prev_node;
+        if ((new_node->reverse_heuristic - new_node->heuristic) > 1) {
+          insertion_node = new_node;
         }
-        else if ((*existing)->depth > prev_node->depth) {
+        auto existing = my_set->find(insertion_node);
+        if (existing == my_set->end()) {
+          my_set->insert(insertion_node);
+        }
+        else if ((*existing)->depth > insertion_node->depth) {
           //Must check because we are searching in DFS order, not BFS
           my_set->erase(existing);
-          my_set->insert(prev_node);
+          my_set->insert(insertion_node);
         }
       }
     }

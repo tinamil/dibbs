@@ -109,11 +109,11 @@ uint32_t Rubiks::get_corner_index(const uint8_t* state)
   return corner_index * 2187 + rot_index;
 }
 
-void Rubiks::restore_corner(const size_t hash_index, uint8_t* state) {
+void Rubiks::restore_corner(const uint64_t hash_index, uint8_t* state) {
   uint8_t puzzle[12];
   uint8_t dual[12];
   assert(hash_index < corner_max_count);
-  const size_t pos_index = hash_index / 2187ui64;
+  const uint64_t pos_index = hash_index / 2187ui64;
   mr::unrank(pos_index, puzzle, dual, 8, 8);
   for (int i = 0; i < 20; ++i) {
     state[i] = 20ui8;
@@ -127,7 +127,7 @@ void Rubiks::restore_corner(const size_t hash_index, uint8_t* state) {
     state[__corner_pos_indices[i]] = __corner_pos_indices[dual[i]];
   }
 
-  size_t rot_index = hash_index % 2187ui64;
+  uint64_t rot_index = hash_index % 2187ui64;
   for (int i = 6; i >= 0; --i)
   {
     state[__corner_rot_indices[i]] = rot_index % 3ui8;
@@ -163,25 +163,25 @@ uint64_t Rubiks::get_index(const uint8_t* state, const int order, const Rubiks::
   }
   switch (type)
   {
-    case PDB::a1997:
-      if (order == 1)       return get_edge_index6a(state);
-      else                  return get_edge_index6b(state);
-    case PDB::a888:
-      if (order == 1)       return get_edge_index8a(state);
-      else                  return get_edge_index8b(state);
-    case PDB::a12:
-      if (order == 1)       return get_new_edge_pos_index(state);
-      else                  return get_new_edge_rot_index(state);
-    case PDB::a81220:
-      if (order == 1)       return get_edge_index8a(state);
-      else if (order == 2)  return get_edge_index8b(state);
-      else if (order == 3)  return get_new_edge_pos_index(state);
-      else if (order == 4)  return get_new_edge_rot_index(state);
-    case PDB::zero:
-    case PDB::clear_state:
-      throw std::runtime_error("Tried to get edge index when using zero heuristic or clearing state.");
-    default:
-      throw std::runtime_error("Failed to find edge_index type");
+  case PDB::a1997:
+    if (order == 1)       return get_edge_index6a(state);
+    else                  return get_edge_index6b(state);
+  case PDB::a888:
+    if (order == 1)       return get_edge_index8a(state);
+    else                  return get_edge_index8b(state);
+  case PDB::a12:
+    if (order == 1)       return get_new_edge_pos_index(state);
+    else                  return get_new_edge_rot_index(state);
+  case PDB::a81220:
+    if (order == 1)       return get_edge_index8a(state);
+    else if (order == 2)  return get_edge_index8b(state);
+    else if (order == 3)  return get_new_edge_pos_index(state);
+    else if (order == 4)  return get_new_edge_rot_index(state);
+  case PDB::zero:
+  case PDB::clear_state:
+    throw std::runtime_error("Tried to get edge index when using zero heuristic or clearing state.");
+  default:
+    throw std::runtime_error("Failed to find edge_index type");
   }
 }
 
@@ -215,12 +215,12 @@ uint64_t Rubiks::get_edge_index(const uint8_t* state, const int size, const uint
   return edge_index * (1i64 << size) + edge_rot_index;
 }
 
-void Rubiks::restore_state_from_index(const size_t hash_index, uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices)
+void Rubiks::restore_state_from_index(const uint64_t hash_index, uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices)
 {
   uint8_t puzzle[12];
   uint8_t dual[12];
   assert(hash_index < (npr(12, size) * (1i64 << size)));
-  const size_t pos_index = hash_index / (1i64 << size);
+  const uint64_t pos_index = hash_index / (1i64 << size);
   mr::unrank(pos_index, puzzle, dual, size, 12);
   for (int i = 0; i < 20; ++i) {
     state[i] = 20ui8;
@@ -234,7 +234,7 @@ void Rubiks::restore_state_from_index(const size_t hash_index, uint8_t* state, c
     state[edge_pos_indices_12[edges[i]]] = edge_pos_indices_12[dual[i]];
   }
 
-  size_t rot_index = hash_index % (1i64 << size);
+  uint64_t rot_index = hash_index % (1i64 << size);
   for (int i = size - 1; i >= 0; --i)
   {
     state[edge_rot_indices[i]] = rot_index % 2;
@@ -257,7 +257,7 @@ uint64_t Rubiks::get_new_edge_pos_index(const uint8_t* state)
   return mr::k_rank(puzzle, dual, 12, 12);
 }
 
-void Rubiks::restore_new_edge_pos_index(const size_t index, uint8_t* state) {
+void Rubiks::restore_new_edge_pos_index(const uint64_t index, uint8_t* state) {
 
   assert(index < __factorial_lookup[12]);
   uint8_t puzzle[12];
@@ -338,7 +338,7 @@ uint64_t Rubiks::get_new_edge_rot_index(const uint8_t* state) {
     return corner_rot_index * 2048ui64 + edge_rot_index;*/
 }
 
-void Rubiks::restore_new_edge_rot_index(const size_t hash_index, uint8_t* state) {
+void Rubiks::restore_new_edge_rot_index(const uint64_t hash_index, uint8_t* state) {
 
   throw std::exception("Not implemented restore_new_edge_rot_index");
   /* assert(hash_index < (2048 * 2187));
@@ -348,14 +348,14 @@ void Rubiks::restore_new_edge_rot_index(const size_t hash_index, uint8_t* state)
    state[38] = 3;
    state[39] = 3;
 
-   size_t corner_rot_index = hash_index / 2048;
+   uint64_t corner_rot_index = hash_index / 2048;
    for (int i = 6; i >= 0; --i)
    {
      state[__corner_rot_indices[i]] = corner_rot_index % 3ui8;
      corner_rot_index /= 3;
    }
 
-   size_t edge_rot_index = hash_index % 2048;
+   uint64_t edge_rot_index = hash_index % 2048;
    for (int i = 10; i >= 0; --i)
    {
      state[edge_rot_indices_12[i]] = edge_rot_index % 2;
@@ -387,13 +387,14 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
   }
 
   static std::vector<const uint8_t*> initialized_pdbs_locs;
-  static std::vector<std::shared_ptr<std::vector<std::vector<uint8_t>>>> initialized_pdbs;
-  std::shared_ptr<std::vector<std::vector<uint8_t>>>  vectors = nullptr;
+  static std::vector<std::vector<std::vector<uint8_t>>*> initialized_pdbs;
+  std::vector<std::vector<uint8_t>>* vectors = nullptr;
 
   if (type == PDB::clear_state) {
     for (int i = 0; i < initialized_pdbs_locs.size(); ++i) {
       if (memcmp(initialized_pdbs_locs[i], start_state, 40) == 0) {
         initialized_pdbs_locs.erase(initialized_pdbs_locs.begin() + i);
+        delete initialized_pdbs[i];
         initialized_pdbs.erase(initialized_pdbs.begin() + i);
       }
     }
@@ -408,7 +409,7 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
   }
   if (vectors == nullptr)
   {
-    vectors = std::make_shared<std::vector<std::vector<uint8_t>>>();
+    vectors = new std::vector<std::vector<uint8_t>>();
     initialized_pdbs_locs.push_back(start_state);
     initialized_pdbs.push_back(vectors);
 
@@ -500,12 +501,9 @@ uint8_t Rubiks::pattern_lookup(const uint8_t* state, const uint8_t* start_state,
     }
   }
 
-  uint8_t best = 0;
-  for (uint8_t i = 0, end = (uint8_t)vectors->size(); i < end; ++i) {
-    const uint8_t val = get_4byte_value(vectors->at(i), get_index(state, i, type));
-    if (val > best) {
-      best = val;
-    }
+  uint8_t best = get_4byte_value(vectors->at(0), get_index(state, 0, type));
+  for (uint8_t i = 1, end = (uint8_t)vectors->size(); i < end; ++i) {
+    best = std::max(best, get_4byte_value(vectors->at(i), get_index(state, i, type)));
   }
   return best;
 }
@@ -515,8 +513,8 @@ void Rubiks::generate_pattern_database(
   const std::string filename,
   const uint8_t* state,
   const uint8_t max_depth,
-  const size_t max_count,
-  const std::function<size_t(const uint8_t* state)> lookup_func
+  const uint64_t max_count,
+  const std::function<uint64_t(const uint8_t* state)> lookup_func
 )
 {
   std::cout << "Generating edges db\n";
@@ -525,10 +523,10 @@ void Rubiks::generate_pattern_database(
   stack.push(ri);
 
   std::cout << "Edges: " << max_count << "\n";
-  const size_t pdb_size = max_count / 2 + max_count % 2;
+  const uint64_t pdb_size = max_count / 2 + max_count % 2;
   std::vector<uint8_t> pattern_lookup;
   pattern_lookup.resize(pdb_size);
-  for (size_t i = 0; i < max_count; ++i) {
+  for (uint64_t i = 0; i < max_count; ++i) {
     set_4byte_value(pattern_lookup, lookup_func(state), max_depth);
   }
 
@@ -537,7 +535,7 @@ void Rubiks::generate_pattern_database(
   uint8_t id_depth = 1;
   uint64_t count = 1;
 
-  size_t divisor = 10000000;
+  uint64_t divisor = 10000000;
   while (count < max_count && id_depth < max_depth)
   {
     if (stack.empty())
@@ -570,7 +568,7 @@ void Rubiks::generate_pattern_database(
         {
           set_4byte_value(pattern_lookup, new_state_index, prev_db_val + 1);
           ++count;
-          size_t remaining = max_count - count;
+          uint64_t remaining = max_count - count;
           if (remaining > 0) {
             while (remaining / divisor == 0) divisor /= 10;
             if (remaining % divisor == 0) {
@@ -593,18 +591,18 @@ void Rubiks::generate_pattern_database(
 
 void Rubiks::process_buffer(
   std::vector<uint8_t>& pattern_lookup,
-  std::atomic_size_t& count,
+  std::atomic_uint64_t& count,
   const std::vector<uint64_t>& local_results_buffer,
   const uint8_t id_depth,
-  const size_t max_count)
+  const uint64_t max_count)
 {
-  size_t divisor = 10000000;
-  for (size_t i = 0; i < local_results_buffer.size(); ++i) {
+  uint64_t divisor = 10000000;
+  for (uint64_t i = 0; i < local_results_buffer.size(); ++i) {
     auto id = local_results_buffer[i];
     if (get_4byte_value(pattern_lookup, id) > id_depth) {
       set_4byte_value(pattern_lookup, id, id_depth);
       count++;
-      size_t remaining = max_count - count;
+      uint64_t remaining = max_count - count;
       if (remaining > 0) {
         while (remaining / divisor == 0) divisor /= 10;
         if (remaining % divisor == 0) {
@@ -617,18 +615,18 @@ void Rubiks::process_buffer(
 
 void Rubiks::pdb_expand_nodes(
   moodycamel::ConcurrentQueue<std::pair<uint64_t, uint64_t>>& input_queue,
-  std::atomic_size_t& count,
-  const size_t max_count,
+  std::atomic_uint64_t& count,
+  const uint64_t max_count,
   std::mutex& pattern_lookup_mutex,
   std::vector<uint8_t>& pattern_lookup,
-  const std::function<size_t(const uint8_t* state)> lookup_func,
-  const std::function<void(const size_t hash, uint8_t* state)> reverse_func,
+  const std::function<uint64_t(const uint8_t* state)> lookup_func,
+  const std::function<void(const uint64_t hash, uint8_t* state)> reverse_func,
   const uint8_t id_depth,
   const bool reverse_direction
 )
 {
   using namespace std::chrono_literals;
-  const size_t buffer_size = 65536;
+  const uint64_t buffer_size = 65536;
   moodycamel::ConsumerToken ctok(input_queue);
   std::vector<uint64_t> local_results_buffer;
 
@@ -682,9 +680,9 @@ void Rubiks::pdb_expand_nodes(
 void Rubiks::generate_pattern_database_multithreaded(
   const std::string filename,
   const uint8_t* state,
-  const size_t max_count,
-  const std::function<size_t(const uint8_t* state)> lookup_func,
-  const std::function<void(const size_t hash, uint8_t* state)> reverse_func
+  const uint64_t max_count,
+  const std::function<uint64_t(const uint8_t* state)> lookup_func,
+  const std::function<void(const uint64_t hash, uint8_t* state)> reverse_func
 )
 {
   using namespace std::chrono_literals;
@@ -693,11 +691,11 @@ void Rubiks::generate_pattern_database_multithreaded(
 
   std::cout << "Generating PDB\n";
   std::cout << "Count: " << max_count << "\n";
-  const size_t pdb_size = max_count / 2 + max_count % 2;
+  const uint64_t pdb_size = max_count / 2 + max_count % 2;
   std::vector<uint8_t> pattern_lookup;
   pattern_lookup.resize(pdb_size);
-  std::atomic_size_t count = 0;
-  for (size_t i = 0; i < max_count; ++i) {
+  std::atomic_uint64_t count = 0;
+  for (uint64_t i = 0; i < max_count; ++i) {
     set_4byte_value(pattern_lookup, i, pdb_initialization_value);
   }
 
@@ -739,7 +737,7 @@ void Rubiks::generate_pattern_database_multithreaded(
     //Queue work for the threads
     uint64_t start;
     bool set_start(false);
-    for (size_t i = 0; i < max_count; ++i) {
+    for (uint64_t i = 0; i < max_count; ++i) {
       uint8_t val = get_4byte_value(pattern_lookup, i);
       if (!set_start && val == target_val) {
         set_start = true;
@@ -770,7 +768,7 @@ void Rubiks::generate_pattern_database_multithreaded(
       threads[i].join();
     }
   }
-  for (size_t i = 0; i < max_count; ++i) {
+  for (uint64_t i = 0; i < max_count; ++i) {
     if (get_4byte_value(pattern_lookup, i) == pdb_initialization_value) {
       std::cerr << "Error: index " << i << " was not set to a valid value, found count == " << count << std::endl;
       throw new std::exception("Error: index was not set to a valid value.");
@@ -781,4 +779,27 @@ void Rubiks::generate_pattern_database_multithreaded(
 
   const uint64_t shape[] = { pdb_size };
   npy::SaveArrayAsNumpy<uint8_t>(filename, false, 1, shape, pattern_lookup);
+}
+
+void Rubiks::set_4byte_value(std::vector<uint8_t>& data, const uint64_t position, const uint8_t value) {
+  assert(value < 16);
+  if (position % 2 == 0) {
+    //Update the low nybble
+    data[position / 2] = (data[position / 2] & 0xF0) + value;
+  }
+  else {
+    //Update the high nybble
+    data[position / 2] = (data[position / 2] & 0x0F) + (value << 4);
+  }
+}
+
+uint8_t Rubiks::get_4byte_value(const std::vector<uint8_t>& data, const uint64_t position) {
+  if (position % 2 == 0) {
+    //Retrieve low nybble
+    return data[position / 2] & 0x0F;
+  }
+  else {
+    //Retrieve high nybble
+    return (data[position / 2] & 0xF0) >> 4;
+  }
 }

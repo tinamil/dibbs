@@ -12,7 +12,7 @@
 struct Node
 {
   #ifdef HISTORY
-  std::shared_ptr<Node> parent;
+  std::shared_ptr<const Node> parent;
   std::shared_ptr<Node> reverse_parent;
   #endif
   uint8_t state[40];
@@ -29,6 +29,7 @@ struct Node
   Node();
   Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type);
   Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation, const bool reverse, const Rubiks::PDB type);
+  Node(const Node* node_parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation, const bool reverse, const Rubiks::PDB type);
   Node(const Node& old_obj);
 
   uint8_t get_face() const;

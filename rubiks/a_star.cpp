@@ -125,7 +125,7 @@ void expand_node(
       }
       for (int rotation = 0; rotation < 3; ++rotation)
       {
-        std::shared_ptr<Node> new_node = std::make_shared<Node>(next_node, start_state, next_node->depth + 1, face, rotation, reverse, pdb_type);
+        std::shared_ptr<Node> new_node = std::make_shared<Node>(next_node, nullptr, next_node->depth + 1, face, rotation, reverse, pdb_type);
 
         if (new_node->combined < next_node->combined) {
           std::cout << "Consistency error: " << unsigned(new_node->combined) << " < " << unsigned(next_node->combined) << " " << std::endl;
@@ -178,6 +178,7 @@ std::pair<uint64_t, double> search::multithreaded_ida_star(const uint8_t* start_
 
   std::cout << "Minimum number of moves to solve: " << unsigned int(id_depth) << std::endl;
   std::thread* thread_array = new std::thread[thread_count];
+
   while (optimal_node == nullptr)
   {
     id_depth += 1;
@@ -188,7 +189,7 @@ std::pair<uint64_t, double> search::multithreaded_ida_star(const uint8_t* start_
     {
       for (int rotation = 0; rotation < 3; ++rotation)
       {
-        std::shared_ptr<Node> new_node = std::make_shared<Node>(original_node, start_state, 1, face, rotation, reverse, pdb_type);
+        std::shared_ptr<Node> new_node = std::make_shared<Node>(original_node, nullptr, 1, face, rotation, reverse, pdb_type);
         if ((reverse && Rubiks::is_solved(new_node->state, start_state)) || (!reverse && Rubiks::is_solved(new_node->state, Rubiks::__goal)))
         {
           std::cout << "Solved IDA*: 1" << std::endl;
@@ -206,7 +207,7 @@ std::pair<uint64_t, double> search::multithreaded_ida_star(const uint8_t* start_
         {
           for (int rotation2 = 0; rotation2 < 3; ++rotation2)
           {
-            std::shared_ptr<Node> new_node2 = std::make_shared<Node>(new_node, start_state, 2, face2, rotation2, reverse, pdb_type);
+            std::shared_ptr<Node> new_node2 = std::make_shared<Node>(new_node, nullptr, 2, face2, rotation2, reverse, pdb_type);
             if ((reverse && Rubiks::is_solved(new_node2->state, start_state)) || (!reverse && Rubiks::is_solved(new_node2->state, Rubiks::__goal)))
             {
               std::cout << "Solved IDA*: 2" << std::endl;

@@ -10,7 +10,10 @@
 #include "id_dibbs.h"
 #include "utility.h"
 #include "multithreaded_id_dibbs.h"
-
+#include <windows.h>
+#include <stdio.h>
+#include <psapi.h>
+#include "DiskHash.hpp"
 using namespace std;
 using namespace Rubiks;
 
@@ -45,6 +48,11 @@ void search_cubes()
       count_results.push_back(count);
       time_results.push_back(time_elapsed);
       cout << "DIBBS CPU time used: " << time_elapsed << " s" << endl;
+      PROCESS_MEMORY_COUNTERS memCounter;
+      BOOL res = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
+      if (res) {
+        cout << memCounter.PeakPagefileUsage / 1024.0 / 1024 / 1024 << "GB\n";
+      }
     }
     #endif
     #ifdef GBFHS
@@ -77,6 +85,7 @@ int main()
       throw std::exception("Failed to rotate and counter-rotate properly.");
     }
   }
+
   delete[] test_state;
   search_cubes();
 

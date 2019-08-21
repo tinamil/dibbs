@@ -47,7 +47,7 @@ namespace Rubiks
 {
 
   struct StateHash {
-    size_t operator() (const uint8_t* s) const
+    uint64_t operator() (const uint8_t* s) const
     {
       return boost_hash(s, 40);
     }
@@ -104,11 +104,11 @@ namespace Rubiks
   //2^4 - 1, largest possible unsigned 4 bit value, and larger than any PDB ever gets for Rubiks
   constexpr uint8_t pdb_initialization_value = 15;
 
-  constexpr size_t corner_max_count = 88179840;
-  constexpr size_t edge_6_max_count = npr(12, 6) * 64;
-  constexpr size_t edge_8_max_count = npr(12, 8) * 256;
-  constexpr size_t edge_12_pos_max_count = npr(12, 12);
-  constexpr size_t edge_20_rot_max_count = 4478976;
+  constexpr uint64_t corner_max_count = 88179840;
+  constexpr uint64_t edge_6_max_count = npr(12, 6) * 64;
+  constexpr uint64_t edge_8_max_count = npr(12, 8) * 256;
+  constexpr uint64_t edge_12_pos_max_count = npr(12, 12);
+  constexpr uint64_t edge_20_rot_max_count = 4478976;
 
   const uint8_t edge_pos_indices_6a[] = { 1, 3, 4, 6, 8, 9 };
   const uint8_t edge_rot_indices_6a[] = { 21, 23, 24, 26, 28, 29 };
@@ -141,7 +141,7 @@ namespace Rubiks
     uint8_t state[40];
     uint8_t depth;
     uint8_t last_face;
-    size_t index;
+    uint64_t index;
 
     RubiksIndex() : state(), depth(0), last_face(0), index(0) {  }
     RubiksIndex(const uint8_t* original_state, const uint8_t depth, const uint8_t last_face) : depth(depth), last_face(last_face), index(UINT64_MAX) {
@@ -167,16 +167,16 @@ namespace Rubiks
   };
 
   struct PDB_Value {
-    size_t index;
+    uint64_t index;
     uint8_t value;
 
     PDB_Value() : index(0), value(0) {}
-    PDB_Value(size_t idx, uint8_t val) noexcept : index(idx), value(val) {}
+    PDB_Value(uint64_t idx, uint8_t val) noexcept : index(idx), value(val) {}
   };
 
   struct RubiksEdgeStateHash
   {
-    inline std::size_t operator() (const uint8_t* s) const {
+    inline uint64_t operator() (const uint8_t* s) const {
       if (s == nullptr) {
         throw std::invalid_argument("received null pointer value in RubiksStateHash operator ()");
       }
@@ -205,7 +205,7 @@ namespace Rubiks
   extern uint64_t get_index(const uint8_t* state, const int order, const Rubiks::PDB type);
 
   extern uint32_t get_corner_index(const uint8_t* state);
-  extern void restore_corner(const size_t index, uint8_t* state);
+  extern void restore_corner(const uint64_t index, uint8_t* state);
 
   extern uint64_t get_edge_index(const uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
 
@@ -216,15 +216,15 @@ namespace Rubiks
 
 
   extern uint64_t get_new_edge_pos_index(const uint8_t* state);
-  extern void restore_new_edge_pos_index(const size_t index, uint8_t* state);
+  extern void restore_new_edge_pos_index(const uint64_t index, uint8_t* state);
   extern uint64_t get_new_edge_rot_index(const uint8_t* state);
-  extern void restore_new_edge_rot_index(const size_t index, uint8_t* state);
+  extern void restore_new_edge_rot_index(const uint64_t index, uint8_t* state);
 
-  extern void restore_state_from_index(const size_t hash_index, uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
-  inline void restore_index6a(const size_t index, uint8_t* state) { restore_state_from_index(index, state, 6, edges_6a, edge_rot_indices_6a); }
-  inline void restore_index6b(const size_t index, uint8_t* state) { restore_state_from_index(index, state, 6, edges_6b, edge_rot_indices_6b); }
-  inline void restore_index8a(const size_t index, uint8_t* state) { restore_state_from_index(index, state, 8, edges_8a, edge_rot_indices_8a); }
-  inline void restore_index8b(const size_t index, uint8_t* state) { restore_state_from_index(index, state, 8, edges_8b, edge_rot_indices_8b); }
+  extern void restore_state_from_index(const uint64_t hash_index, uint8_t* state, const int size, const uint8_t* edges, const uint8_t* edge_rot_indices);
+  inline void restore_index6a(const uint64_t index, uint8_t* state) { restore_state_from_index(index, state, 6, edges_6a, edge_rot_indices_6a); }
+  inline void restore_index6b(const uint64_t index, uint8_t* state) { restore_state_from_index(index, state, 6, edges_6b, edge_rot_indices_6b); }
+  inline void restore_index8a(const uint64_t index, uint8_t* state) { restore_state_from_index(index, state, 8, edges_8a, edge_rot_indices_8a); }
+  inline void restore_index8b(const uint64_t index, uint8_t* state) { restore_state_from_index(index, state, 8, edges_8b, edge_rot_indices_8b); }
 
   extern bool is_solved(const uint8_t* state);
   extern bool is_solved(const uint8_t* cube, const uint8_t* target);
@@ -234,50 +234,29 @@ namespace Rubiks
     return pattern_lookup(state, __goal, type);
   }
 
-  extern void generate_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth, const size_t max_count, const std::function<size_t(const uint8_t* state)> func);
+  extern void generate_pattern_database(std::string filename, const uint8_t* state, const uint8_t max_depth, const uint64_t max_count, const std::function<uint64_t(const uint8_t* state)> func);
   extern void generate_pattern_database_multithreaded(
     std::string filename,
     const uint8_t* state,
-    const size_t max_count,
-    const std::function<size_t(const uint8_t* state)> func,
-    const std::function<void(const size_t hash, uint8_t* state)> reverse_func
+    const uint64_t max_count,
+    const std::function<uint64_t(const uint8_t* state)> func,
+    const std::function<void(const uint64_t hash, uint8_t* state)> reverse_func
   );
-  extern void process_buffer(std::vector<uint8_t>& pattern_lookup, std::atomic_size_t& count, const std::vector<uint64_t>& local_results_buffer, const uint8_t id_depth, const size_t max_count);
+  extern void process_buffer(std::vector<uint8_t>& pattern_lookup, std::atomic_uint64_t& count, const std::vector<uint64_t>& local_results_buffer, const uint8_t id_depth, const uint64_t max_count);
 
   extern void pdb_expand_nodes(
     moodycamel::ConcurrentQueue<std::pair<uint64_t, uint64_t>>& input_queue,
-    std::atomic_size_t& count,
-    const size_t max_count,
+    std::atomic_uint64_t& count,
+    const uint64_t max_count,
     std::mutex& pattern_lookup_mutex,
     std::vector<uint8_t>& pattern_lookup,
-    const std::function<size_t(const uint8_t* state)> lookup_func,
-    const std::function<void(const size_t hash, uint8_t* state)> reverse_func,
+    const std::function<uint64_t(const uint8_t* state)> lookup_func,
+    const std::function<void(const uint64_t hash, uint8_t* state)> reverse_func,
     const uint8_t id_depth,
     const bool reverse_direction
   );
 
 
-  inline void set_4byte_value(std::vector<uint8_t>& data, const size_t position, const uint8_t value) {
-    assert(value < 16);
-    if (position % 2 == 0) {
-      //Update the low nybble
-      data[position / 2] = (data[position / 2] & 0xF0) + value;
-    }
-    else {
-      //Update the high nybble
-      data[position / 2] = (data[position / 2] & 0x0F) + (value << 4);
-    }
-  }
-
-  inline uint8_t get_4byte_value(std::vector<uint8_t>& data, const size_t position) {
-    const uint8_t val = data[position / 2];
-    if (position % 2 == 0) {
-      //Retrieve low nybble
-      return val & 0x0F;
-    }
-    else {
-      //Retrieve high nybble
-      return (val & 0xF0) >> 4;
-    }
-  }
+  extern void set_4byte_value(std::vector<uint8_t>& data, const uint64_t position, const uint8_t value);
+  extern uint8_t get_4byte_value(const std::vector<uint8_t>& data, const uint64_t position);
 }

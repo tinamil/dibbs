@@ -62,6 +62,44 @@ Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, 
   combined = depth + heuristic;
 }
 
+Node::Node(const Node* node_parent, const uint8_t* start_state, const uint8_t _depth, const uint8_t _face, const uint8_t _rotation,
+  const bool reverse, const Rubiks::PDB type) :
+#ifdef HISTORY 
+  reverse_parent(nullptr),
+#endif 
+  face(_face * 3 + _rotation), depth(_depth)
+{
+#ifdef HISTORY
+  parent = std::shared_ptr<const Node>(node_parent);
+#endif
+  memcpy(state, node_parent->state, 40);
+  Rubiks::rotate(state, _face, _rotation);
+
+  heuristic = Rubiks::pattern_lookup(state, type);
+  if (start_state != nullptr) {
+    reverse_heuristic = Rubiks::pattern_lookup(state, start_state, type);
+    if (reverse)
+    {
+      uint8_t tmp = heuristic;
+      heuristic = reverse_heuristic;
+      reverse_heuristic = tmp;
+    }
+    f_bar = depth + heuristic + depth - reverse_heuristic;
+  }
+  else {
+    f_bar = 0;
+    reverse_heuristic = 0;
+  }
+  if (node_parent != nullptr && node_parent->passed_threshold) {
+    passed_threshold = true;
+  }
+  else {
+    passed_threshold = heuristic <= reverse_heuristic;
+  }
+  combined = depth + heuristic;
+}
+
+
 Node::Node(const Node& old_node) :
   #ifdef HISTORY
   parent(old_node.parent), reverse_parent(old_node.reverse_parent),
