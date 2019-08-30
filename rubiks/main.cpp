@@ -18,7 +18,8 @@ using namespace std;
 using namespace Rubiks;
 
 //#define ASTAR 
-#define DIBBS 
+//#define DIBBS 
+#define DISK_DIBBS
 //#define GBFHS
 
 void search_cubes()
@@ -42,7 +43,7 @@ void search_cubes()
       cout << "IDA* CPU time used: " << time_elapsed << " s" << endl;
     }
     #endif
-    #ifdef DIBBS
+    #ifdef DIBBS 
     {
       auto [count, time_elapsed] = search::multithreaded_id_dibbs(cubes[i], type);
       count_results.push_back(count);
@@ -53,6 +54,14 @@ void search_cubes()
       if (res) {
         cout << memCounter.PeakPagefileUsage / 1024.0 / 1024 / 1024 << "GB\n";
       }
+    }
+    #endif
+    #ifdef DISK_DIBBS
+    {
+      auto [count, time_elapsed] = search::multithreaded_disk_dibbs(cubes[i], type);
+      count_results.push_back(count);
+      time_results.push_back(time_elapsed);
+      cout << "DIBBS CPU time used: " << time_elapsed << " s" << endl;
     }
     #endif
     #ifdef GBFHS

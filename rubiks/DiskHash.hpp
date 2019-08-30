@@ -19,6 +19,18 @@ public:
   uint64_t size() {
     return count;
   }
+  uint64_t disk_size() {
+    uint64_t size = 0;
+    for (size_t i = 0; i < NUM_BUCKETS; ++i) {
+       std::ifstream file(file_name(i), std::ifstream::ate | std::ios::binary);
+       if (!file.is_open())
+       {
+         throw new std::exception("failed to open file");
+       }
+       size += file.tellg();
+    }
+    return size;
+  }
   std::vector<std::pair<Key, Key>> compare_hash(const DiskHash& other) const;
 
 private:

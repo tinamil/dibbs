@@ -112,9 +112,14 @@ void check_results(std::vector<std::pair<Node, Node> > results, uint8_t& upper_b
   }
 }
 
-std::pair<uint8_t, uint64_t> search::solve_disk_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type, unsigned int iteration, uint8_t upper_bound)
+std::pair<uint8_t, uint64_t> search::solve_disk_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type, unsigned int iteration = 1, uint8_t upper_bound = 255)
 {
   const size_t thread_count = std::thread::hardware_concurrency();
+
+  if (iteration == 0) {
+    std::cout << "Iteration cannot be equal to 0 to start, start at 1";
+    throw std::exception("Iteration cannot be equal to 0 to start, start at 1");
+  }
 
   stack forward_stack, backward_stack;
 
@@ -125,15 +130,12 @@ std::pair<uint8_t, uint64_t> search::solve_disk_dibbs(const uint8_t* start_state
 
   std::atomic_uint64_t count = 0;
 
-  if (iteration == 0) {
-    forward_stack.push(start);
-    expand_layer(forward_stack, &forward_set, false, pdb_type, start_state, 0, count, thread_count);
-    backward_stack.push(goal);
-    expand_layer(backward_stack, &backward_set, true, pdb_type, start_state, 0, count, thread_count);
-    auto results = forward_set.compare_hash(backward_set);
-    check_results(results, upper_bound);
-    iteration += 1;
-  }
+  forward_stack.push(start);
+  expand_layer(forward_stack, &forward_set, false, pdb_type, start_state, iteration - 1, count, thread_count);
+  backward_stack.push(goal);
+  expand_layer(backward_stack, &backward_set, true, pdb_type, start_state, iteration - 1, count, thread_count);
+  auto results = forward_set.compare_hash(backward_set);
+  check_results(results, upper_bound);
 
   while (upper_bound > iteration)
   {
@@ -171,6 +173,9 @@ std::pair<uint8_t, uint64_t> search::solve_disk_dibbs(const uint8_t* start_state
     }
   }
 
+  uint64_t size = forward_set.disk_size() + backward_set.disk_size();
+  std::cout << "Size used = " << std::to_string(size / 1024.0 / 1024 / 1024) << " GB\n";
+
   return std::make_pair(upper_bound, uint64_t(count));
 }
 
@@ -185,7 +190,7 @@ std::pair<uint64_t, double> search::multithreaded_disk_dibbs(const uint8_t* star
     return std::make_pair(0, 0);
   }
 
-  auto [upper_bound, count] = solve_disk_dibbs(start_state, pdb_type, 0, std::numeric_limits<uint8_t>::max());
+  auto [upper_bound, count] = solve_disk_dibbs(start_state, pdb_type);
 
   std::cout << "Solved DIBBS: Length = " << std::to_string(upper_bound) << " Count = " << std::to_string(count) << std::endl;
 
