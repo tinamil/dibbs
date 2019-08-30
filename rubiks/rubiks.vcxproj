@@ -26,6 +26,7 @@
     <ClCompile Include="id_gbfhs.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mr_rank.cpp" />
+    <ClCompile Include="multithreaded_disk_dibbs.cpp" />
     <ClCompile Include="multithreaded_id_dibbs.cpp" />
     <ClCompile Include="node.cpp" />
     <ClCompile Include="rubiks.cpp" />

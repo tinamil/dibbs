@@ -16,6 +16,9 @@ public:
   void open();
   void close();
   void insert(const Key& data);
+  uint64_t size() {
+    return count;
+  }
   std::vector<std::pair<Key, Key>> compare_hash(const DiskHash& other) const;
 
 private:
@@ -23,6 +26,7 @@ private:
   std::ofstream open_files[NUM_BUCKETS];
   std::mutex locks[NUM_BUCKETS];
   std::string name;
+  std::atomic_uint64_t count;
 
   std::string file_name(size_t bucket) const {
     return name + "_" + std::to_string(bucket) + ".tmp";
@@ -43,6 +47,7 @@ DiskHash<Key, Hash, KeyEqual>::~DiskHash() {
 
 template<class Key, class Hash, class KeyEqual>
 void DiskHash<Key, Hash, KeyEqual>::open() {
+  count = 0;
   for (size_t i = 0; i < NUM_BUCKETS; ++i) {
     open_files[i] = std::ofstream(file_name(i), std::ios::binary);
   }
@@ -57,6 +62,7 @@ void DiskHash<Key, Hash, KeyEqual>::close() {
 
 template<class Key, class Hash, class KeyEqual>
 void DiskHash<Key, Hash, KeyEqual>::insert(const Key& data) {
+  ++count;
   size_t hash_val = Hash{}(data);
   size_t bucket = hash_val % NUM_BUCKETS;
   locks[bucket].lock();

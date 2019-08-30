@@ -47,6 +47,9 @@
     <ClCompile Include="multithreaded_id_dibbs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="multithreaded_disk_dibbs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="a_star.h">
