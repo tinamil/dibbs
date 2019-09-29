@@ -114,7 +114,7 @@ void check_results(std::vector<std::pair<Node, Node> > results, uint8_t& upper_b
 
 std::pair<uint8_t, uint64_t> search::solve_disk_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type, unsigned int iteration = 1, uint8_t upper_bound = 255)
 {
-  const size_t thread_count = std::thread::hardware_concurrency();
+  const size_t thread_count = (size_t)(std::thread::hardware_concurrency());
 
   if (iteration == 0) {
     std::cout << "Iteration cannot be equal to 0 to start, start at 1";
@@ -181,9 +181,13 @@ std::pair<uint8_t, uint64_t> search::solve_disk_dibbs(const uint8_t* start_state
 
 std::pair<uint64_t, double> search::multithreaded_disk_dibbs(const uint8_t* start_state, const Rubiks::PDB pdb_type)
 {
+  {
+    //Zero out any previous disk_set files
+    disk_set forward_set("forward/forward"), backward_set("backward/backward");
+  }
   auto c_start = clock();
 
-  std::cout << "ID-DIBBS" << std::endl;
+  std::cout << "DISK-DIBBS" << std::endl;
   if (Rubiks::is_solved(start_state))
   {
     std::cout << "Given a solved cube.  Nothing to solve." << std::endl;

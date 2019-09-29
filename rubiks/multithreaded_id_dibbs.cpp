@@ -294,7 +294,7 @@ std::pair<uint64_t, double> search::multithreaded_id_dibbs(const uint8_t* start_
     else {
       iterative_layer(backward_stack, goal, forward_stack, start, other_set, storage_set, iteration, c_star, upper_bound, true, pdb_type, start_state, count, last_backward_size, last_forward_size, thread_count);
     }
-    if (reached_depth_limit(iteration, pdb_type)) {
+    if (upper_bound > c_star && reached_depth_limit(iteration, pdb_type)) {
       std::cout << "Reached node limit: " << std::to_string(storage_set->size()) << " + " << std::to_string(other_set->size()) << "; switching to disk" << std::endl;
       std::thread thread1 = std::thread([&forward_set]() {
         forward_set.clear();

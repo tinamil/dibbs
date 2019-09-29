@@ -16,29 +16,32 @@ public:
   void open();
   void close();
   void insert(const Key& data);
+  std::vector<std::pair<Key, Key>> compare_hash(const DiskHash& other) const;
+
   uint64_t size() {
-    return count;
+    return insertion_count;
   }
+
   uint64_t disk_size() {
     uint64_t size = 0;
-    for (size_t i = 0; i < NUM_BUCKETS; ++i) {
-       std::ifstream file(file_name(i), std::ifstream::ate | std::ios::binary);
-       if (!file.is_open())
-       {
-         throw new std::exception("failed to open file");
-       }
-       size += file.tellg();
+    for (size_t i = 0; i < bucket_count; ++i) {
+      std::ifstream file(file_name(i), std::ifstream::ate | std::ios::binary);
+      if (!file.is_open())
+      {
+        throw new std::exception("failed to open file");
+      }
+      size += file.tellg();
     }
     return size;
   }
-  std::vector<std::pair<Key, Key>> compare_hash(const DiskHash& other) const;
 
 private:
-  static constexpr size_t NUM_BUCKETS = 500;
-  std::ofstream open_files[NUM_BUCKETS];
-  std::mutex locks[NUM_BUCKETS];
+  const unsigned int thread_count;
+  const size_t bucket_count;
+  std::ofstream* open_files;
+  std::mutex* locks;
   std::string name;
-  std::atomic_uint64_t count;
+  std::atomic_uint64_t insertion_count;
 
   std::string file_name(size_t bucket) const {
     return name + "_" + std::to_string(bucket) + ".tmp";
@@ -48,35 +51,49 @@ private:
 };
 
 template<class Key, class Hash, class KeyEqual>
-DiskHash<Key, Hash, KeyEqual>::DiskHash(const std::string& name) : name(name) {
+DiskHash<Key, Hash, KeyEqual>::DiskHash(const std::string& name) : name(name), thread_count(std::thread::hardware_concurrency()), bucket_count(480) {
+  _setmaxstdio(8192);
+  open_files = new std::ofstream[bucket_count];
+  locks = new std::mutex[bucket_count];
   open();
 }
 
 template<class Key, class Hash, class KeyEqual>
 DiskHash<Key, Hash, KeyEqual>::~DiskHash() {
   close();
+  delete[] open_files;
+  delete[] locks;
 }
 
 template<class Key, class Hash, class KeyEqual>
 void DiskHash<Key, Hash, KeyEqual>::open() {
-  count = 0;
-  for (size_t i = 0; i < NUM_BUCKETS; ++i) {
-    open_files[i] = std::ofstream(file_name(i), std::ios::binary);
+  insertion_count = 0;
+  std::thread* thread_array = new std::thread[thread_count];
+  for (size_t thread_number = 0; thread_number < thread_count; ++thread_number) {
+    thread_array[thread_number] = std::thread([thread_number, this]() {
+      for (size_t i = thread_number; i < bucket_count; i += thread_count) {
+        open_files[i] = std::ofstream(file_name(i), std::ios::binary);
+      }
+      });
   }
+  for (size_t i = 0; i < thread_count; ++i) {
+    thread_array[i].join();
+  }
+  delete[] thread_array;
 }
 
 template<class Key, class Hash, class KeyEqual>
 void DiskHash<Key, Hash, KeyEqual>::close() {
-  for (size_t i = 0; i < NUM_BUCKETS; ++i) {
+  for (size_t i = 0; i < bucket_count; ++i) {
     open_files[i].close();
   }
 }
 
 template<class Key, class Hash, class KeyEqual>
 void DiskHash<Key, Hash, KeyEqual>::insert(const Key& data) {
-  ++count;
+  ++insertion_count;
   size_t hash_val = Hash{}(data);
-  size_t bucket = hash_val % NUM_BUCKETS;
+  size_t bucket = hash_val % bucket_count;
   locks[bucket].lock();
   open_files[bucket].write(reinterpret_cast<const char*>(&data), sizeof data);
   locks[bucket].unlock();
@@ -109,14 +126,12 @@ std::vector<Key> DiskHash<Key, Hash, KeyEqual>::load_vector(size_t bucket) const
 template<class Key, class Hash, class KeyEqual>
 std::vector<std::pair<Key, Key>> DiskHash<Key, Hash, KeyEqual>::compare_hash(const DiskHash& other) const
 {
-  std::cout << "Comparing " << name << " against " << other.name << "\n";
   std::vector<std::pair<Key, Key>> intersection;
-  const unsigned int thread_count = std::thread::hardware_concurrency();
   std::thread* thread_array = new std::thread[thread_count];
   std::mutex result_lock;
   for (size_t thread_number = 0; thread_number < thread_count; ++thread_number) {
-    thread_array[thread_number] = std::thread([&intersection, &result_lock, thread_number, this, &other, thread_count]() {
-      for (size_t i = thread_number; i < NUM_BUCKETS; i += thread_count) {
+    thread_array[thread_number] = std::thread([&intersection, &result_lock, thread_number, this, &other]() {
+      for (size_t i = thread_number; i < bucket_count; i += thread_count) {
         std::unordered_set<Key, Hash, KeyEqual> set = load_bucket(i);
         std::vector<Key> other_vec = other.load_vector(i);
         for (size_t j = 0; j < other_vec.size(); ++j) {
@@ -134,6 +149,5 @@ std::vector<std::pair<Key, Key>> DiskHash<Key, Hash, KeyEqual>::compare_hash(con
     thread_array[i].join();
   }
   delete[] thread_array;
-  std::cout << "Finished comparing " << name << " against " << other.name << ", found " << std::to_string(intersection.size()) << " intersection results\n";
   return intersection;
 }
