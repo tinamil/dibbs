@@ -105,6 +105,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Astar.h" />
+    <ClInclude Include="hash.hpp" />
     <ClInclude Include="Node.h" />
     <ClInclude Include="Pancake.h" />
     <ClInclude Include="problems.h" />
