@@ -98,32 +98,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="a_star.cpp" />
-    <ClCompile Include="bidirectional.cpp" />
-    <ClCompile Include="bidirectional2.cpp" />
-    <ClCompile Include="bimemory.cpp" />
-    <ClCompile Include="clusters.cpp" />
-    <ClCompile Include="front_to_front.cpp" />
-    <ClCompile Include="hash_table.cpp" />
-    <ClCompile Include="io.cpp" />
-    <ClCompile Include="iterative_deepening.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="meet_in_middle.cpp" />
-    <ClCompile Include="min_expansions.cpp" />
-    <ClCompile Include="min_max_heap.cpp" />
-    <ClCompile Include="min_max_multiset.cpp" />
+    <ClCompile Include="Node.cpp" />
+    <ClCompile Include="Pancake.cpp" />
     <ClCompile Include="problems.cpp" />
-    <ClCompile Include="random.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="bistates.h" />
-    <ClInclude Include="clusters.h" />
-    <ClInclude Include="hash_table.h" />
-    <ClInclude Include="heap_record.h" />
-    <ClInclude Include="main.h" />
-    <ClInclude Include="min_max_heap.h" />
-    <ClInclude Include="min_max_multiset.h" />
-    <ClInclude Include="vec.h" />
+    <ClInclude Include="Astar.h" />
+    <ClInclude Include="Node.h" />
+    <ClInclude Include="Pancake.h" />
+    <ClInclude Include="problems.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

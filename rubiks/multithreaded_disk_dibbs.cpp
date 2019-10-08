@@ -12,9 +12,9 @@ void expand_node(const Node prev_node,
   std::atomic_uint64_t& count) {
 
   ++count;
-  if (count % 1000000 == 0) {
-    std::cout << count << "\n";
-  }
+  //if (count % 1000000 == 0) {
+  //  std::cout << count << "\n";
+  //}
 
   for (int face = 0; face < 6; ++face)
   {
@@ -46,7 +46,7 @@ bool expand_layer(stack& my_stack,
   const size_t thread_count,
   bool do_cleanup = true)
 {
-  std::cout << "Storing layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
+  //std::cout << "Storing layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
   if (do_cleanup) {
     my_set->open();
   }
@@ -96,7 +96,7 @@ bool expand_layer(stack& my_stack,
   if (my_stack.size() > 0) {
     return false;
   }
-  std::cout << "Finished storing layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
+  //std::cout << "Finished storing layer " << id_depth << " in " << (reverse ? "backward" : "forward") << '\n';
   return true;
 }
 
@@ -107,7 +107,7 @@ void check_results(std::vector<std::pair<Node, Node> > results, uint8_t& upper_b
     if (my_cost + reverse_cost < upper_bound)
     {
       upper_bound = my_cost + reverse_cost;
-      std::cout << "New upper bound: " << unsigned int(upper_bound) << std::endl;
+      //std::cout << "New upper bound: " << unsigned int(upper_bound) << std::endl;
     }
   }
 }

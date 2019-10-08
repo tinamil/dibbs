@@ -1,4 +1,4 @@
-#include "multithreaded_id_dibbs.h"
+#include "id_dibbs.h"
 
 using namespace search;
 

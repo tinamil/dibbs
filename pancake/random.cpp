@@ -2,7 +2,7 @@
    1. This file was copied on 10/5/12 from c:\sewell\research\facility\facility_cbfns\random.cpp.
    2. Modified the functions to explicitly cast to integers in order to eliminate compiler warnings.
 */
-
+#include "random.h"
 //_________________________________________________________________________________________________
 
 double ggubfs(double *dseed)

@@ -1,5 +1,3 @@
-#include "main.h"
-#include <queue>
 
 static bool             solved;
 static unsigned char    bound;
