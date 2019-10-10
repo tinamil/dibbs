@@ -18,9 +18,6 @@
     <ClCompile Include="problems.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Node.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Pancake.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -35,13 +32,13 @@
     <ClInclude Include="Astar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Node.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Pancake.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="hash.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Direction.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -2,45 +2,88 @@
 #include <iostream>
 #include <cassert>
 #include <algorithm>
-#include "Node.h"
+#include "Direction.h"
+#include "hash.hpp"
 
+constexpr int NUM_PANCAKES = 10;
+constexpr int GAPX = 0;
 class Pancake {
 
-  uint8_t* inv_source;            // invserse of sequence of pancakes
-  static uint8_t* goal;           // goal sequence of Pancakes
+private:
+  //uint8_t* inv_source;            // inverse of sequence of pancakes
+  static uint8_t*& goal() { static uint8_t* I; return I; }  // static goal sequence of Pancakes
+
+  Direction dir;
 
 public:
-  uint8_t* source;                // source sequence of Pancakes
-  uint8_t n;                      // n = number of Pancakes.
 
-  Pancake(uint8_t* data, uint8_t n) : n(n)
+  uint8_t source[NUM_PANCAKES + 1];                // source sequence of Pancakes
+  uint8_t g;
+  uint8_t f;
+  uint8_t h;
+
+  uint8_t gap_lb() const;
+  uint8_t update_gap_lb(int i, uint8_t LB) const;
+  int check_inputs() const;
+
+  Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), f(0)
   {
-    source = new uint8_t[n];
-    inv_source = new uint8_t[n];
-    memcpy(source, data, n);
-
-    for (int i = n - 1; i >= 0; --i) {
-
-    }
-    std::reverse_copy(source, source + n, inv_source);
+    assert(NUM_PANCAKES > 0);
+    //inv_source = new uint8_t[n + 1];
+    memcpy(source, data, NUM_PANCAKES + 1);
+    f = h = gap_lb();
+    //std::reverse_copy(source + 1, source + n + 1, inv_source + 1);
+    //inv_source[0] = source[0];
   }
 
-  ~Pancake() {
-    delete[] inv_source;
-    delete[] source;
+  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), f(copy.f) {
+    //inv_source = new uint8_t[n + 1];
+    memcpy(source, copy.source, NUM_PANCAKES + 1);
+    //memcpy(inv_source, copy.inv_source, n + 1);
   }
 
   static inline void initialize_goal(int n) {
-    goal = new uint8_t[n + 1];
-    for (int i = 1; i <= n; i++) goal[i] = i;
-    goal[0] = n;
+    goal() = new uint8_t[n + 1];
+    goal()[0] = n;
+    for (int i = 1; i <= n; i++) goal()[i] = i;
   }
 
-  unsigned char gap_lb(int direction, int x);
-  uint8_t update_gap_lb(int direction, int i, uint8_t LB, int x);
-  int check_inputs();
+  inline bool is_solution() const {
+    return memcmp(source, goal(), NUM_PANCAKES + 1) == 0;
+  }
 
-  inline bool is_solution() {
-    return memcmp(source, goal, n) == 0;
+  inline bool operator==(const Pancake& right) const {
+    return memcmp(source, right.source, NUM_PANCAKES + 1) == 0;
+  }
+
+  void apply_flip(int i) {
+    assert(i >= 1 && i <= NUM_PANCAKES);
+    std::reverse(source + 1, source + i + 1);
+  }
+
+  Pancake apply_action(int i) const {
+    Pancake new_node(*this);
+    new_node.apply_flip(i);
+    new_node.g = g + 1;
+    //TODO: Update_gap_lb doesn't work!
+    new_node.h = new_node.gap_lb();//new_node.update_gap_lb(i, new_node.h);
+    new_node.f = new_node.g + new_node.h;
+    assert(new_node.f >= f); //Consistency check
+    return new_node;
   }
 };
+
+struct PancakeSort {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    return lhs.f > rhs.f;
+  }
+};
+
+struct PancakeHash
+{
+  inline std::size_t operator() (const Pancake& x) const
+  {
+    return SuperFastHash(x.source, NUM_PANCAKES + 1);
+  }
+};
+

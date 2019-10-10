@@ -8,39 +8,43 @@
 
 #include "Pancake.h"
 
+/*************************************************************************************************/
 
-uint8_t Pancake::gap_lb(int direction, int x)
+uint8_t Pancake::gap_lb() const
 /*
-   1. This function computes the GAP LB for a sequence of Pancakes.
+   1. This function computes the GAP LB for a sequence of pancakes.
    2. Input Variables
-      a. cur_seq = the order of the Pancakes.
+      a. source = the order of the pancakes.
       b. direction = = 1(2) for forward (reverse) search.
    3. Global Variables
-      a. n = number of Pancakes.
+      a. n = number of pancakes.
       b. inv_source = inverse of source.
-      c. source[i] = the number of the Pancake that is position i (i.e., order of the Pancakes).
+      c. source[i] = the number of the pancake that is position i (i.e., order of the pancakes).
    4. Output Variables
-      a. LB = GAP LB for the sequence of Pancakes is returned.
-   5. Created 7/17/17 by modifying c:\sewell\research\Pancake\matlab\gap_lb.m.
+      a. LB = GAP LB for the sequence of pancakes is returned.
+   5. Created 7/17/17 by modifying c:\sewell\research\pancake\matlab\gap_lb.m.
    6. Modified 8/5/17 to compute the GAP-X LB.  See "Bidirectional Search That Is Guaranteed to Meet in the Middle."
 */
 {
-  uint8_t LB = 0;
-  if (x == -1) return(LB);
+  unsigned char  LB;
+  int            i;
 
-  if (direction == 1) {
-    for (int i = 1; i < n; i++) {
-      if ((source[i] <= x) || (source[i - 1] <= x)) continue;
+  LB = 0;
+  if (GAPX == -1) return(LB);
+
+  if (dir == Direction::forward) {
+    for (i = 2; i <= NUM_PANCAKES; i++) {
+      if ((source[i] <= GAPX) || (source[i - 1] <= GAPX)) continue;
       if (abs(source[i] - source[i - 1]) > 1) LB = LB + 1;
     }
-    if ((abs(n - source[n-1]) > 1) && (source[n] > x)) LB = LB + 1;
+    if ((abs(NUM_PANCAKES + 1 - source[NUM_PANCAKES]) > 1) && (source[NUM_PANCAKES] > GAPX)) LB = LB + 1;
   }
   else {
-    for (int i = 1; i < n; i++) {
-      if ((source[i] <= x) || (source[i - 1] <= x)) continue;
+    /*for (i = 2; i <= NUM_PANCAKES; i++) {
+      if ((source[i] <= GAPX) || (source[i - 1] <= GAPX)) continue;
       if (abs(inv_source[source[i]] - inv_source[source[i - 1]]) > 1) LB = LB + 1;
     }
-    if ((abs(n + 1 - inv_source[source[n]]) > 1) && (source[n] > x)) LB = LB + 1;
+    if ((abs(NUM_PANCAKES + 1 - inv_source[source[NUM_PANCAKES]]) > 1) && (source[NUM_PANCAKES] > GAPX)) LB = LB + 1;*/
   }
 
   return(LB);
@@ -48,57 +52,57 @@ uint8_t Pancake::gap_lb(int direction, int x)
 
 //_________________________________________________________________________________________________
 
-uint8_t Pancake::update_gap_lb(int direction, int i, uint8_t LB, int x)
+uint8_t Pancake::update_gap_lb(int i, uint8_t LB) const
 /*
    1. This function updates the GAP lower bound when a flip is made at position i.
    2. Input Variables
-      a. cur_seq = the order of the Pancakes.
+      a. source = the order of the pancakes.
       b. direction = = 1(2) for forward (reverse) search.
       c. i = position where the flip is to be made.  I.e., the new sequence is obtained by reversing the sequence
-             of Pancakes in positions 1 through i.
-      d. LB = the GAP LB for cur_seq before the flip.
+             of pancakes in positions 1 through i.
+      d. LB = the GAP LB for source before the flip.
    3. Global Variables
-      a. n = number of Pancakes.
+      a. n = number of pancakes.
       b. inv_source = inverse of source.
-      c. source[i] = the number of the Pancake that is position i (i.e., order of the Pancakes).
+      c. source[i] = the number of the pancake that is position i (i.e., order of the pancakes).
    4. Output Variables
       a. LB = GAP LB for the sequence after the flip has been made is returned.
-   5. Created 7/17/17 by modifying c:\sewell\research\Pancake\matlab\update_gap_lb.m.
+   5. Created 7/17/17 by modifying c:\sewell\research\pancake\matlab\update_gap_lb.m.
    6. Modified 8/7/17 to compute the GAP-X LB.  See "Bidirectional Search That Is Guaranteed to Meet in the Middle."
    */
 {
-  int inv_p1, inv_pi, inv_pi1, p1, pi, pi1;
+  int            inv_p1, inv_pi, inv_pi1, p1, pi, pi1;
 
-  if (x == -1) return(0);
+  if (GAPX == -1) return(0);
 
-  assert((1 <= i) && (i <= n));
+  assert((1 <= i) && (i <= NUM_PANCAKES + 1));
 
-  if (direction == 1) {
+  if (dir == Direction::forward) {
     p1 = source[1];
     pi = source[i];
-    if (i < n)
+    if (i < NUM_PANCAKES)
       pi1 = source[i + 1];
     else
-      pi1 = n + 1;
+      pi1 = NUM_PANCAKES + 1;
 
-    if ((pi <= x) || (pi1 <= x) || (abs(pi1 - pi) <= 1)) LB = LB + 1;
-    if ((p1 <= x) || (pi1 <= x) || (abs(pi1 - p1) <= 1)) LB = LB - 1;
+    if ((pi <= GAPX) || (pi1 <= GAPX) || (abs(pi1 - pi) <= 1)) LB = LB + 1;
+    if ((p1 <= GAPX) || (pi1 <= GAPX) || (abs(pi1 - p1) <= 1)) LB = LB - 1;
   }
   else {
-    p1 = source[1];
-    pi = source[i];
-    inv_p1 = inv_source[p1];
-    inv_pi = inv_source[pi];
-    if (i < n) {
-      pi1 = source[i + 1];
-      inv_pi1 = inv_source[source[i + 1]];
-    }
-    else {
-      pi1 = n + 1;
-      inv_pi1 = n + 1;
-    }
-    if ((pi <= x) || (pi1 <= x) || (abs(inv_pi1 - inv_pi) <= 1)) LB = LB + 1;
-    if ((p1 <= x) || (pi1 <= x) || (abs(inv_pi1 - inv_p1) <= 1)) LB = LB - 1;
+    /* p1 = source[1];
+     pi = source[i];
+     inv_p1 = inv_source[p1];
+     inv_pi = inv_source[pi];
+     if (i < NUM_PANCAKES) {
+       pi1 = source[i + 1];
+       inv_pi1 = inv_source[source[i + 1]];
+     }
+     else {
+       pi1 = NUM_PANCAKES + 1;
+       inv_pi1 = NUM_PANCAKES + 1;
+     }
+     if ((pi <= GAPX) || (pi1 <= GAPX) || (abs(inv_pi1 - inv_pi) <= 1)) LB = LB + 1;
+     if ((p1 <= GAPX) || (pi1 <= GAPX) || (abs(inv_pi1 - inv_p1) <= 1)) LB = LB - 1;*/
   }
 
   return(LB);
@@ -108,20 +112,20 @@ uint8_t Pancake::update_gap_lb(int direction, int i, uint8_t LB, int x)
 
 //_________________________________________________________________________________________________
 
-int Pancake::check_inputs()
+int Pancake::check_inputs() const
 /*
    1. This routine performs some simple checks on seq.
       If an error is found, 0 is returned, otherwise 1 is returned.
    2. Written 7/18/17.
 */
 {
-  int* used = new int[n + 1];
-  for (int i = 0; i <= n; i++) used[i] = 0;
+  int* used = new int[NUM_PANCAKES + 1];
+  for (int i = 0; i <= NUM_PANCAKES; i++) used[i] = 0;
 
   // Check that all the indices in seq are legitimate and that there are no duplicates.
 
-  for (int i = 1; i <= n; i++) {
-    if ((source[i] < 1) || (source[i] > n)) {
+  for (int i = 1; i <= NUM_PANCAKES; i++) {
+    if ((source[i] < 1) || (source[i] > NUM_PANCAKES)) {
       fprintf(stderr, "illegal number in seq\n");
       delete[] used;
       return(0);

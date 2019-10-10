@@ -38,7 +38,7 @@ inline void hash_combine_impl(uint64_t& h, uint64_t k)
 
 uint64_t inline boost_hash(const uint8_t* data, const size_t len) {
   uint64_t hash = 0;
-  for (int i = 0; i < len; ++i) {
+  for (size_t i = 0; i < len; ++i) {
     hash_combine_impl(hash, data[i]);
   }
   return hash;

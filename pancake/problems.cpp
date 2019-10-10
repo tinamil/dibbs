@@ -4,9 +4,7 @@
 //_________________________________________________________________________________________________
 
 void define_problems(int n, int gap, int i, unsigned char *seq)
-{
-   unsigned char  **problems;
- 
+{ 
    switch (n) {
       case 10:
 		   switch (gap) {
