@@ -10,7 +10,7 @@ constexpr int GAPX = 0;
 class Pancake {
 
 private:
-  //uint8_t* inv_source;            // inverse of sequence of pancakes
+  uint8_t inv_source[NUM_PANCAKES + 1];            // inverse of sequence of pancakes
   static uint8_t*& goal() { static uint8_t* I; return I; }  // static goal sequence of Pancakes
 
   Direction dir;
@@ -29,17 +29,15 @@ public:
   Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), f(0)
   {
     assert(NUM_PANCAKES > 0);
-    //inv_source = new uint8_t[n + 1];
     memcpy(source, data, NUM_PANCAKES + 1);
     f = h = gap_lb();
-    //std::reverse_copy(source + 1, source + n + 1, inv_source + 1);
-    //inv_source[0] = source[0];
+    std::reverse_copy(source + 1, source + NUM_PANCAKES + 1, inv_source + 1);
+    inv_source[0] = source[0];
   }
 
   Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), f(copy.f) {
-    //inv_source = new uint8_t[n + 1];
     memcpy(source, copy.source, NUM_PANCAKES + 1);
-    //memcpy(inv_source, copy.inv_source, n + 1);
+    memcpy(inv_source, copy.inv_source, NUM_PANCAKES + 1);
   }
 
   static inline void initialize_goal(int n) {
@@ -63,11 +61,10 @@ public:
 
   Pancake apply_action(int i) const {
     Pancake new_node(*this);
-    new_node.apply_flip(i);
+    new_node.h = new_node.update_gap_lb(i, new_node.h);
     new_node.g = g + 1;
-    //TODO: Update_gap_lb doesn't work!
-    new_node.h = new_node.gap_lb();//new_node.update_gap_lb(i, new_node.h);
     new_node.f = new_node.g + new_node.h;
+    new_node.apply_flip(i);
     assert(new_node.f >= f); //Consistency check
     return new_node;
   }

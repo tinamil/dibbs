@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-int main(int argc, const char* argv[])
+int main()
 {
   Pancake::initialize_goal(NUM_PANCAKES);
   uint8_t problem[NUM_PANCAKES + 1];

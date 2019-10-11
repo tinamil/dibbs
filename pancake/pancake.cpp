@@ -75,7 +75,7 @@ uint8_t Pancake::update_gap_lb(int i, uint8_t LB) const
 
   if (GAPX == -1) return(0);
 
-  assert((1 <= i) && (i <= NUM_PANCAKES + 1));
+  assert((1 <= i) && (i <= NUM_PANCAKES));
 
   if (dir == Direction::forward) {
     p1 = source[1];
