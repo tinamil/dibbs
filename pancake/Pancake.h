@@ -5,74 +5,95 @@
 #include "Direction.h"
 #include "hash.hpp"
 
-constexpr int NUM_PANCAKES = 10;
-constexpr int GAPX = 0;
+
+constexpr int NUM_PANCAKES = 30;
+constexpr int GAPX = 1;
+
 class Pancake {
 
-private:
-  uint8_t inv_source[NUM_PANCAKES + 1];            // inverse of sequence of pancakes
-  static uint8_t*& goal() { static uint8_t* I; return I; }  // static goal sequence of Pancakes
-
+private:     // inverse of sequence of pancakes
   Direction dir;
+  static uint8_t*& DUAL_SOURCE() { static uint8_t* I; return I; }  // static goal sequence of Pancakes
 
 public:
-
   uint8_t source[NUM_PANCAKES + 1];                // source sequence of Pancakes
   uint8_t g;
-  uint8_t f;
   uint8_t h;
+  uint8_t h2;
+  uint8_t f;
+  uint8_t f_bar;
 
-  uint8_t gap_lb() const;
-  uint8_t update_gap_lb(int i, uint8_t LB) const;
+  uint8_t gap_lb(Direction dir) const;
+  uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
   int check_inputs() const;
 
-  Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), f(0)
+  Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), f(0), f_bar(0)
   {
     assert(NUM_PANCAKES > 0);
     memcpy(source, data, NUM_PANCAKES + 1);
-    f = h = gap_lb();
-    std::reverse_copy(source + 1, source + NUM_PANCAKES + 1, inv_source + 1);
-    inv_source[0] = source[0];
+    h = gap_lb(dir);
+    f = h;
+    f_bar = f;
   }
 
-  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), f(copy.f) {
+  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar) {
     memcpy(source, copy.source, NUM_PANCAKES + 1);
-    memcpy(inv_source, copy.inv_source, NUM_PANCAKES + 1);
   }
 
-  static inline void initialize_goal(int n) {
-    goal() = new uint8_t[n + 1];
-    goal()[0] = n;
-    for (int i = 1; i <= n; i++) goal()[i] = i;
+  //Required to calculate reverse heuristics, not needed for forward only search
+  static void Initialize_Dual(uint8_t src[]) {
+    if (DUAL_SOURCE() != nullptr) delete[] DUAL_SOURCE();
+    DUAL_SOURCE() = new uint8_t[NUM_PANCAKES + 1];
+    DUAL_SOURCE()[0] = NUM_PANCAKES;
+    for (int i = 1; i <= NUM_PANCAKES; i++) DUAL_SOURCE()[src[i]] = i;
   }
 
-  inline bool is_solution() const {
-    return memcmp(source, goal(), NUM_PANCAKES + 1) == 0;
+  inline static Pancake GetSortedStack(Direction dir) {
+    uint8_t pancakes[NUM_PANCAKES + 1];
+    pancakes[0] = NUM_PANCAKES;
+    for (int i = 1; i <= NUM_PANCAKES; ++i) { pancakes[i] = i; }
+
+    return Pancake(pancakes, dir);
   }
 
   inline bool operator==(const Pancake& right) const {
     return memcmp(source, right.source, NUM_PANCAKES + 1) == 0;
   }
 
-  void apply_flip(int i) {
+  //Reverses the pancakes between 1 and i
+  inline void apply_flip(int i) {
     assert(i >= 1 && i <= NUM_PANCAKES);
     std::reverse(source + 1, source + i + 1);
   }
 
+  //Copies pancake, applies a flip, and updates g/h/f values
   Pancake apply_action(int i) const {
     Pancake new_node(*this);
-    new_node.h = new_node.update_gap_lb(i, new_node.h);
+    new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
+    new_node.h2 = new_node.update_gap_lb(OppositeDirection(dir), i, new_node.h2);
     new_node.g = g + 1;
     new_node.f = new_node.g + new_node.h;
+    new_node.f_bar = 2 * new_node.g + new_node.h - new_node.h2;
     new_node.apply_flip(i);
     assert(new_node.f >= f); //Consistency check
     return new_node;
   }
 };
 
-struct PancakeSort {
+//Returns smallest f value
+struct PancakeFSort {
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
     return lhs.f > rhs.f;
+  }
+};
+
+//Returns smallest fbar with largest g value
+struct PancakeFBarSort {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    if (lhs.f_bar == rhs.f_bar) {
+      return lhs.g < rhs.g;
+    }
+    return lhs.f_bar > rhs.f_bar;
   }
 };
 

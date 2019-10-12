@@ -1,28 +1,35 @@
 #pragma once
+#pragma once
 
 #include "Pancake.h"
 #include <queue>
 #include <unordered_set>
 #include <tuple>
+#include <stack>
 
-
-class Astar
+class ID_D
 {
-  std::priority_queue<Pancake, std::vector<Pancake>, PancakeFSort> open;
-  std::unordered_set<Pancake, PancakeHash> closed;
+  std::unordered_set<Pancake, PancakeHash> open_f, open_b;
+  //std::unordered_set<Pancake, PancakeHash> closed;
+  std::stack<Pancake> stack;
+  
+  size_t UB;
 
-  Astar() : open() {}
+  ID_D() : open_f(), open_b() {}
 
   std::pair<double, size_t> run_search(Pancake start, Pancake goal) {
     size_t expansions = 0;
-    open.push(start);
+    stack.push(start);
+    UB = std::numeric_limits<size_t>().max();
 
     double c_star = std::numeric_limits<double>::infinity();
-    while (open.size() > 0) {
-      Pancake next_val = open.top();
-      open.pop();
+    while (stack.size() > 0) {
+      Pancake next_val = stack.top();
+      stack.pop();
       ++expansions;
-      if (next_val == goal) {
+
+      //TODO: Set termination condition correctly
+      if (next_val.f < UB) {
         c_star = next_val.g;
         assert(next_val.h == 0);
         break;
@@ -34,31 +41,13 @@ class Astar
         if (it == closed.end()) {
           open.push(new_action);
         }
-
-#ifdef INCONSISTENT_HEURISTIC
-        //only necessary for inconsistent heuristics
-        else if ((*it).g > new_action.g) {
-          closed.erase(it);
-          open.push(new_action);
-        }
-#endif
       }
 
 
       auto in_closed = closed.find(next_val);
       if (in_closed != closed.end())
       {
-#ifdef INCONSISTENT_HEURISTIC
-        //only necessary for inconsistent heuristics
-        if ((*in_closed).g > next_val.g) {
-          closed.erase(in_closed);
-        }
-        else {
-          continue;
-        }
-#else
         continue;
-#endif
       }
 
       closed.insert(next_val);
@@ -70,7 +59,7 @@ class Astar
 public:
 
   static std::pair<double, size_t> search(Pancake start, Pancake goal) {
-    Astar instance;
+    ID_D instance;
     return instance.run_search(start, goal);
   }
 };

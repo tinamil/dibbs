@@ -10,7 +10,7 @@
 
 /*************************************************************************************************/
 
-uint8_t Pancake::gap_lb() const
+uint8_t Pancake::gap_lb(Direction dir) const
 /*
    1. This function computes the GAP LB for a sequence of pancakes.
    2. Input Variables
@@ -40,11 +40,11 @@ uint8_t Pancake::gap_lb() const
     if ((abs(NUM_PANCAKES + 1 - source[NUM_PANCAKES]) > 1) && (source[NUM_PANCAKES] > GAPX)) LB = LB + 1;
   }
   else {
-    /*for (i = 2; i <= NUM_PANCAKES; i++) {
+    for (i = 2; i <= NUM_PANCAKES; i++) {
       if ((source[i] <= GAPX) || (source[i - 1] <= GAPX)) continue;
-      if (abs(inv_source[source[i]] - inv_source[source[i - 1]]) > 1) LB = LB + 1;
+      if (abs(DUAL_SOURCE()[source[i]] - DUAL_SOURCE()[source[i - 1]]) > 1) LB = LB + 1;
     }
-    if ((abs(NUM_PANCAKES + 1 - inv_source[source[NUM_PANCAKES]]) > 1) && (source[NUM_PANCAKES] > GAPX)) LB = LB + 1;*/
+    if ((abs(NUM_PANCAKES + 1 - DUAL_SOURCE()[source[NUM_PANCAKES]]) > 1) && (source[NUM_PANCAKES] > GAPX)) LB = LB + 1;
   }
 
   return(LB);
@@ -52,7 +52,7 @@ uint8_t Pancake::gap_lb() const
 
 //_________________________________________________________________________________________________
 
-uint8_t Pancake::update_gap_lb(int i, uint8_t LB) const
+uint8_t Pancake::update_gap_lb(Direction dir, int i, uint8_t LB) const
 /*
    1. This function updates the GAP lower bound when a flip is made at position i.
    2. Input Variables
@@ -89,20 +89,20 @@ uint8_t Pancake::update_gap_lb(int i, uint8_t LB) const
     if ((p1 <= GAPX) || (pi1 <= GAPX) || (abs(pi1 - p1) <= 1)) LB = LB - 1;
   }
   else {
-    /* p1 = source[1];
-     pi = source[i];
-     inv_p1 = inv_source[p1];
-     inv_pi = inv_source[pi];
-     if (i < NUM_PANCAKES) {
-       pi1 = source[i + 1];
-       inv_pi1 = inv_source[source[i + 1]];
-     }
-     else {
-       pi1 = NUM_PANCAKES + 1;
-       inv_pi1 = NUM_PANCAKES + 1;
-     }
-     if ((pi <= GAPX) || (pi1 <= GAPX) || (abs(inv_pi1 - inv_pi) <= 1)) LB = LB + 1;
-     if ((p1 <= GAPX) || (pi1 <= GAPX) || (abs(inv_pi1 - inv_p1) <= 1)) LB = LB - 1;*/
+    p1 = source[1];
+    pi = source[i];
+    inv_p1 = DUAL_SOURCE()[p1];
+    inv_pi = DUAL_SOURCE()[pi];
+    if (i < NUM_PANCAKES) {
+      pi1 = source[i + 1];
+      inv_pi1 = DUAL_SOURCE()[source[i + 1]];
+    }
+    else {
+      pi1 = NUM_PANCAKES + 1;
+      inv_pi1 = NUM_PANCAKES + 1;
+    }
+    if ((pi <= GAPX) || (pi1 <= GAPX) || (abs(inv_pi1 - inv_pi) <= 1)) LB = LB + 1;
+    if ((p1 <= GAPX) || (pi1 <= GAPX) || (abs(inv_pi1 - inv_p1) <= 1)) LB = LB - 1;
   }
 
   return(LB);
