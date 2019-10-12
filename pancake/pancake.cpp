@@ -39,7 +39,7 @@ uint8_t Pancake::gap_lb(Direction dir) const
     }
     if ((abs(NUM_PANCAKES + 1 - source[NUM_PANCAKES]) > 1) && (source[NUM_PANCAKES] > GAPX)) LB = LB + 1;
   }
-  else {
+  else if (DUAL_SOURCE() != nullptr) {
     for (i = 2; i <= NUM_PANCAKES; i++) {
       if ((source[i] <= GAPX) || (source[i - 1] <= GAPX)) continue;
       if (abs(DUAL_SOURCE()[source[i]] - DUAL_SOURCE()[source[i - 1]]) > 1) LB = LB + 1;
@@ -88,7 +88,7 @@ uint8_t Pancake::update_gap_lb(Direction dir, int i, uint8_t LB) const
     if ((pi <= GAPX) || (pi1 <= GAPX) || (abs(pi1 - pi) <= 1)) LB = LB + 1;
     if ((p1 <= GAPX) || (pi1 <= GAPX) || (abs(pi1 - p1) <= 1)) LB = LB - 1;
   }
-  else {
+  else if (DUAL_SOURCE() != nullptr) {
     p1 = source[1];
     pi = source[i];
     inv_p1 = DUAL_SOURCE()[p1];

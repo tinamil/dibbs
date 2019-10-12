@@ -125,6 +125,7 @@
     <ClInclude Include="Astar.h" />
     <ClInclude Include="Direction.h" />
     <ClInclude Include="hash.hpp" />
+    <ClInclude Include="id-d.h" />
     <ClInclude Include="Pancake.h" />
     <ClInclude Include="problems.h" />
   </ItemGroup>

@@ -2,9 +2,11 @@
 #include <iostream>
 #include <cassert>
 #include <algorithm>
+#include <vector>
 #include "Direction.h"
 #include "hash.hpp"
 
+//#define HISTORY
 
 constexpr int NUM_PANCAKES = 30;
 constexpr int GAPX = 1;
@@ -12,16 +14,20 @@ constexpr int GAPX = 1;
 class Pancake {
 
 private:     // inverse of sequence of pancakes
-  Direction dir;
-  static uint8_t*& DUAL_SOURCE() { static uint8_t* I; return I; }  // static goal sequence of Pancakes
+  static uint8_t*& DUAL_SOURCE() { static uint8_t* I = nullptr; return I; };  // static goal sequence of Pancakes
 
 public:
+  Direction dir;
+#ifdef HISTORY
+  std::vector<uint8_t> actions;
+#endif
   uint8_t source[NUM_PANCAKES + 1];                // source sequence of Pancakes
   uint8_t g;
   uint8_t h;
   uint8_t h2;
   uint8_t f;
   uint8_t f_bar;
+  bool threshold;
 
   uint8_t gap_lb(Direction dir) const;
   uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
@@ -34,9 +40,14 @@ public:
     h = gap_lb(dir);
     f = h;
     f_bar = f;
+    threshold = h == 0;
   }
 
-  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar) {
+  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar), threshold(copy.threshold)
+#ifdef HISTORY
+    , actions(copy.actions)
+#endif
+  {
     memcpy(source, copy.source, NUM_PANCAKES + 1);
   }
 
@@ -69,20 +80,27 @@ public:
   //Copies pancake, applies a flip, and updates g/h/f values
   Pancake apply_action(int i) const {
     Pancake new_node(*this);
+#ifdef HISTORY
+    new_node.actions.push_back(i);
+#endif
     new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
     new_node.h2 = new_node.update_gap_lb(OppositeDirection(dir), i, new_node.h2);
     new_node.g = g + 1;
     new_node.f = new_node.g + new_node.h;
     new_node.f_bar = 2 * new_node.g + new_node.h - new_node.h2;
+    new_node.threshold = threshold || new_node.h <= new_node.h2;
     new_node.apply_flip(i);
     assert(new_node.f >= f); //Consistency check
     return new_node;
   }
 };
 
-//Returns smallest f value
+//Returns smallest f value with largest g value
 struct PancakeFSort {
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    if (lhs.f == rhs.f) {
+      return lhs.g < rhs.g;
+    }
     return lhs.f > rhs.f;
   }
 };

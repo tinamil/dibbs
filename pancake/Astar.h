@@ -4,6 +4,7 @@
 #include <queue>
 #include <unordered_set>
 #include <tuple>
+#include <string>
 
 
 class Astar
@@ -17,17 +18,22 @@ class Astar
     size_t expansions = 0;
     open.push(start);
 
-    double c_star = std::numeric_limits<double>::infinity();
+    double UB = std::numeric_limits<double>::infinity();
     while (open.size() > 0) {
       Pancake next_val = open.top();
       open.pop();
-      ++expansions;
       if (next_val == goal) {
-        c_star = next_val.g;
+        UB = next_val.g;
+        //std::cout << "Actions: ";
+        //for (int i = 0; i < next_val.actions.size(); ++i) {
+         // std::cout << std::to_string(next_val.actions[i]) << " ";
+        //}
+        //std::cout << std::endl;
         assert(next_val.h == 0);
         break;
       }
 
+      ++expansions;
       for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
         Pancake new_action = next_val.apply_action(i);
         auto it = closed.find(new_action);
@@ -64,7 +70,7 @@ class Astar
       closed.insert(next_val);
     }
 
-    return std::make_pair(c_star, expansions);
+    return std::make_pair(UB, expansions);
   }
 
 public:

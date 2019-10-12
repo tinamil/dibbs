@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cassert>
 
+void easy_problem(int n, uint8_t* seq);
+
 //problems.cpp
 void define_problems(int n, int gap, int i, unsigned char* seq);
 void define_problems_10_0(int i, unsigned char* seq);
