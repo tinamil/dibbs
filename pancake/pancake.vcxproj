@@ -117,15 +117,18 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="IDAstar.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Pancake.cpp" />
     <ClCompile Include="problems.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Astar.h" />
+    <ClInclude Include="dibbs.h" />
     <ClInclude Include="Direction.h" />
     <ClInclude Include="hash.hpp" />
     <ClInclude Include="id-d.h" />
+    <ClInclude Include="IDAstar.h" />
     <ClInclude Include="Pancake.h" />
     <ClInclude Include="problems.h" />
   </ItemGroup>

@@ -9,17 +9,21 @@
 #include <cmath>
 
 Pancake best_pancake_f(Pancake::GetSortedStack(Direction::forward)), best_pancake_b(Pancake::GetSortedStack(Direction::backward));
+typedef std::unordered_set<Pancake, PancakeHash> hash_set;
 
 class ID_D
 {
-  std::unordered_set<Pancake, PancakeHash> open_f, open_b;
+  hash_set open_f, open_b;
   std::stack<Pancake> stack;
+  size_t LB;
+  size_t UB;
+  size_t expansions;
 
   ID_D() : open_f(), open_b() {}
 
-  void expand_layer(std::stack<Pancake>& stack, std::unordered_set<Pancake, PancakeHash>& my_set, const std::unordered_set<Pancake, PancakeHash>& other_set, const size_t LB, size_t& UB, const size_t iteration, size_t& expansions) {
+  void expand_layer(std::stack<Pancake>& stack, std::unordered_set<Pancake, PancakeHash>& my_set, const std::unordered_set<Pancake, PancakeHash>& other_set, const size_t iteration) {
     my_set.clear();
-    while (!stack.empty() && LB < UB) {
+    while (!stack.empty() && LB < UB && my_set.size() + other_set.size() <= NODE_LIMIT) {
       Pancake current = stack.top();
       stack.pop();
       expansions += 1;
@@ -27,6 +31,7 @@ class ID_D
       for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
         Pancake new_node = current.apply_action(i);
 
+        //Check for intersection with other direction
         auto it = other_set.find(new_node);
         if (it != other_set.end()) {
           int tmp_UB = (*it).g + new_node.g;
@@ -42,27 +47,40 @@ class ID_D
             }
           }
         }
-
-        if (new_node.f_bar <= iteration) {
-          stack.push(new_node);
-        }
-        //TODO: Add strong threshold stores generated in addition to expanded
-        else if (current.threshold) {
-          it = my_set.find(current);
-          if (it == my_set.end()) {
-            my_set.insert(current);
+        else {
+          if (new_node.f_bar <= iteration) {
+            stack.push(new_node);
           }
-          else if ((it != my_set.end() && (*it).g > current.g))
-          {
-            my_set.erase(it);
-            my_set.insert(current);
+          else if (current.threshold) {
+            //Inserts both current and new_node (current MUST be inserted, new_node is speculative)
+            it = my_set.find(current);
+            if (it == my_set.end()) {
+              my_set.insert(current);
+            }
+            else if ((it != my_set.end() && (*it).g > current.g))
+            {
+              my_set.erase(it);
+              my_set.insert(current);
+            }
+
+            if (new_node.h2 - new_node.h > 1) {
+              it = my_set.find(new_node);
+              if (it == my_set.end()) {
+                my_set.insert(new_node);
+              }
+              else if ((it != my_set.end() && (*it).g > new_node.g))
+              {
+                my_set.erase(it);
+                my_set.insert(new_node);
+              }
+            }
           }
         }
       }
     }
   }
 
-  void id_check_layer(std::stack<Pancake>& stack, const std::unordered_set<Pancake, PancakeHash>& other_set, const size_t LB, size_t& UB, const size_t iteration, size_t& expansions) {
+  void id_check_layer(std::stack<Pancake>& stack, const std::unordered_set<Pancake, PancakeHash>& other_set, const size_t iteration) {
     while (!stack.empty() && LB < UB) {
       Pancake current = stack.top();
       stack.pop();
@@ -90,6 +108,43 @@ class ID_D
           stack.push(new_node);
         }
       }
+    }
+  }
+
+  void search_iteration(Pancake forward_origin, Pancake backward_origin, size_t& iteration, hash_set& forward_set, hash_set& backward_set, size_t& forward_expansions, size_t& backward_expansions) {
+    {
+      size_t start_count = expansions;
+      stack.push(forward_origin);
+      expand_layer(stack, forward_set, backward_set, iteration);
+      forward_expansions = expansions - start_count;
+
+      if (UB <= LB || forward_set.size() + backward_set.size() > NODE_LIMIT) return;
+
+      if (forward_set.size() > 0) {
+        stack.push(backward_origin);
+        id_check_layer(stack, forward_set, iteration - 1);
+      }
+
+      iteration += 1;
+      //std::cout << iteration << "\n";
+      LB = iteration;
+
+      if (UB <= LB || forward_set.size() + backward_set.size() > NODE_LIMIT) return;
+
+      start_count = expansions;
+      stack.push(backward_origin);
+      expand_layer(stack, backward_set, forward_set, iteration - 1);
+      backward_expansions = expansions - start_count;
+
+      if (UB <= LB || forward_set.size() + backward_set.size() > NODE_LIMIT) return;
+
+      //Extra check, unnecessary but might find an early solution for next depth 
+      if (backward_set.size() > 0) {
+        stack.push(forward_origin);
+        id_check_layer(stack, backward_set, iteration - 1);
+      }
+
+      if (UB <= LB || forward_set.size() + backward_set.size() > NODE_LIMIT) return;
     }
   }
 
@@ -98,54 +153,32 @@ class ID_D
     if (start == goal) {
       return std::make_pair(0, 0);
     }
-    size_t expansions = 0;
+    expansions = 0;
+    UB = std::numeric_limits<double>::max();
+    LB = 1;
+
     size_t iteration = 0;
-    size_t UB = std::numeric_limits<double>::max();
-    size_t LB = 1;
+    size_t forward_expansions = 0;
+    size_t backward_expansions = 0;
 
     open_b.insert(goal);
 
     stack.push(start);
-    expand_layer(stack, open_f, open_b, LB, UB, iteration, expansions);
+    expand_layer(stack, open_f, open_b, iteration);
 
     stack.push(goal);
-    expand_layer(stack, open_b, open_f, LB, UB, iteration, expansions);
+    expand_layer(stack, open_b, open_f, iteration);
 
     iteration = 1;
     LB = 1;
 
-    while (LB < UB) {
-      //std::cout << "Expanding Forward: " << iteration << '\n';
-      stack.push(start);
-      expand_layer(stack, open_f, open_b, LB, UB, iteration, expansions);
-
-      if (UB <= LB) break;
-
-      if (open_f.size() > 0) {
-        stack.push(goal);
-        //std::cout << "ID Checking Backward: " << iteration << '\n';
-        id_check_layer(stack, open_f, LB, UB, iteration - 1, expansions);
+    while (LB < UB && (open_f.size() + open_b.size()) <= NODE_LIMIT) {
+      if (forward_expansions <= backward_expansions) {
+        search_iteration(start, goal, iteration, open_f, open_b, forward_expansions, backward_expansions);
       }
-
-      iteration += 1;
-      LB = iteration;
-
-      if (UB <= LB) break;
-
-      stack.push(goal);
-      //std::cout << "Expanding Backward: " << iteration << '\n';
-      expand_layer(stack, open_b, open_f, LB, UB, iteration - 1, expansions);
-
-      if (UB <= LB) break;
-
-      //Extra check, unnecessary but might find an early solution for next depth 
-      if (open_b.size() > 0) {
-        stack.push(start);
-        //std::cout << "ID Checking Forward: " << iteration << '\n';
-        id_check_layer(stack, open_b, LB, UB, iteration - 1, expansions);
+      else {
+        search_iteration(goal, start, iteration, open_b, open_f, backward_expansions, forward_expansions);
       }
-
-      if (UB <= LB) break;
     }
 
     //std::cout << "Actions: ";
@@ -156,8 +189,10 @@ class ID_D
     //  std::cout << std::to_string(best_pancake_b.actions[i]) << " ";
     //}
     //std::cout << std::endl;
-
-    return std::make_pair(UB, expansions);
+    if (LB >= UB)
+      return std::make_pair(UB, expansions);
+    else
+      return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
   }
 
 public:

@@ -24,6 +24,9 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="IDAstar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="problems.h">
@@ -42,6 +45,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="id-d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IDAstar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dibbs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -6,7 +6,6 @@
 #include <tuple>
 #include <string>
 
-
 class Astar
 {
   std::priority_queue<Pancake, std::vector<Pancake>, PancakeFSort> open;
@@ -22,8 +21,17 @@ class Astar
     while (open.size() > 0) {
       Pancake next_val = open.top();
       open.pop();
+
+      auto it = closed.find(next_val);
+      if (it != closed.end())
+      {
+        continue;
+      }
+      closed.insert(next_val);
+
       if (next_val == goal) {
         UB = next_val.g;
+        //std::cout << "Solution: " << UB << '\n';
         //std::cout << "Actions: ";
         //for (int i = 0; i < next_val.actions.size(); ++i) {
          // std::cout << std::to_string(next_val.actions[i]) << " ";
@@ -32,44 +40,21 @@ class Astar
         assert(next_val.h == 0);
         break;
       }
+      else if (open.size() > NODE_LIMIT) {
+        break;
+      }
 
       ++expansions;
+
       for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
         Pancake new_action = next_val.apply_action(i);
-        auto it = closed.find(new_action);
+        it = closed.find(new_action);
         if (it == closed.end()) {
           open.push(new_action);
         }
-
-#ifdef INCONSISTENT_HEURISTIC
-        //only necessary for inconsistent heuristics
-        else if ((*it).g > new_action.g) {
-          closed.erase(it);
-          open.push(new_action);
-        }
-#endif
       }
-
-
-      auto in_closed = closed.find(next_val);
-      if (in_closed != closed.end())
-      {
-#ifdef INCONSISTENT_HEURISTIC
-        //only necessary for inconsistent heuristics
-        if ((*in_closed).g > next_val.g) {
-          closed.erase(in_closed);
-        }
-        else {
-          continue;
-        }
-#else
-        continue;
-#endif
-      }
-
-      closed.insert(next_val);
     }
-
+    //std::cout << "Size: " << open.size() << '\n';
     return std::make_pair(UB, expansions);
   }
 

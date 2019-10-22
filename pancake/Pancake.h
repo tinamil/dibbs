@@ -8,8 +8,9 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 30;
-constexpr int GAPX = 1;
+constexpr int NUM_PANCAKES = 20;
+constexpr int GAPX = 3;
+constexpr size_t NODE_LIMIT = 3000000000;
 
 class Pancake {
 
@@ -53,8 +54,7 @@ public:
 
   //Required to calculate reverse heuristics, not needed for forward only search
   static void Initialize_Dual(uint8_t src[]) {
-    if (DUAL_SOURCE() != nullptr) delete[] DUAL_SOURCE();
-    DUAL_SOURCE() = new uint8_t[NUM_PANCAKES + 1];
+    if (DUAL_SOURCE() == nullptr) DUAL_SOURCE() = new uint8_t[NUM_PANCAKES + 1];
     DUAL_SOURCE()[0] = NUM_PANCAKES;
     for (int i = 1; i <= NUM_PANCAKES; i++) DUAL_SOURCE()[src[i]] = i;
   }
@@ -105,13 +105,22 @@ struct PancakeFSort {
   }
 };
 
-//Returns smallest fbar with largest g value
-struct PancakeFBarSort {
+//Returns smallest fbar with smallest g value
+struct PancakeFBarSortLowG {
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
-    if (lhs.f_bar == rhs.f_bar) {
-      return lhs.g < rhs.g;
+    int cmp = memcmp(lhs.source, rhs.source, NUM_PANCAKES + 1);
+    if (cmp == 0) {
+      return false;
     }
-    return lhs.f_bar > rhs.f_bar;
+    else if (lhs.f_bar == rhs.f_bar) {
+      if (lhs.g == rhs.g)
+        return cmp < 0;
+      else
+        return lhs.g < rhs.g;
+    }
+    else {
+      return lhs.f_bar < rhs.f_bar;
+    }
   }
 };
 
@@ -119,7 +128,7 @@ struct PancakeHash
 {
   inline std::size_t operator() (const Pancake& x) const
   {
-    return SuperFastHash(x.source, NUM_PANCAKES + 1);
+    return SuperFastHash(x.source + 1, NUM_PANCAKES);
   }
 };
 
