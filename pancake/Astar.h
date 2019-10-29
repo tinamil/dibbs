@@ -5,6 +5,9 @@
 #include <unordered_set>
 #include <tuple>
 #include <string>
+#define NOMINMAX
+#include <windows.h>
+#include <Psapi.h>
 
 class Astar
 {
@@ -17,6 +20,7 @@ class Astar
     size_t expansions = 0;
     open.push(start);
 
+    PROCESS_MEMORY_COUNTERS memCounter;
     double UB = std::numeric_limits<double>::infinity();
     while (open.size() > 0) {
       Pancake next_val = open.top();
@@ -40,7 +44,10 @@ class Astar
         assert(next_val.h == 0);
         break;
       }
-      else if (open.size() > NODE_LIMIT) {
+
+      BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
+      assert(result);
+      if (memCounter.PagefileUsage > MEM_LIMIT) {
         break;
       }
 

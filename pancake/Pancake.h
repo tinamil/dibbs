@@ -8,9 +8,10 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 20;
-constexpr int GAPX = 3;
-constexpr size_t NODE_LIMIT = 3000000000;
+constexpr int NUM_PANCAKES = 30;
+constexpr int GAPX = 2;
+//constexpr size_t NODE_LIMIT = 1000000000;
+constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 
 class Pancake {
 
@@ -102,6 +103,25 @@ struct PancakeFSort {
       return lhs.g < rhs.g;
     }
     return lhs.f > rhs.f;
+  }
+};
+
+//Returns smallest f value with smallest g value
+struct PancakeFSortLowG {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    int cmp = memcmp(lhs.source, rhs.source, NUM_PANCAKES + 1);
+    if (cmp == 0) {
+      return false;
+    }
+    else if (lhs.f == rhs.f) {
+      if (lhs.g == rhs.g)
+        return cmp < 0;
+      else
+        return lhs.g < rhs.g;
+    }
+    else {
+      return lhs.f < rhs.f;
+    }
   }
 };
 

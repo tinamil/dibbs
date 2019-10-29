@@ -10,6 +10,48 @@ void easy_problem(int n, uint8_t* seq)
   memcpy(seq, prob, n + 1);
 }
 
+double ggubfs(double& dseed)
+{
+  int      div;
+  double   product;
+
+  product = 16807.0 * dseed;
+  div = (int)(product / 2147483647.0);
+  dseed = product - (div * 2147483647.0);
+  return(dseed / 2147483648.0);
+}
+
+//_________________________________________________________________________________________________
+
+int random_int_0n(int n, double& dseed)
+{
+  int      truncate;
+
+  truncate = (int)((n + 1) * ggubfs(dseed));
+  return(truncate);
+}
+
+//_________________________________________________________________________________________________
+
+void random_permutation2(int n_s, unsigned char* s, double& dseed)
+/*
+1. This routine generates a random permutation of the elements in s.
+2. The permutation is returned in s.
+3. Based on Chapter 2 of Data Structures and Algorithm Analysis in C
+(Dr. Dobb's Algorithms Collection).
+4. Created 7/20/17 by modifying random_permutation to permute a vector of unsigned char's.
+*/
+{
+  int            i, index;
+  unsigned char  temp;
+
+  for (i = 1; i < n_s; i++) {
+    temp = s[i];
+    index = i + random_int_0n(n_s - i, dseed);
+    s[i] = s[index];
+    s[index] = temp;
+  }
+}
 
 void define_problems(int n, int gap, int i, unsigned char* seq)
 {

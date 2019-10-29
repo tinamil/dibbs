@@ -6,6 +6,10 @@
 #include <string>
 #include <algorithm>
 
+#define NOMINMAX
+#include <windows.h>
+#include <Psapi.h>
+
 class Dibbs
 {
   typedef std::unordered_set<Pancake, PancakeHash> hash_set;
@@ -63,7 +67,14 @@ class Dibbs
     open_b.insert(goal);
 
     UB = std::numeric_limits<double>::infinity();
-    while (open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin()).f_bar + (*open_b.begin()).f_bar) / 2.0) && (open_f.size() + open_b.size()) <= NODE_LIMIT) {
+    PROCESS_MEMORY_COUNTERS memCounter;
+    while (open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin()).f_bar + (*open_b.begin()).f_bar) / 2.0f)) {
+
+      BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
+      assert(result);
+      if (memCounter.PagefileUsage > MEM_LIMIT) {
+        break;
+      }
 
       if ((*open_f.begin()).f_bar < (*open_b.begin()).f_bar) {
         expand_node(open_f, open_f_hash, open_b_hash, closed_f);
@@ -79,7 +90,7 @@ class Dibbs
       }
 
     }
-    if (UB > ceil(((*open_f.begin()).f_bar + (*open_b.begin()).f_bar) / 2.0)) {
+    if (UB > ceil(((size_t)(*open_f.begin()).f_bar + (*open_b.begin()).f_bar) / 2.0)) {
       return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
     }
     else {

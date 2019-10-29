@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 
 #include "Pancake.h"
 #include <queue>
@@ -7,6 +6,10 @@
 #include <tuple>
 #include <stack>
 #include <cmath>
+
+#define NOMINMAX
+#include <windows.h>
+#include <Psapi.h>
 
 Pancake best_pancake_f(Pancake::GetSortedStack(Direction::forward)), best_pancake_b(Pancake::GetSortedStack(Direction::backward));
 typedef std::unordered_set<Pancake, PancakeHash> hash_set;
@@ -18,14 +21,24 @@ class ID_D
   size_t LB;
   size_t UB;
   size_t expansions;
+  bool abort;
 
-  ID_D() : open_f(), open_b() {}
+  ID_D() : open_f(), open_b(), stack(), LB(0), UB(0), expansions(0), abort(false) {}
 
   void expand_layer(std::stack<Pancake>& stack, std::unordered_set<Pancake, PancakeHash>& my_set, const std::unordered_set<Pancake, PancakeHash>& other_set, const size_t iteration) {
     my_set.clear();
-    while (!stack.empty() && LB < UB && my_set.size() + other_set.size() <= NODE_LIMIT) {
+    PROCESS_MEMORY_COUNTERS memCounter;
+    while (!stack.empty() && LB < UB) {
       Pancake current = stack.top();
       stack.pop();
+
+      BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
+      assert(result);
+      if (memCounter.PagefileUsage > MEM_LIMIT) {
+        abort = true;
+        break;
+      }
+
       expansions += 1;
 
       for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
@@ -81,7 +94,7 @@ class ID_D
   }
 
   void id_check_layer(std::stack<Pancake>& stack, const std::unordered_set<Pancake, PancakeHash>& other_set, const size_t iteration) {
-    while (!stack.empty() && LB < UB) {
+    while (!stack.empty() && LB < UB && !abort) {
       Pancake current = stack.top();
       stack.pop();
       expansions += 1;
@@ -118,7 +131,7 @@ class ID_D
       expand_layer(stack, forward_set, backward_set, iteration);
       forward_expansions = expansions - start_count;
 
-      if (UB <= LB || forward_set.size() + backward_set.size() > NODE_LIMIT) return;
+      if (UB <= LB || abort) return;
 
       if (forward_set.size() > 0) {
         stack.push(backward_origin);
@@ -129,14 +142,14 @@ class ID_D
       //std::cout << iteration << "\n";
       LB = iteration;
 
-      if (UB <= LB || forward_set.size() + backward_set.size() > NODE_LIMIT) return;
+      if (UB <= LB || abort) return;
 
       start_count = expansions;
       stack.push(backward_origin);
       expand_layer(stack, backward_set, forward_set, iteration - 1);
       backward_expansions = expansions - start_count;
 
-      if (UB <= LB || forward_set.size() + backward_set.size() > NODE_LIMIT) return;
+      if (UB <= LB || abort) return;
 
       //Extra check, unnecessary but might find an early solution for next depth 
       if (backward_set.size() > 0) {
@@ -144,7 +157,7 @@ class ID_D
         id_check_layer(stack, backward_set, iteration - 1);
       }
 
-      if (UB <= LB || forward_set.size() + backward_set.size() > NODE_LIMIT) return;
+      if (UB <= LB || abort) return;
     }
   }
 
@@ -172,7 +185,7 @@ class ID_D
     iteration = 1;
     LB = 1;
 
-    while (LB < UB && (open_f.size() + open_b.size()) <= NODE_LIMIT) {
+    while (LB < UB && !abort) {
       if (forward_expansions <= backward_expansions) {
         search_iteration(start, goal, iteration, open_f, open_b, forward_expansions, backward_expansions);
       }

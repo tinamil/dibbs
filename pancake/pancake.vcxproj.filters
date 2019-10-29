@@ -27,6 +27,9 @@
     <ClCompile Include="IDAstar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GBFHS.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="problems.h">

@@ -4,6 +4,7 @@
 #include <cassert>
 
 void easy_problem(int n, uint8_t* seq);
+void random_permutation2(int n_s, unsigned char* s, double& dseed);
 
 //problems.cpp
 void define_problems(int n, int gap, int i, unsigned char* seq);
