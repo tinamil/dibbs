@@ -56,5 +56,8 @@
     <ClInclude Include="dibbs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="nbs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

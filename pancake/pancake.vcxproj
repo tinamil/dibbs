@@ -131,6 +131,7 @@
     <ClInclude Include="hash.hpp" />
     <ClInclude Include="id-d.h" />
     <ClInclude Include="IDAstar.h" />
+    <ClInclude Include="nbs.h" />
     <ClInclude Include="Pancake.h" />
     <ClInclude Include="problems.h" />
   </ItemGroup>

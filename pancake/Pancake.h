@@ -125,6 +125,20 @@ struct PancakeFSortLowG {
   }
 };
 
+//Returns smallest g value
+struct PancakeGSort {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    int cmp = memcmp(lhs.source, rhs.source, NUM_PANCAKES + 1);
+    if (cmp == 0) {
+      return false;
+    }
+    if (lhs.g == rhs.g)
+      return cmp < 0;
+    else
+      return lhs.g < rhs.g;
+  }
+};
+
 //Returns smallest fbar with smallest g value
 struct PancakeFBarSortLowG {
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
