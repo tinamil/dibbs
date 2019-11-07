@@ -59,5 +59,8 @@
     <ClInclude Include="nbs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dvcbs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

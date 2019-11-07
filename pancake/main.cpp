@@ -5,6 +5,7 @@
 #include "dibbs.h"
 #include "GBFHS.h"
 #include "nbs.h"
+#include "dvcbs.h"
 #include "problems.h"
 #include <iostream>
 #include <string>
@@ -15,13 +16,14 @@
 #include <iomanip>
 
 
-//#define A_STAR
-//#define REVERSE_ASTAR
+#define A_STAR
+#define REVERSE_ASTAR
 //#define IDA_STAR
-//#define IDD
-//#define DIBBS
-//#define GBFHS
+#define IDD
+#define DIBBS
+#define GBFHS
 #define NBS
+#define DVCBS
 
 
 void generate_random_instance(double& seed, uint8_t problem[]) {
@@ -56,6 +58,9 @@ void output_data(std::ostream& stream) {
 #endif
 #ifdef NBS
   stream << "NBS ";
+#endif
+#ifdef DVCBS
+  stream << "DVCBS ";
 #endif
   stream << "\n";
 
@@ -200,7 +205,7 @@ void output_data(std::ostream& stream) {
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
-    }
+  }
 
   {
 #ifdef GBFHS
@@ -255,7 +260,34 @@ void output_data(std::ostream& stream) {
     stream << time_stream.rdbuf() << std::endl;
 #endif
   }
+
+  {
+#ifdef DVCBS
+    std::cout << "DVCBS\n";
+    double seed = 3.1567;
+    for (int i = 1; i <= 100; ++i) {
+      generate_random_instance(seed, problem);
+      //easy_problem(NUM_PANCAKES, problem);
+      Pancake::Initialize_Dual(problem);
+      Pancake node(problem, Direction::forward);
+      Pancake goal = Pancake::GetSortedStack(Direction::backward);
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions] = Dvcbs::search(node, goal);
+      auto end = std::chrono::system_clock::now();
+      //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+    }
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+#endif
   }
+}
 
 std::string return_formatted_time(std::string format)
 {
@@ -292,6 +324,9 @@ int main()
 #ifdef NBS
   name += "_NBS";
 #endif
+#ifdef DVCBS
+  name += "_DVCBS";
+#endif
   name += ".txt";
   file.open(name, std::ios::app);
 
@@ -299,7 +334,7 @@ int main()
   {
     std::cout << "Error in creating file!!!" << std::endl;
     return 0;
-}
+  }
 
   output_data(file);
-  }
+}

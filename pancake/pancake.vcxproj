@@ -129,6 +129,7 @@
     <ClInclude Include="dibbs.h" />
     <ClInclude Include="Direction.h" />
     <ClInclude Include="hash.hpp" />
+    <ClInclude Include="dvcbs.h" />
     <ClInclude Include="id-d.h" />
     <ClInclude Include="IDAstar.h" />
     <ClInclude Include="nbs.h" />
