@@ -165,6 +165,309 @@ class Dvcbs {
     else return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
   }
 
+  std::pair<int, int> computeSingleClusterMinNodesTieBreaking(std::vector<std::pair<int, int> >& minimalVertexCovers, std::vector<std::pair<double, uint64_t> >& forwardCluster, std::vector<std::pair<double, uint64_t> >& backwardCluster) {
+    int maxF = INT_MAX;
+    int maxB = INT_MAX;
+    std::pair<int, int> maxPair;
+    for (std::vector<std::pair<int, int> >::iterator it = minimalVertexCovers.begin(); it != minimalVertexCovers.end(); ++it) {
+      if (maxF < INT_MAX && maxB < INT_MAX) {
+        break;
+      }
+      if (it->first >= 0) {
+        maxF = forwardCluster[0].second;
+      }
+      if (it->second >= 0) {
+        maxB = backwardCluster[0].second;
+      }
+    }
+    if (maxF < maxB) {
+      return std::make_pair(0, -1);
+    }
+    else {
+      return std::make_pair(-1, 0);
+    }
+    return maxPair;
+  }
+
+  bool getVertexCover(std::vector<uint64_t>& nextForward, std::vector<uint64_t>& nextBackward)
+  {
+    while (true)
+    {
+      if (open_f_waiting.size() == 0 && open_f_ready.size() == 0)
+        return false;
+      if (open_b_waiting.size() == 0 && open_b_ready.size() == 0)
+        return false;
+
+      while (!open_f_waiting.empty() && open_f_waiting.begin()->f < lbmin) {
+        open_f_ready.insert(*open_f_waiting.begin());
+        open_f_waiting.erase(open_f_waiting.begin());
+      }
+      while (!open_b_waiting.empty() && open_b_waiting.begin()->f < lbmin) {
+        open_b_ready.insert(*open_b_waiting.begin());
+        open_b_waiting.erase(open_b_waiting.begin());
+      }
+
+      if (!open_f_ready.empty() && !open_b_ready.empty() && open_f_ready.begin()->g + open_b_ready.begin()->g <= lbmin)
+      {
+
+        std::vector<std::pair<double, uint64_t> > forwardCluster;
+        std::vector<std::pair<double, uint64_t> > backwardCluster;
+        for (auto it = open_f_ready.begin(); it != open_f_ready.end() && it->g <= lbmin - open_b_ready.begin()->g - 1 + 0.00001; it++) {
+          if(forwardCluster.size() == 0 || forwardCluster.back().first != it->g)
+            forwardCluster.push_back(std::make_pair(it->g, 1));
+          else {
+            forwardCluster.back().second++;
+          }
+        }
+        for (auto it = open_b_ready.begin(); it != open_b_ready.end() && it->g <= lbmin - open_f_ready.begin()->g - 1 + 0.00001; it++) {
+          if (backwardCluster.size() == 0 || backwardCluster.back().first != it->g)
+            backwardCluster.push_back(std::make_pair(it->g, 1));
+          else {
+            backwardCluster.back().second++;
+          }
+        }
+        int minJ = INT_MAX;
+        int minI = INT_MAX;
+        int minValue = INT_MAX;
+        uint64_t NumForwardInVC = 0;
+        uint64_t NumBackwardInVC = 0;
+        std::vector<std::pair<int, int> > minimalVertexCovers;
+        for (int i = -1; i < ((int)forwardCluster.size()); i++) {
+          if (i >= 0) {
+            NumForwardInVC += forwardCluster[i].second;
+          }
+          else {
+            NumForwardInVC = 0;
+          }
+          bool skip = false;
+          for (int j = -1; j < ((int)backwardCluster.size()) && !skip; j++) {
+            if (j >= 0) {
+              NumBackwardInVC += backwardCluster[j].second;
+            }
+            else {
+              NumBackwardInVC = 0;
+            }
+            if (i == ((int)forwardCluster.size()) - 1) {
+              if (NumForwardInVC < minValue) {
+                minimalVertexCovers.clear();
+              }
+              if (NumForwardInVC <= minValue) {
+                minimalVertexCovers.push_back(std::make_pair(i, j));
+                minValue = NumForwardInVC;
+              }
+              skip = true;
+            }
+            else if (j == ((int)backwardCluster.size()) - 1) {
+              if (NumBackwardInVC < minValue) {
+                minimalVertexCovers.clear();
+              }
+              if (NumBackwardInVC <= minValue) {
+                minimalVertexCovers.push_back(std::make_pair(i, j));
+                minValue = NumBackwardInVC;
+              }
+              skip = true;
+            }
+            else if (backwardCluster[j + 1].first + forwardCluster[i + 1].first + 1 > lbmin) {
+              if (NumBackwardInVC + NumForwardInVC < minValue) {
+                minimalVertexCovers.clear();
+              }
+              if (NumBackwardInVC + NumForwardInVC <= minValue) {
+                minimalVertexCovers.push_back(std::make_pair(i, j));
+                minValue = NumBackwardInVC + NumForwardInVC;
+              }
+              skip = true;
+            }
+          }
+        }
+
+
+        std::pair<int, int> chosenVC = computeSingleClusterMinNodesTieBreaking(minimalVertexCovers, forwardCluster, backwardCluster);
+
+        for (int i = 0; i <= chosenVC.first; i++) {
+          auto v = forwardQueue.getNodesMapElements(kOpenReady, forwardCluster[i].first);
+          nextForward.insert(nextForward.end(), v.begin(), v.end());
+        }
+        for (int j = 0; j <= chosenVC.second; j++) {
+          auto v = backwardQueue.getNodesMapElements(kOpenReady, backwardCluster[j].first);
+          nextBackward.insert(nextBackward.end(), v.begin(), v.end());
+        }
+
+
+        return true;
+      }
+      else
+      {
+        bool changed = false;
+        if (/*backwardQueue.OpenReadySize() == 0 && */backwardQueue.OpenWaitingSize() != 0)
+        {
+          const auto i4 = backwardQueue.getFirstKey(kOpenWaiting);
+          if (!fgreater(i4, CLowerBound))
+          {
+            changed = true;
+            backwardQueue.PutToReady();
+          }
+        }
+        if (/*forwardQueue.OpenReadySize() == 0 && */forwardQueue.OpenWaitingSize() != 0)
+        {
+          const auto i3 = forwardQueue.getFirstKey(kOpenWaiting);
+          if (!fgreater(i3, CLowerBound))
+          {
+            changed = true;
+            forwardQueue.PutToReady();
+          }
+        }
+        if (!changed) {
+          CLowerBound = DBL_MAX;
+          if (forwardQueue.OpenWaitingSize() != 0)
+          {
+            const auto i5 = forwardQueue.getFirstKey(kOpenWaiting);
+            CLowerBound = std::min(CLowerBound, i5);
+          }
+          if (backwardQueue.OpenWaitingSize() != 0)
+          {
+            const auto i6 = backwardQueue.getFirstKey(kOpenWaiting);
+            CLowerBound = std::min(CLowerBound, i6);
+          }
+          if ((forwardQueue.OpenReadySize() != 0) && (backwardQueue.OpenReadySize() != 0))
+            CLowerBound = std::min(CLowerBound, forwardQueue.getFirstKey(kOpenReady) + backwardQueue.getFirstKey(kOpenReady) + epsilon);
+        }
+
+
+      }
+
+
+    }
+    return false;
+  }
+
+  template <class state, class action, class environment, class dataStructure, class priorityQueue>
+  bool ExpandAVertexCover(std::vector<state>& thePath)
+  {
+    std::vector<uint64_t> nForward, nBackward;
+    bool result = queue.getVertexCover(nForward, nBackward, tieBreakingPolicy);
+    // if failed, see if we have optimal path (but return)
+    if (result == false)
+    {
+      if (currentCost == DBL_MAX)
+      {
+        thePath.resize(0);
+        return true;
+      }
+      ExtractFromMiddle(thePath);
+      return true;
+    }
+
+
+    if ((!isAllSolutions && !fless(queue.GetLowerBound(), currentCost)) || (isAllSolutions && !flesseq(queue.GetLowerBound(), currentCost))) {
+      ExtractFromMiddle(thePath);
+      return true;
+    }
+
+    else if (nForward.size() > 0 &&
+      nBackward.size() > 0)
+    {
+      std::unordered_map<state*, bool> mapData;
+      for (int i = 0; i < nForward.size(); i++) {
+        mapData[&(queue.forwardQueue.Lookup(nForward[i]).data)] = true;
+      }
+      for (int j = 0; j < nBackward.size(); j++) {
+        if (mapData.find(&(queue.backwardQueue.Lookup(nBackward[j]).data)) != mapData.end()) {
+          ExtractFromMiddle(thePath);
+          return true;
+        }
+      }
+
+    }
+    struct compareBackward {
+      compareBackward(dataStructure currQueue) : queue(currQueue) {}
+      bool operator () (uint64_t i, uint64_t j) { return (queue.backwardQueue.Lookup(i).h < queue.backwardQueue.Lookup(j).h); }
+      dataStructure queue;
+    };
+    struct compareForward {
+      compareForward(dataStructure currQueue) : queue(currQueue) {}
+      bool operator () (uint64_t i, uint64_t j) { return (queue.forwardQueue.Lookup(i).h < queue.forwardQueue.Lookup(j).h); }
+      dataStructure queue;
+    };
+    double currentLowerBound = queue.GetLowerBound();
+
+    if (nForward.size() == 0) {
+      for (int j = 0; j < ((int)nBackward.size()); j++) {
+        double oldKey = queue.backwardQueue.getFirstKey(kOpenReady);
+        if (queue.backwardQueue.Lookup(nBackward[j]).where != kClosed) {
+          counts[currentLowerBound]++;
+          Expand(nBackward[j], queue.backwardQueue, queue.forwardQueue, backwardHeuristic, start);
+        }
+        if ((!isAllSolutions && !fless(queue.GetLowerBound(), currentCost)) || (isAllSolutions && !flesseq(queue.GetLowerBound(), currentCost))) {
+          ExtractFromMiddle(thePath);
+          return true;
+        }
+        if (currentLowerBound != queue.GetLowerBound() || oldKey != queue.backwardQueue.getFirstKey(kOpenReady)) {
+          return false;
+        }
+      }
+    }
+
+    else if (nBackward.size() == 0) {
+      for (int i = 0; i < ((int)nForward.size()); i++) {
+        double oldKey = queue.forwardQueue.getFirstKey(kOpenReady);
+        if (queue.forwardQueue.Lookup(nForward[i]).where != kClosed) {
+          counts[currentLowerBound]++;
+          Expand(nForward[i], queue.forwardQueue, queue.backwardQueue, forwardHeuristic, goal);
+        }
+        if ((!isAllSolutions && !fless(queue.GetLowerBound(), currentCost)) || (isAllSolutions && !flesseq(queue.GetLowerBound(), currentCost))) {
+          ExtractFromMiddle(thePath);
+          return true;
+        }
+        if (currentLowerBound != queue.GetLowerBound() || oldKey != queue.forwardQueue.getFirstKey(kOpenReady)) {
+          return false;
+        }
+      }
+    }
+    else {
+      int i = nForward.size() - 1;
+      int j = nBackward.size() - 1;
+      while (i >= 0 || j >= 0) {
+        if ((!isAllSolutions && !fless(queue.GetLowerBound(), currentCost)) || (isAllSolutions && !flesseq(queue.GetLowerBound(), currentCost)))
+        {
+          ExtractFromMiddle(thePath);
+          return true;
+        }
+        bool expandForward;
+        if (i < 0) {
+          expandForward = false;
+        }
+        else if (j < 0) {
+          expandForward = true;
+        }
+        else {
+          if (queue.forwardQueue.Lookup(nForward[i]).g >= queue.backwardQueue.Lookup(nBackward[j]).g) {
+            expandForward = true;
+          }
+          else {
+            expandForward = false;
+          }
+        }
+        if (expandForward) {
+          if (queue.forwardQueue.Lookup(nForward[i]).where != kClosed) {
+            counts[currentLowerBound]++;
+            Expand(nForward[i], queue.forwardQueue, queue.backwardQueue, forwardHeuristic, goal);
+          }
+          i--;
+        }
+        else {
+          if (queue.backwardQueue.Lookup(nBackward[j]).where != kClosed) {
+            counts[currentLowerBound]++;
+            Expand(nBackward[j], queue.backwardQueue, queue.forwardQueue, backwardHeuristic, start);
+          }
+          j--;
+        }
+        if (currentLowerBound != queue.GetLowerBound()) {
+          return false;
+        }
+      }
+    }
+    return false;
+  }
 
 public:
 
