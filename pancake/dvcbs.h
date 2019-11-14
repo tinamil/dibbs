@@ -118,8 +118,8 @@ class Dvcbs {
     PROCESS_MEMORY_COUNTERS memCounter;
     while (true)
     {
-      BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
-      assert(result);
+      BOOL proc_result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
+      assert(proc_result);
       if (memCounter.PagefileUsage > MEM_LIMIT) {
         return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
       }
