@@ -5,6 +5,7 @@
 #include "Pancake.h"
 #include <queue>
 #include <unordered_set>
+#include <unordered_map>
 #include <tuple>
 #include <stack>
 #include <cmath>
@@ -30,43 +31,7 @@ class Dvcbs {
 
   Dvcbs() : open_f_ready(), open_b_ready(), open_f_waiting(), open_b_waiting(), open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
 
-  bool select_pair() {
-    while (!open_f_waiting.empty() && open_f_waiting.begin()->f < lbmin) {
-      open_f_ready.insert(*open_f_waiting.begin());
-      open_f_waiting.erase(open_f_waiting.begin());
-    }
-    while (!open_b_waiting.empty() && open_b_waiting.begin()->f < lbmin) {
-      open_b_ready.insert(*open_b_waiting.begin());
-      open_b_waiting.erase(open_b_waiting.begin());
-    }
-
-    while (true) {
-      if (open_f_ready.empty() && open_f_waiting.empty()) return false;
-      if (open_b_ready.empty() && open_b_waiting.empty()) return false;
-
-      if (!open_f_ready.empty() && !open_b_ready.empty() && open_f_ready.begin()->g + open_b_ready.begin()->g <= lbmin) return true;
-      if (!open_f_waiting.empty() && open_f_waiting.begin()->f <= lbmin) {
-        open_f_ready.insert(*open_f_waiting.begin());
-        open_f_waiting.erase(open_f_waiting.begin());
-      }
-      else if (!open_b_waiting.empty() && open_b_waiting.begin()->f <= lbmin) {
-        open_b_ready.insert(*open_b_waiting.begin());
-        open_b_waiting.erase(open_b_waiting.begin());
-      }
-      else {
-        size_t min_wf = std::numeric_limits<size_t>::max();
-        if (!open_f_waiting.empty()) min_wf = open_f_waiting.begin()->f;
-        size_t min_wb = std::numeric_limits<size_t>::max();
-        if (!open_b_waiting.empty()) min_wb = open_b_waiting.begin()->f;
-        size_t min_r = std::numeric_limits<size_t>::max();
-        if (!open_f_ready.empty() && !open_b_ready.empty()) min_r = open_f_ready.begin()->g + open_b_ready.begin()->g;
-        lbmin = std::min(std::min(min_wf, min_wb), min_r);
-      }
-    }
-  }
-
-  bool expand_node_forward() {
-    Pancake next_val = *open_f_ready.begin();
+  bool expand_node_forward(const Pancake& next_val) {
     open_f_ready.erase(next_val);
     open_f_hash.erase(next_val);
 
@@ -99,8 +64,7 @@ class Dvcbs {
     }
   }
 
-  bool expand_node_backward() {
-    Pancake next_val = *open_b_ready.begin();
+  bool expand_node_backward(const Pancake& next_val) {
     open_b_ready.erase(next_val);
     open_b_hash.erase(next_val);
 
@@ -132,6 +96,7 @@ class Dvcbs {
       open_b_hash.insert(new_action);
     }
   }
+
   std::pair<double, size_t> run_search(Pancake start, Pancake goal)
   {
     if (start == goal) {
@@ -139,7 +104,7 @@ class Dvcbs {
     }
 
     expansions = 0;
-    UB = std::numeric_limits<double>::max();
+    UB = std::numeric_limits<size_t>::max();
 
     open_f_waiting.insert(start);
     open_f_hash.insert(start);
@@ -149,26 +114,133 @@ class Dvcbs {
 
     lbmin = std::max(1ui8, std::max(start.h, goal.h));
 
-    bool finished = false;
-    while (select_pair())
+
+    PROCESS_MEMORY_COUNTERS memCounter;
+    while (true)
     {
-      if (lbmin >= UB) {
-        finished = true;
-        break;
+      BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
+      assert(result);
+      if (memCounter.PagefileUsage > MEM_LIMIT) {
+        return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
       }
 
-      expand_node_forward();
-      expand_node_backward();
-    }
+      std::vector<Pancake> nForward, nBackward;
+      bool result = getVertexCover(nForward, nBackward);
+      // if failed, see if we have optimal path (but return)
+      if (result == false)
+      {
+        if (UB == std::numeric_limits<double>::max())
+        {
+          return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
+        }
+        else {
+          return std::make_pair(UB, expansions);
+        }
+      }
 
-    if (finished)  return std::make_pair(UB, expansions);
-    else return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
+
+      if (lbmin >= UB) {
+        return std::make_pair(UB, expansions);
+      }
+
+      else if (nForward.size() > 0 && nBackward.size() > 0)
+      {
+        std::unordered_map<Pancake, bool, PancakeHash> mapData;
+        for (int i = 0; i < nForward.size(); i++) {
+          mapData[nForward[i]] = true;
+        }
+        for (int j = 0; j < nBackward.size(); j++) {
+          if (mapData.find(nBackward[j]) != mapData.end()) {
+            return std::make_pair(UB, expansions);
+          }
+        }
+
+      }
+
+      auto currentLowerBound = lbmin;
+
+      bool skip_loop = false;
+      if (nForward.size() == 0) {
+        for (int j = 0; j < ((int)nBackward.size()); j++) {
+          double oldKey = open_b_ready.begin()->f;
+          //if (closed_b.find(nBackward[j]) == closed_b.end()) {
+          expand_node_backward(nBackward[j]);
+          //}
+          if (lbmin >= UB) {
+            return std::make_pair(UB, expansions);
+          }
+          if (currentLowerBound != lbmin || open_b_ready.empty() || oldKey != open_b_ready.begin()->f) {
+            skip_loop = true;
+            break;
+          }
+        }
+        if (skip_loop) continue;
+      }
+
+      else if (nBackward.size() == 0) {
+        for (int i = 0; i < ((int)nForward.size()); i++) {
+          double oldKey = open_f_ready.begin()->f;
+          //if (closed_f.find(nForward[i]) == closed_f.end()) {
+          expand_node_forward(nForward[i]);
+          //}
+          if (lbmin >= UB) {
+            return std::make_pair(UB, expansions);
+          }
+          if (currentLowerBound != lbmin || open_f_ready.empty() || oldKey != open_f_ready.begin()->f) {
+            skip_loop = true;
+            break;
+          }
+        }
+        if (skip_loop) continue;
+      }
+      else {
+        int i = nForward.size() - 1;
+        int j = nBackward.size() - 1;
+        while (i >= 0 || j >= 0) {
+          if (lbmin >= UB)
+          {
+            return std::make_pair(UB, expansions);
+          }
+          bool expandForward;
+          if (i < 0) {
+            expandForward = false;
+          }
+          else if (j < 0) {
+            expandForward = true;
+          }
+          else {
+            if (nForward[i].g >= nBackward[j].g) {
+              expandForward = true;
+            }
+            else {
+              expandForward = false;
+            }
+          }
+          if (expandForward) {
+            if (closed_f.find(nForward[i]) == closed_f.end()) {
+              expand_node_forward(nForward[i]);
+            }
+            i--;
+          }
+          else {
+            if (closed_b.find(nBackward[j]) == closed_b.end()) {
+              expand_node_backward(nBackward[j]);
+            }
+            j--;
+          }
+          if (currentLowerBound != lbmin) {
+            skip_loop = true;
+            break;
+          }
+        }
+        if (skip_loop) continue;
+      }
+    }
   }
 
   std::pair<int, int> computeSingleClusterMinNodesTieBreaking(std::vector<std::pair<int, int> >& minimalVertexCovers, std::vector<std::pair<double, uint64_t> >& forwardCluster, std::vector<std::pair<double, uint64_t> >& backwardCluster) {
     int maxF = INT_MAX;
     int maxB = INT_MAX;
-    std::pair<int, int> maxPair;
     for (std::vector<std::pair<int, int> >::iterator it = minimalVertexCovers.begin(); it != minimalVertexCovers.end(); ++it) {
       if (maxF < INT_MAX && maxB < INT_MAX) {
         break;
@@ -186,10 +258,9 @@ class Dvcbs {
     else {
       return std::make_pair(-1, 0);
     }
-    return maxPair;
   }
 
-  bool getVertexCover(std::vector<uint64_t>& nextForward, std::vector<uint64_t>& nextBackward)
+  bool getVertexCover(std::vector<Pancake>& nextForward, std::vector<Pancake>& nextBackward)
   {
     while (true)
     {
@@ -198,11 +269,11 @@ class Dvcbs {
       if (open_b_waiting.size() == 0 && open_b_ready.size() == 0)
         return false;
 
-      while (!open_f_waiting.empty() && open_f_waiting.begin()->f < lbmin) {
+      while (!open_f_waiting.empty() && open_f_waiting.begin()->f <= lbmin) {
         open_f_ready.insert(*open_f_waiting.begin());
         open_f_waiting.erase(open_f_waiting.begin());
       }
-      while (!open_b_waiting.empty() && open_b_waiting.begin()->f < lbmin) {
+      while (!open_b_waiting.empty() && open_b_waiting.begin()->f <= lbmin) {
         open_b_ready.insert(*open_b_waiting.begin());
         open_b_waiting.erase(open_b_waiting.begin());
       }
@@ -213,7 +284,7 @@ class Dvcbs {
         std::vector<std::pair<double, uint64_t> > forwardCluster;
         std::vector<std::pair<double, uint64_t> > backwardCluster;
         for (auto it = open_f_ready.begin(); it != open_f_ready.end() && it->g <= lbmin - open_b_ready.begin()->g - 1 + 0.00001; it++) {
-          if(forwardCluster.size() == 0 || forwardCluster.back().first != it->g)
+          if (forwardCluster.size() == 0 || forwardCluster.back().first != it->g)
             forwardCluster.push_back(std::make_pair(it->g, 1));
           else {
             forwardCluster.back().second++;
@@ -284,190 +355,70 @@ class Dvcbs {
         std::pair<int, int> chosenVC = computeSingleClusterMinNodesTieBreaking(minimalVertexCovers, forwardCluster, backwardCluster);
 
         for (int i = 0; i <= chosenVC.first; i++) {
-          auto v = forwardQueue.getNodesMapElements(kOpenReady, forwardCluster[i].first);
-          nextForward.insert(nextForward.end(), v.begin(), v.end());
+          auto start = open_f_ready.begin();
+          auto start_g = start->g;
+          while (start != open_f_ready.end() && start->g == start_g) {
+            nextForward.push_back(*start);
+            ++start;
+          }
         }
-        for (int j = 0; j <= chosenVC.second; j++) {
-          auto v = backwardQueue.getNodesMapElements(kOpenReady, backwardCluster[j].first);
-          nextBackward.insert(nextBackward.end(), v.begin(), v.end());
+        for (int i = 0; i <= chosenVC.second; i++) {
+          auto start = open_b_ready.begin();
+          auto start_g = start->g;
+          while (start != open_b_ready.end() && start->g == start_g) {
+            nextBackward.push_back(*start);
+            ++start;
+          }
         }
-
-
         return true;
       }
       else
       {
         bool changed = false;
-        if (/*backwardQueue.OpenReadySize() == 0 && */backwardQueue.OpenWaitingSize() != 0)
+        if (open_b_waiting.size() != 0)
         {
-          const auto i4 = backwardQueue.getFirstKey(kOpenWaiting);
-          if (!fgreater(i4, CLowerBound))
+          const auto i4 = open_b_waiting.begin()->f;
+          if (i4 <= lbmin)
           {
             changed = true;
-            backwardQueue.PutToReady();
+            while (!open_b_waiting.empty() && open_b_waiting.begin()->f == i4) {
+              open_b_ready.insert(*open_b_waiting.begin());
+              open_b_waiting.erase(open_b_waiting.begin());
+            }
           }
         }
-        if (/*forwardQueue.OpenReadySize() == 0 && */forwardQueue.OpenWaitingSize() != 0)
+        if (open_f_waiting.size() != 0)
         {
-          const auto i3 = forwardQueue.getFirstKey(kOpenWaiting);
-          if (!fgreater(i3, CLowerBound))
+          const auto i3 = open_f_waiting.begin()->f;
+          if (i3 <= lbmin)
           {
             changed = true;
-            forwardQueue.PutToReady();
+            while (!open_f_waiting.empty() && open_f_waiting.begin()->f == i3) {
+              open_f_ready.insert(*open_f_waiting.begin());
+              open_f_waiting.erase(open_f_waiting.begin());
+            }
           }
         }
         if (!changed) {
-          CLowerBound = DBL_MAX;
-          if (forwardQueue.OpenWaitingSize() != 0)
+          lbmin = std::numeric_limits<size_t>::max();
+          if (open_f_waiting.size() != 0)
           {
-            const auto i5 = forwardQueue.getFirstKey(kOpenWaiting);
-            CLowerBound = std::min(CLowerBound, i5);
+            const auto i5 = open_f_waiting.begin()->f;
+            lbmin = std::min(lbmin, (size_t)i5);
           }
-          if (backwardQueue.OpenWaitingSize() != 0)
+          if (open_b_waiting.size() != 0)
           {
-            const auto i6 = backwardQueue.getFirstKey(kOpenWaiting);
-            CLowerBound = std::min(CLowerBound, i6);
+            const auto i6 = open_b_waiting.begin()->f;
+            lbmin = std::min(lbmin, (size_t)i6);
           }
-          if ((forwardQueue.OpenReadySize() != 0) && (backwardQueue.OpenReadySize() != 0))
-            CLowerBound = std::min(CLowerBound, forwardQueue.getFirstKey(kOpenReady) + backwardQueue.getFirstKey(kOpenReady) + epsilon);
-        }
-
-
-      }
-
-
-    }
-    return false;
-  }
-
-  template <class state, class action, class environment, class dataStructure, class priorityQueue>
-  bool ExpandAVertexCover(std::vector<state>& thePath)
-  {
-    std::vector<uint64_t> nForward, nBackward;
-    bool result = queue.getVertexCover(nForward, nBackward, tieBreakingPolicy);
-    // if failed, see if we have optimal path (but return)
-    if (result == false)
-    {
-      if (currentCost == DBL_MAX)
-      {
-        thePath.resize(0);
-        return true;
-      }
-      ExtractFromMiddle(thePath);
-      return true;
-    }
-
-
-    if ((!isAllSolutions && !fless(queue.GetLowerBound(), currentCost)) || (isAllSolutions && !flesseq(queue.GetLowerBound(), currentCost))) {
-      ExtractFromMiddle(thePath);
-      return true;
-    }
-
-    else if (nForward.size() > 0 &&
-      nBackward.size() > 0)
-    {
-      std::unordered_map<state*, bool> mapData;
-      for (int i = 0; i < nForward.size(); i++) {
-        mapData[&(queue.forwardQueue.Lookup(nForward[i]).data)] = true;
-      }
-      for (int j = 0; j < nBackward.size(); j++) {
-        if (mapData.find(&(queue.backwardQueue.Lookup(nBackward[j]).data)) != mapData.end()) {
-          ExtractFromMiddle(thePath);
-          return true;
-        }
-      }
-
-    }
-    struct compareBackward {
-      compareBackward(dataStructure currQueue) : queue(currQueue) {}
-      bool operator () (uint64_t i, uint64_t j) { return (queue.backwardQueue.Lookup(i).h < queue.backwardQueue.Lookup(j).h); }
-      dataStructure queue;
-    };
-    struct compareForward {
-      compareForward(dataStructure currQueue) : queue(currQueue) {}
-      bool operator () (uint64_t i, uint64_t j) { return (queue.forwardQueue.Lookup(i).h < queue.forwardQueue.Lookup(j).h); }
-      dataStructure queue;
-    };
-    double currentLowerBound = queue.GetLowerBound();
-
-    if (nForward.size() == 0) {
-      for (int j = 0; j < ((int)nBackward.size()); j++) {
-        double oldKey = queue.backwardQueue.getFirstKey(kOpenReady);
-        if (queue.backwardQueue.Lookup(nBackward[j]).where != kClosed) {
-          counts[currentLowerBound]++;
-          Expand(nBackward[j], queue.backwardQueue, queue.forwardQueue, backwardHeuristic, start);
-        }
-        if ((!isAllSolutions && !fless(queue.GetLowerBound(), currentCost)) || (isAllSolutions && !flesseq(queue.GetLowerBound(), currentCost))) {
-          ExtractFromMiddle(thePath);
-          return true;
-        }
-        if (currentLowerBound != queue.GetLowerBound() || oldKey != queue.backwardQueue.getFirstKey(kOpenReady)) {
-          return false;
-        }
-      }
-    }
-
-    else if (nBackward.size() == 0) {
-      for (int i = 0; i < ((int)nForward.size()); i++) {
-        double oldKey = queue.forwardQueue.getFirstKey(kOpenReady);
-        if (queue.forwardQueue.Lookup(nForward[i]).where != kClosed) {
-          counts[currentLowerBound]++;
-          Expand(nForward[i], queue.forwardQueue, queue.backwardQueue, forwardHeuristic, goal);
-        }
-        if ((!isAllSolutions && !fless(queue.GetLowerBound(), currentCost)) || (isAllSolutions && !flesseq(queue.GetLowerBound(), currentCost))) {
-          ExtractFromMiddle(thePath);
-          return true;
-        }
-        if (currentLowerBound != queue.GetLowerBound() || oldKey != queue.forwardQueue.getFirstKey(kOpenReady)) {
-          return false;
-        }
-      }
-    }
-    else {
-      int i = nForward.size() - 1;
-      int j = nBackward.size() - 1;
-      while (i >= 0 || j >= 0) {
-        if ((!isAllSolutions && !fless(queue.GetLowerBound(), currentCost)) || (isAllSolutions && !flesseq(queue.GetLowerBound(), currentCost)))
-        {
-          ExtractFromMiddle(thePath);
-          return true;
-        }
-        bool expandForward;
-        if (i < 0) {
-          expandForward = false;
-        }
-        else if (j < 0) {
-          expandForward = true;
-        }
-        else {
-          if (queue.forwardQueue.Lookup(nForward[i]).g >= queue.backwardQueue.Lookup(nBackward[j]).g) {
-            expandForward = true;
-          }
-          else {
-            expandForward = false;
-          }
-        }
-        if (expandForward) {
-          if (queue.forwardQueue.Lookup(nForward[i]).where != kClosed) {
-            counts[currentLowerBound]++;
-            Expand(nForward[i], queue.forwardQueue, queue.backwardQueue, forwardHeuristic, goal);
-          }
-          i--;
-        }
-        else {
-          if (queue.backwardQueue.Lookup(nBackward[j]).where != kClosed) {
-            counts[currentLowerBound]++;
-            Expand(nBackward[j], queue.backwardQueue, queue.forwardQueue, backwardHeuristic, start);
-          }
-          j--;
-        }
-        if (currentLowerBound != queue.GetLowerBound()) {
-          return false;
+          if ((open_f_ready.size() != 0) && (open_b_ready.size() != 0))
+            lbmin = std::min(lbmin, (size_t)(open_f_ready.begin()->g + open_b_ready.begin()->g + 1));
         }
       }
     }
     return false;
   }
+
 
 public:
 

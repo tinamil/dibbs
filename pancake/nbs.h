@@ -138,7 +138,7 @@ class Nbs {
     }
 
     expansions = 0;
-    UB = std::numeric_limits<double>::max();
+    UB = std::numeric_limits<size_t>::max();
 
     open_f_waiting.insert(start);
     open_f_hash.insert(start);

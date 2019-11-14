@@ -45,7 +45,7 @@ class Dibbs
 
         auto it_open = other_open.find(new_action);
         if (it_open != other_open.end()) {
-          UB = std::min(UB, (size_t)(*it_open).g + new_action.g);
+          UB = std::min(UB, (size_t)it_open->g + new_action.g);
         }
         else {
           auto it_open = open_hash.find(new_action);
@@ -64,11 +64,13 @@ class Dibbs
     expansions = 0;
 
     open_f.insert(start);
+    open_f_hash.insert(goal);
     open_b.insert(goal);
+    open_b_hash.insert(goal);
 
-    UB = std::numeric_limits<double>::infinity();
+    UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
-    while (open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin()).f_bar + (*open_b.begin()).f_bar) / 2.0f)) {
+    while (open_f.size() > 0 && open_b.size() > 0 && UB > ceil((open_f.begin()->f_bar + open_b.begin()->f_bar) / 2.0)) {
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
@@ -76,10 +78,10 @@ class Dibbs
         break;
       }
 
-      if ((*open_f.begin()).f_bar < (*open_b.begin()).f_bar) {
+      if (open_f.begin()->f_bar < open_b.begin()->f_bar) {
         expand_node(open_f, open_f_hash, open_b_hash, closed_f);
       }
-      else if ((*open_f.begin()).f_bar > (*open_b.begin()).f_bar) {
+      else if (open_f.begin()->f_bar > open_b.begin()->f_bar) {
         expand_node(open_b, open_b_hash, open_f_hash, closed_b);
       }
       else if (open_f.size() <= open_b.size()) {
@@ -90,7 +92,7 @@ class Dibbs
       }
 
     }
-    if (UB > ceil(((size_t)(*open_f.begin()).f_bar + (*open_b.begin()).f_bar) / 2.0)) {
+    if (UB > ceil((open_f.begin()->f_bar + open_b.begin()->f_bar) / 2.0)) {
       return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
     }
     else {

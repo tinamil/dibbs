@@ -8,7 +8,7 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 30;
+constexpr int NUM_PANCAKES = 16;
 constexpr int GAPX = 2;
 //constexpr size_t NODE_LIMIT = 1000000000;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB

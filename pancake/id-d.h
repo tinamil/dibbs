@@ -167,7 +167,7 @@ class ID_D
       return std::make_pair(0, 0);
     }
     expansions = 0;
-    UB = std::numeric_limits<double>::max();
+    UB = std::numeric_limits<size_t>::max();
     LB = 1;
 
     size_t iteration = 0;

@@ -16,13 +16,13 @@
 #include <iomanip>
 
 
-#define A_STAR
-#define REVERSE_ASTAR
+//#define A_STAR
+//#define REVERSE_ASTAR
 //#define IDA_STAR
-#define IDD
-#define DIBBS
-#define GBFHS
-#define NBS
+//#define IDD
+//#define DIBBS
+//#define GBFHS
+//#define NBS
 #define DVCBS
 
 
@@ -69,9 +69,10 @@ void output_data(std::ostream& stream) {
   std::stringstream expansion_stream;
   std::stringstream time_stream;
   uint8_t problem[NUM_PANCAKES + 1];
+  double answers[101];
+  bool answered = false;
   {
 #ifdef A_STAR
-
     std::cout << "A*\n";
     double seed = 3.1567;
     for (int i = 1; i <= 100; ++i) {
@@ -92,7 +93,15 @@ void output_data(std::ostream& stream) {
       }
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!answered) {
+        answers[i] = cstar;
+      }
+      else {
+        assert(answers[i] == cstar);
+      }
     }
+    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -121,7 +130,15 @@ void output_data(std::ostream& stream) {
       }
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!answered) {
+        answers[i] = cstar;
+      }
+      else {
+        assert(answers[i] == cstar);
+      }
     }
+    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -144,7 +161,15 @@ void output_data(std::ostream& stream) {
       expansion_stream << std::to_string(expansions) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!answered) {
+        answers[i] = cstar;
+      }
+      else {
+        assert(answers[i] == cstar);
+      }
     }
+    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -173,7 +198,15 @@ void output_data(std::ostream& stream) {
         expansion_stream << std::to_string(expansions) << " ";
       }
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!answered) {
+        answers[i] = cstar;
+      }
+      else {
+        assert(answers[i] == cstar);
+      }
     }
+    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -201,7 +234,16 @@ void output_data(std::ostream& stream) {
       }
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!answered) {
+        answers[i] = cstar;
+      }
+      else {
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        assert(answers[i] == cstar);
+      }
     }
+    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -228,7 +270,15 @@ void output_data(std::ostream& stream) {
         expansion_stream << std::to_string(expansions) << " ";
       }
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!answered) {
+        answers[i] = cstar;
+      }
+      else {
+        assert(answers[i] == cstar);
+      }
     }
+    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -255,7 +305,15 @@ void output_data(std::ostream& stream) {
         expansion_stream << std::to_string(expansions) << " ";
       }
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!answered) {
+        answers[i] = cstar;
+      }
+      else {
+        assert(answers[i] == cstar);
+      }
     }
+    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -282,7 +340,15 @@ void output_data(std::ostream& stream) {
         expansion_stream << std::to_string(expansions) << " ";
       }
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!answered) {
+        answers[i] = cstar;
+      }
+      else {
+        assert(answers[i] == cstar);
+      }
     }
+    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
