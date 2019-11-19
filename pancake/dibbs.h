@@ -26,7 +26,9 @@ class Dibbs
   void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, std::unordered_set<Pancake, PancakeHash>& closed) {
     Pancake next_val = *open.begin();
     open.erase(next_val);
-    open_hash.erase(next_val);
+    auto it_hash = open_hash.find(next_val);
+    assert(it_hash != open_hash.end());
+    open_hash.erase(it_hash);
 
 
     ++expansions;
@@ -43,14 +45,33 @@ class Dibbs
       auto it_closed = closed.find(new_action);
       if (it_closed == closed.end()) {
 
-        auto it_open = other_open.find(new_action);
-        if (it_open != other_open.end()) {
-          UB = std::min(UB, (size_t)it_open->g + new_action.g);
+        auto it_other = other_open.find(new_action);
+        if (it_other != other_open.end()) {
+#ifdef HISTORY
+          if (it_other->g + new_action.g < UB) {
+            if (new_action.dir == Direction::forward) {
+              best_f = new_action;
+              best_b = *it_other;
+            }
+            else {
+              best_f = *it_other;
+              best_b = new_action;
+            }
+          }
+#endif
+          UB = std::min(UB, (size_t)it_other->g + new_action.g);
         }
         else {
           auto it_open = open_hash.find(new_action);
-          if (it_open != open_hash.end()) {
-            continue;
+          if (it_open != open_hash.end())
+          {
+            if (it_open->g <= new_action.g) {
+              continue;
+            }
+            else {
+              open.erase(new_action);
+              open_hash.erase(new_action);
+            }
           }
 
           open.insert(new_action);
@@ -60,11 +81,15 @@ class Dibbs
     }
   }
 
+#ifdef HISTORY
+  Pancake best_f, best_b;
+#endif
+
   std::pair<double, size_t> run_search(Pancake start, Pancake goal) {
     expansions = 0;
 
     open_f.insert(start);
-    open_f_hash.insert(goal);
+    open_f_hash.insert(start);
     open_b.insert(goal);
     open_b_hash.insert(goal);
 
@@ -92,14 +117,24 @@ class Dibbs
       }
 
     }
+#ifdef HISTORY
+    std::cout << "Actions: ";
+    for (int i = 0; i < best_f.actions.size(); ++i) {
+      std::cout << std::to_string(best_f.actions[i]) << " ";
+    }
+    for (int i = 0; i < best_b.actions.size(); ++i) {
+      std::cout << std::to_string(best_b.actions[i]) << " ";
+    }
+    std::cout << std::endl;
+#endif
     if (UB > ceil((open_f.begin()->f_bar + open_b.begin()->f_bar) / 2.0)) {
       return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
-    }
+  }
     else {
       //std::cout << "Size: " << open.size() << '\n';
       return std::make_pair(UB, expansions);
     }
-  }
+}
 
 public:
 

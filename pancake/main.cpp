@@ -25,6 +25,8 @@
 //#define NBS
 #define DVCBS
 
+constexpr int NUM_PROBLEMS = 100;
+
 
 void generate_random_instance(double& seed, uint8_t problem[]) {
   problem[0] = NUM_PANCAKES;
@@ -69,14 +71,15 @@ void output_data(std::ostream& stream) {
   std::stringstream expansion_stream;
   std::stringstream time_stream;
   uint8_t problem[NUM_PANCAKES + 1];
-  double answers[101];
+  double answers[NUM_PROBLEMS + 1];
   bool answered = false;
   {
 #ifdef A_STAR
     std::cout << "A*\n";
     double seed = 3.1567;
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       generate_random_instance(seed, problem);
+
       //define_problems(NUM_PANCAKES, GAPX, i, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake node(problem, Direction::forward);
@@ -111,7 +114,7 @@ void output_data(std::ostream& stream) {
 #ifdef REVERSE_ASTAR
     std::cout << "RA*\n";
     double seed = 3.1567;
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       generate_random_instance(seed, problem);
       //define_problems(NUM_PANCAKES, GAPX, i, problem);
       //easy_problem(NUM_PANCAKES, problem);
@@ -148,7 +151,7 @@ void output_data(std::ostream& stream) {
 #ifdef IDA_STAR
     std::cout << "IDA\n";
     double seed = 3.1567;
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       generate_random_instance(seed, problem);
       //define_problems(NUM_PANCAKES, GAPX, i, problem);
       //easy_problem(NUM_PANCAKES, problem);
@@ -180,7 +183,7 @@ void output_data(std::ostream& stream) {
     //ID-D
     std::cout << "ID-D\n";
     double seed = 3.1567;
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       generate_random_instance(seed, problem);
       //define_problems(NUM_PANCAKES, GAPX, i, problem);
       //easy_problem(NUM_PANCAKES, problem);
@@ -203,6 +206,7 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else {
+        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << " " << std::to_string(expansions) << std::endl;
         assert(answers[i] == cstar);
       }
     }
@@ -216,7 +220,7 @@ void output_data(std::ostream& stream) {
     //DIBBS
     std::cout << "DIBBS\n";
     double seed = 3.1567;
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       generate_random_instance(seed, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
@@ -253,7 +257,7 @@ void output_data(std::ostream& stream) {
 #ifdef GBFHS
     std::cout << "GBFHS\n";
     double seed = 3.1567;
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       generate_random_instance(seed, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
@@ -288,7 +292,7 @@ void output_data(std::ostream& stream) {
 #ifdef NBS
     std::cout << "NBS\n";
     double seed = 3.1567;
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       generate_random_instance(seed, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
@@ -323,7 +327,7 @@ void output_data(std::ostream& stream) {
 #ifdef DVCBS
     std::cout << "DVCBS\n";
     double seed = 3.1567;
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       generate_random_instance(seed, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
@@ -365,8 +369,7 @@ std::string return_formatted_time(std::string format)
   return ss.str();
 }
 
-int main()
-{
+void run_random_test() {
   std::ofstream file;
   std::string name = "output" + std::to_string(NUM_PANCAKES) + "_" + std::to_string(GAPX) + "_" + return_formatted_time("%y%b%d-%H%M%S");
 #ifdef A_STAR
@@ -399,8 +402,23 @@ int main()
   if (!file)
   {
     std::cout << "Error in creating file!!!" << std::endl;
-    return 0;
+    return;
   }
 
   output_data(file);
+}
+
+int main()
+{
+  //run_random_test();
+
+  uint8_t problem[NUM_PANCAKES + 1] = { 16, 10, 3, 12, 6, 7, 8, 4, 5, 15, 2, 9, 14, 13, 1, 11, 16 };
+  Pancake::Initialize_Dual(problem);
+  Pancake node(problem, Direction::forward);
+  Pancake goal = Pancake::GetSortedStack(Direction::backward);
+
+  uint8_t solution[] = { 10, 13, 5, 9, 6, 11, 3, 12, 15, 11, 5, 10 };
+  for (int i = 0; i <= 11; ++i) {
+    node.apply_action(solution[i]);
+  }
 }

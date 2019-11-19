@@ -38,7 +38,7 @@ class Astar
         //std::cout << "Solution: " << UB << '\n';
         //std::cout << "Actions: ";
         //for (int i = 0; i < next_val.actions.size(); ++i) {
-         // std::cout << std::to_string(next_val.actions[i]) << " ";
+        //  std::cout << std::to_string(next_val.actions[i]) << " ";
         //}
         //std::cout << std::endl;
         assert(next_val.h == 0);
