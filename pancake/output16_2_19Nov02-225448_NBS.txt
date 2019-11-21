@@ -1,2 +1,0 @@
-Pancakes = 16 gap-x = 2
-Algorithms: NBS 

@@ -1,2 +1,0 @@
-Pancakes = 30 gap-x = 1
-Algorithms: A* RA* IDD DIBBS GBFHS 
