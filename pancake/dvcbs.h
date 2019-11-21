@@ -15,12 +15,14 @@
 #include <windows.h>
 #include <Psapi.h>
 
-typedef std::unordered_set<Pancake, PancakeHash> hash_set;
-typedef std::set<Pancake, PancakeFSortLowG> waiting_set;
-typedef std::set<Pancake, PancakeGSort> ready_set;
 
 class Dvcbs {
 
+  typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
+  typedef std::set<const Pancake*, PancakeFSortLowG> waiting_set;
+  typedef std::set<const Pancake*, PancakeGSort> ready_set;
+
+  StackArray<Pancake> storage;
   ready_set open_f_ready, open_b_ready;
   waiting_set open_f_waiting, open_b_waiting;
   hash_set open_f_hash, open_b_hash;
@@ -31,7 +33,7 @@ class Dvcbs {
 
   Dvcbs() : open_f_ready(), open_b_ready(), open_f_waiting(), open_b_waiting(), open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
 
-  bool expand_node_forward(const Pancake& next_val) {
+  bool expand_node_forward(const Pancake* next_val) {
     open_f_ready.erase(next_val);
     open_f_hash.erase(next_val);
 
@@ -47,24 +49,27 @@ class Dvcbs {
     ++expansions;
 
     for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
-      Pancake new_action = next_val.apply_action(i);
+      Pancake new_action = next_val->apply_action(i);
 
-      auto it_open = open_b_hash.find(new_action);
+      auto it_open = open_b_hash.find(&new_action);
       if (it_open != open_b_hash.end()) {
-        UB = std::min(UB, (size_t)it_open->g + new_action.g);
+        UB = std::min(UB, (size_t)(*it_open)->g + new_action.g);
       }
 
-      it_open = open_f_hash.find(new_action);
-      if (it_open != open_f_hash.end() && it_open->g <= new_action.g) continue;
-      auto it_closed = closed_f.find(new_action);
-      if (it_closed != closed_f.end() && it_closed->g <= new_action.g) continue;
+      it_open = open_f_hash.find(&new_action);
+      if (it_open != open_f_hash.end() && (*it_open)->g <= new_action.g) continue;
+      auto it_closed = closed_f.find(&new_action);
+      if (it_closed != closed_f.end() && (*it_closed)->g <= new_action.g) continue;
 
-      open_f_waiting.insert(new_action);
-      open_f_hash.insert(new_action);
+
+      auto ptr = storage.push_back(new_action);
+      open_f_waiting.insert(ptr);
+      open_f_hash.insert(ptr);
     }
+    return true;
   }
 
-  bool expand_node_backward(const Pancake& next_val) {
+  bool expand_node_backward(const Pancake* next_val) {
     open_b_ready.erase(next_val);
     open_b_hash.erase(next_val);
 
@@ -80,21 +85,23 @@ class Dvcbs {
     ++expansions;
 
     for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
-      Pancake new_action = next_val.apply_action(i);
+      Pancake new_action = next_val->apply_action(i);
 
-      auto it_open = open_f_hash.find(new_action);
+      auto it_open = open_f_hash.find(&new_action);
       if (it_open != open_f_hash.end()) {
-        UB = std::min(UB, (size_t)it_open->g + new_action.g);
+        UB = std::min(UB, (size_t)(*it_open)->g + new_action.g);
       }
 
-      it_open = open_b_hash.find(new_action);
-      if (it_open != open_b_hash.end() && it_open->g <= new_action.g) continue;
-      auto it_closed = closed_b.find(new_action);
-      if (it_closed != closed_b.end() && it_closed->g <= new_action.g) continue;
+      it_open = open_b_hash.find(&new_action);
+      if (it_open != open_b_hash.end() && (*it_open)->g <= new_action.g) continue;
+      auto it_closed = closed_b.find(&new_action);
+      if (it_closed != closed_b.end() && (*it_closed)->g <= new_action.g) continue;
 
-      open_b_waiting.insert(new_action);
-      open_b_hash.insert(new_action);
+      auto ptr = storage.push_back(new_action);
+      open_b_waiting.insert(ptr);
+      open_b_hash.insert(ptr);
     }
+    return true;
   }
 
   std::pair<double, size_t> run_search(Pancake start, Pancake goal)
@@ -106,11 +113,13 @@ class Dvcbs {
     expansions = 0;
     UB = std::numeric_limits<size_t>::max();
 
-    open_f_waiting.insert(start);
-    open_f_hash.insert(start);
+    auto ptr = storage.push_back(start);
+    open_f_waiting.insert(ptr);
+    open_f_hash.insert(ptr);
 
-    open_b_waiting.insert(goal);
-    open_b_hash.insert(goal);
+    ptr = storage.push_back(goal);
+    open_b_waiting.insert(ptr);
+    open_b_hash.insert(ptr);
 
     lbmin = std::max(1ui8, std::max(start.h, goal.h));
 
@@ -124,7 +133,7 @@ class Dvcbs {
         return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
       }
 
-      std::vector<Pancake> nForward, nBackward;
+      std::vector<const Pancake*> nForward, nBackward;
       bool result = getVertexCover(nForward, nBackward);
       // if failed, see if we have optimal path (but return)
       if (result == false)
@@ -145,7 +154,7 @@ class Dvcbs {
 
       else if (nForward.size() > 0 && nBackward.size() > 0)
       {
-        std::unordered_map<Pancake, bool, PancakeHash> mapData;
+        std::unordered_map<const Pancake*, bool, PancakeHash, PancakeEqual> mapData;
         for (int i = 0; i < nForward.size(); i++) {
           mapData[nForward[i]] = true;
         }
@@ -162,14 +171,14 @@ class Dvcbs {
       bool skip_loop = false;
       if (nForward.size() == 0) {
         for (int j = 0; j < ((int)nBackward.size()); j++) {
-          double oldKey = open_b_ready.begin()->f;
-          //if (closed_b.find(nBackward[j]) == closed_b.end()) {
-          expand_node_backward(nBackward[j]);
-          //}
+          double oldKey = (*open_b_ready.begin())->f;
+          if (closed_b.find(nBackward[j]) == closed_b.end()) {
+            expand_node_backward(nBackward[j]);
+          }
           if (lbmin >= UB) {
             return std::make_pair(UB, expansions);
           }
-          if (currentLowerBound != lbmin || open_b_ready.empty() || oldKey != open_b_ready.begin()->f) {
+          if (currentLowerBound != lbmin || open_b_ready.empty() || oldKey != (*open_b_ready.begin())->f) {
             skip_loop = true;
             break;
           }
@@ -179,14 +188,14 @@ class Dvcbs {
 
       else if (nBackward.size() == 0) {
         for (int i = 0; i < ((int)nForward.size()); i++) {
-          double oldKey = open_f_ready.begin()->f;
-          //if (closed_f.find(nForward[i]) == closed_f.end()) {
-          expand_node_forward(nForward[i]);
-          //}
+          double oldKey = (*open_f_ready.begin())->f;
+          if (closed_f.find(nForward[i]) == closed_f.end()) {
+            expand_node_forward(nForward[i]);
+          }
           if (lbmin >= UB) {
             return std::make_pair(UB, expansions);
           }
-          if (currentLowerBound != lbmin || open_f_ready.empty() || oldKey != open_f_ready.begin()->f) {
+          if (currentLowerBound != lbmin || open_f_ready.empty() || oldKey != (*open_f_ready.begin())->f) {
             skip_loop = true;
             break;
           }
@@ -209,7 +218,7 @@ class Dvcbs {
             expandForward = true;
           }
           else {
-            if (nForward[i].g >= nBackward[j].g) {
+            if (nForward[i]->g >= nBackward[j]->g) {
               expandForward = true;
             }
             else {
@@ -260,7 +269,7 @@ class Dvcbs {
     }
   }
 
-  bool getVertexCover(std::vector<Pancake>& nextForward, std::vector<Pancake>& nextBackward)
+  bool getVertexCover(std::vector<const Pancake*>& nextForward, std::vector<const Pancake*>& nextBackward)
   {
     while (true)
     {
@@ -269,30 +278,30 @@ class Dvcbs {
       if (open_b_waiting.size() == 0 && open_b_ready.size() == 0)
         return false;
 
-      while (!open_f_waiting.empty() && open_f_waiting.begin()->f <= lbmin) {
+      while (!open_f_waiting.empty() && (*open_f_waiting.begin())->f <= lbmin) {
         open_f_ready.insert(*open_f_waiting.begin());
         open_f_waiting.erase(open_f_waiting.begin());
       }
-      while (!open_b_waiting.empty() && open_b_waiting.begin()->f <= lbmin) {
+      while (!open_b_waiting.empty() && (*open_b_waiting.begin())->f <= lbmin) {
         open_b_ready.insert(*open_b_waiting.begin());
         open_b_waiting.erase(open_b_waiting.begin());
       }
 
-      if (!open_f_ready.empty() && !open_b_ready.empty() && open_f_ready.begin()->g + open_b_ready.begin()->g <= lbmin)
+      if (!open_f_ready.empty() && !open_b_ready.empty() && (*open_f_ready.begin())->g + (*open_b_ready.begin())->g <= lbmin)
       {
 
         std::vector<std::pair<double, uint64_t> > forwardCluster;
         std::vector<std::pair<double, uint64_t> > backwardCluster;
-        for (auto it = open_f_ready.begin(); it != open_f_ready.end() && it->g <= lbmin - open_b_ready.begin()->g - 1 + 0.00001; it++) {
-          if (forwardCluster.size() == 0 || forwardCluster.back().first != it->g)
-            forwardCluster.push_back(std::make_pair(it->g, 1));
+        for (auto it = open_f_ready.begin(); it != open_f_ready.end() && (*it)->g <= lbmin - (*open_b_ready.begin())->g - 1 + 0.00001; it++) {
+          if (forwardCluster.size() == 0 || forwardCluster.back().first != (*it)->g)
+            forwardCluster.push_back(std::make_pair((*it)->g, 1));
           else {
             forwardCluster.back().second++;
           }
         }
-        for (auto it = open_b_ready.begin(); it != open_b_ready.end() && it->g <= lbmin - open_f_ready.begin()->g - 1 + 0.00001; it++) {
-          if (backwardCluster.size() == 0 || backwardCluster.back().first != it->g)
-            backwardCluster.push_back(std::make_pair(it->g, 1));
+        for (auto it = open_b_ready.begin(); it != open_b_ready.end() && (*it)->g <= lbmin - (*open_f_ready.begin())->g - 1 + 0.00001; it++) {
+          if (backwardCluster.size() == 0 || backwardCluster.back().first != (*it)->g)
+            backwardCluster.push_back(std::make_pair((*it)->g, 1));
           else {
             backwardCluster.back().second++;
           }
@@ -356,17 +365,17 @@ class Dvcbs {
 
         for (int i = 0; i <= chosenVC.first; i++) {
           auto start = open_f_ready.begin();
-          auto start_g = start->g;
-          while (start != open_f_ready.end() && start->g == start_g) {
-            nextForward.push_back(*start);
+          auto start_g = (*start)->g;
+          while (start != open_f_ready.end() && (*start)->g == start_g) {
+            nextForward.push_back(&**start);
             ++start;
           }
         }
         for (int i = 0; i <= chosenVC.second; i++) {
           auto start = open_b_ready.begin();
-          auto start_g = start->g;
-          while (start != open_b_ready.end() && start->g == start_g) {
-            nextBackward.push_back(*start);
+          auto start_g = (*start)->g;
+          while (start != open_b_ready.end() && (*start)->g == start_g) {
+            nextBackward.push_back(&**start);
             ++start;
           }
         }
@@ -377,11 +386,11 @@ class Dvcbs {
         bool changed = false;
         if (open_b_waiting.size() != 0)
         {
-          const auto i4 = open_b_waiting.begin()->f;
+          const auto i4 = (*open_b_waiting.begin())->f;
           if (i4 <= lbmin)
           {
             changed = true;
-            while (!open_b_waiting.empty() && open_b_waiting.begin()->f == i4) {
+            while (!open_b_waiting.empty() && (*open_b_waiting.begin())->f == i4) {
               open_b_ready.insert(*open_b_waiting.begin());
               open_b_waiting.erase(open_b_waiting.begin());
             }
@@ -389,11 +398,11 @@ class Dvcbs {
         }
         if (open_f_waiting.size() != 0)
         {
-          const auto i3 = open_f_waiting.begin()->f;
+          const auto i3 = (*open_f_waiting.begin())->f;
           if (i3 <= lbmin)
           {
             changed = true;
-            while (!open_f_waiting.empty() && open_f_waiting.begin()->f == i3) {
+            while (!open_f_waiting.empty() && (*open_f_waiting.begin())->f == i3) {
               open_f_ready.insert(*open_f_waiting.begin());
               open_f_waiting.erase(open_f_waiting.begin());
             }
@@ -403,16 +412,16 @@ class Dvcbs {
           lbmin = std::numeric_limits<size_t>::max();
           if (open_f_waiting.size() != 0)
           {
-            const auto i5 = open_f_waiting.begin()->f;
+            const auto i5 = (*open_f_waiting.begin())->f;
             lbmin = std::min(lbmin, (size_t)i5);
           }
           if (open_b_waiting.size() != 0)
           {
-            const auto i6 = open_b_waiting.begin()->f;
+            const auto i6 = (*open_b_waiting.begin())->f;
             lbmin = std::min(lbmin, (size_t)i6);
           }
           if ((open_f_ready.size() != 0) && (open_b_ready.size() != 0))
-            lbmin = std::min(lbmin, (size_t)(open_f_ready.begin()->g + open_b_ready.begin()->g + 1));
+            lbmin = std::min(lbmin, (size_t)((*open_f_ready.begin())->g + (*open_b_ready.begin())->g + 1));
         }
       }
     }

@@ -56,10 +56,13 @@
     <ClInclude Include="dibbs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="nbs.h">
+    <ClInclude Include="dvcbs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dvcbs.h">
+    <ClInclude Include="StackArray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Nbs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

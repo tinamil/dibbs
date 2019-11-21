@@ -116,6 +116,9 @@
     <ClCompile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="GBFHS.h" />
@@ -125,6 +128,8 @@
     <ClCompile Include="problems.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Nbs.h" />
+    <ClInclude Include="StackArray.h" />
     <ClInclude Include="Astar.h" />
     <ClInclude Include="dibbs.h" />
     <ClInclude Include="Direction.h" />
@@ -132,7 +137,6 @@
     <ClInclude Include="dvcbs.h" />
     <ClInclude Include="id-d.h" />
     <ClInclude Include="IDAstar.h" />
-    <ClInclude Include="nbs.h" />
     <ClInclude Include="Pancake.h" />
     <ClInclude Include="problems.h" />
   </ItemGroup>

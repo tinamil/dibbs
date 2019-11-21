@@ -8,9 +8,8 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 16;
-constexpr int GAPX = 2;
-//constexpr size_t NODE_LIMIT = 1000000000;
+constexpr int NUM_PANCAKES = 10;
+constexpr int GAPX = 0;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 
 class Pancake {
@@ -34,6 +33,8 @@ public:
   uint8_t gap_lb(Direction dir) const;
   uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
   int check_inputs() const;
+
+  Pancake() {}
 
   Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), f(0), f_bar(0)
   {
@@ -99,61 +100,78 @@ public:
 //Returns smallest f value with largest g value
 struct PancakeFSort {
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
-    if (lhs.f == rhs.f) {
-      return lhs.g < rhs.g;
+    return operator()(&lhs, &rhs);
+  }
+
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    if (lhs->f == rhs->f) {
+      return lhs->g < rhs->g;
     }
-    return lhs.f > rhs.f;
+    return lhs->f > rhs->f;
   }
 };
 
 //Returns smallest f value with smallest g value
 struct PancakeFSortLowG {
+
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
-    int cmp = memcmp(lhs.source, rhs.source, NUM_PANCAKES + 1);
+    return operator()(&lhs, &rhs);
+  }
+
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
     if (cmp == 0) {
       return false;
     }
-    else if (lhs.f == rhs.f) {
-      if (lhs.g == rhs.g)
+    else if (lhs->f == rhs->f) {
+      if (lhs->g == rhs->g)
         return cmp < 0;
       else
-        return lhs.g < rhs.g;
+        return lhs->g < rhs->g;
     }
     else {
-      return lhs.f < rhs.f;
+      return lhs->f < rhs->f;
     }
   }
 };
 
 //Returns smallest g value
 struct PancakeGSort {
+
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
-    int cmp = memcmp(lhs.source, rhs.source, NUM_PANCAKES + 1);
+    return operator()(&lhs, &rhs);
+  }
+
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
     if (cmp == 0) {
       return false;
     }
-    if (lhs.g == rhs.g)
+    if (lhs->g == rhs->g)
       return cmp < 0;
     else
-      return lhs.g < rhs.g;
+      return lhs->g < rhs->g;
   }
 };
 
 //Returns smallest fbar with smallest g value
 struct PancakeFBarSortLowG {
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
-    int cmp = memcmp(lhs.source, rhs.source, NUM_PANCAKES + 1);
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
     if (cmp == 0) {
       return false;
     }
-    else if (lhs.f_bar == rhs.f_bar) {
-      if (lhs.g == rhs.g)
+    else if (lhs->f_bar == rhs->f_bar) {
+      if (lhs->g == rhs->g)
         return cmp < 0;
       else
-        return lhs.g < rhs.g;
+        return lhs->g < rhs->g;
     }
     else {
-      return lhs.f_bar < rhs.f_bar;
+      return lhs->f_bar < rhs->f_bar;
     }
   }
 };
@@ -162,7 +180,22 @@ struct PancakeHash
 {
   inline std::size_t operator() (const Pancake& x) const
   {
-    return SuperFastHash(x.source + 1, NUM_PANCAKES);
+    return operator()(&x);
+  }
+  inline std::size_t operator() (const Pancake* x) const
+  {
+    return SuperFastHash(x->source + 1, NUM_PANCAKES);
   }
 };
 
+struct PancakeEqual
+{
+  inline bool operator() (const Pancake* x, const Pancake* y) const
+  {
+    return *x == *y;
+  }
+  inline bool operator() (const Pancake x, const Pancake y) const
+  {
+    return x == y;
+  }
+};

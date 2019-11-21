@@ -12,14 +12,16 @@
 #include <windows.h>
 #include <Psapi.h>
 
-typedef std::unordered_set<Pancake, PancakeHash> hash_set;
-typedef std::set<Pancake, PancakeFSortLowG> set;
 
 class Gbfhs {
 
+  typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
+  typedef std::unordered_set<Pancake, PancakeHash> closed_set;
+  typedef std::set<Pancake, PancakeFSortLowG> set;
+
   set open_f, open_b;
   hash_set open_f_hash, open_b_hash;
-  hash_set closed_f, closed_b;
+  closed_set closed_f, closed_b;
   size_t expansions;
   size_t UB;
   size_t f_lim; //Also LB
@@ -50,8 +52,8 @@ class Gbfhs {
     while (expandable.size() > 0) {
       Pancake next_val = expandable.back();
       expandable.erase(expandable.end() - 1);
+      open_f_hash.erase(&next_val);
       open_f.erase(next_val);
-      open_f_hash.erase(next_val);
 
       closed_f.insert(next_val);
 
@@ -66,19 +68,19 @@ class Gbfhs {
       for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
         Pancake new_action = next_val.apply_action(i);
 
-        auto it_open = open_f_hash.find(new_action);
-        if (it_open != open_f_hash.end() && it_open->g <= new_action.g) continue;
+        auto it_open = open_f_hash.find(&new_action);
+        if (it_open != open_f_hash.end() && (*it_open)->g <= new_action.g) continue;
         auto it_closed = closed_f.find(new_action);
         if (it_closed != closed_f.end() && it_closed->g <= new_action.g) continue;
 
-        open_f.insert(new_action);
-        open_f_hash.insert(new_action);
+        auto ptr = open_f.insert(new_action);
+        open_f_hash.insert(&(*ptr.first));
 
         if (new_action.f <= f_lim && new_action.g <= glim_f) expandable.push_back(new_action);
 
-        it_open = open_b_hash.find(new_action);
+        it_open = open_b_hash.find(&new_action);
         if (it_open != open_b_hash.end()) {
-          UB = std::min(UB, (size_t)it_open->g + new_action.g);
+          UB = std::min(UB, (size_t)(*it_open)->g + new_action.g);
           if (UB <= f_lim) return true;
         }
       }
@@ -95,8 +97,8 @@ class Gbfhs {
     while (expandable.size() > 0) {
       Pancake next_val = expandable.back();
       expandable.erase(expandable.end() - 1);
+      open_b_hash.erase(&next_val);
       open_b.erase(next_val);
-      open_b_hash.erase(next_val);
 
       closed_b.insert(next_val);
 
@@ -111,19 +113,19 @@ class Gbfhs {
       for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
         Pancake new_action = next_val.apply_action(i);
 
-        auto it_open = open_b_hash.find(new_action);
-        if (it_open != open_b_hash.end() && it_open->g <= new_action.g) continue;
+        auto it_open = open_b_hash.find(&new_action);
+        if (it_open != open_b_hash.end() && (*it_open)->g <= new_action.g) continue;
         auto it_closed = closed_b.find(new_action);
         if (it_closed != closed_b.end() && it_closed->g <= new_action.g) continue;
 
-        open_b.insert(new_action);
-        open_b_hash.insert(new_action);
+        auto ptr = open_b.insert(new_action);
+        open_b_hash.insert(&(*ptr.first));
 
         if (new_action.f <= f_lim && new_action.g <= glim_b) expandable.push_back(new_action);
 
-        it_open = open_f_hash.find(new_action);
+        it_open = open_f_hash.find(&new_action);
         if (it_open != open_f_hash.end()) {
-          UB = std::min(UB, (size_t)it_open->g + new_action.g);
+          UB = std::min(UB, (size_t)(*it_open)->g + new_action.g);
           if (UB <= f_lim) return true;
         }
       }
@@ -143,10 +145,10 @@ class Gbfhs {
     size_t iteration = 0;
 
     open_f.insert(start);
-    open_f_hash.insert(start);
+    open_f_hash.insert(&start);
 
     open_b.insert(goal);
-    open_b_hash.insert(goal);
+    open_b_hash.insert(&goal);
 
     f_lim = std::max(1ui8, std::max(start.h, goal.h));
     while (open_f.size() > 0 && open_b.size() > 0)

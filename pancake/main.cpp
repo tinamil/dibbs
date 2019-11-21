@@ -4,7 +4,7 @@
 #include "IDAstar.h"
 #include "dibbs.h"
 #include "GBFHS.h"
-#include "nbs.h"
+#include "Nbs.h"
 #include "dvcbs.h"
 #include "problems.h"
 #include <iostream>
@@ -16,13 +16,14 @@
 #include <iomanip>
 
 
-//#define A_STAR
-//#define REVERSE_ASTAR
 //#define IDA_STAR
-//#define IDD
-//#define DIBBS
-//#define GBFHS
-//#define NBS
+
+#define A_STAR
+#define REVERSE_ASTAR
+#define IDD
+#define DIBBS
+#define GBFHS
+#define NBS
 #define DVCBS
 
 constexpr int NUM_PROBLEMS = 100;
@@ -243,7 +244,7 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
         assert(answers[i] == cstar);
       }
     }
@@ -371,6 +372,7 @@ std::string return_formatted_time(std::string format)
 
 void run_random_test() {
   std::ofstream file;
+  std::string dir = R"(C:\Users\John\Dropbox\UIUC\Research\PancakeData\)";
   std::string name = "output" + std::to_string(NUM_PANCAKES) + "_" + std::to_string(GAPX) + "_" + return_formatted_time("%y%b%d-%H%M%S");
 #ifdef A_STAR
   name += "_A";
@@ -397,7 +399,7 @@ void run_random_test() {
   name += "_DVCBS";
 #endif
   name += ".txt";
-  file.open(name, std::ios::app);
+  file.open(dir + name, std::ios::app);
 
   if (!file)
   {
@@ -410,15 +412,5 @@ void run_random_test() {
 
 int main()
 {
-  //run_random_test();
-
-  uint8_t problem[NUM_PANCAKES + 1] = { 16, 10, 3, 12, 6, 7, 8, 4, 5, 15, 2, 9, 14, 13, 1, 11, 16 };
-  Pancake::Initialize_Dual(problem);
-  Pancake node(problem, Direction::forward);
-  Pancake goal = Pancake::GetSortedStack(Direction::backward);
-
-  uint8_t solution[] = { 10, 13, 5, 9, 6, 11, 3, 12, 15, 11, 5, 10 };
-  for (int i = 0; i <= 11; ++i) {
-    node.apply_action(solution[i]);
-  }
+  run_random_test();
 }

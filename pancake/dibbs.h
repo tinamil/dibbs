@@ -2,6 +2,7 @@
 #include "Pancake.h"
 #include <set>
 #include <unordered_set>
+#include <unordered_map>
 #include <tuple>
 #include <string>
 #include <algorithm>
@@ -10,26 +11,57 @@
 #include <windows.h>
 #include <Psapi.h>
 
+const static int debug_nodes[][17] = {
+  { 16, 10, 3, 12, 6, 7, 8, 4, 5, 15, 2, 9, 14, 13, 1, 11, 16 },
+{ 16, 2, 15, 5, 4, 8, 7, 6, 12, 3, 10, 9, 14, 13, 1, 11, 16 },
+{ 16, 13, 14, 9, 10, 3, 12, 6, 7, 8, 4, 5, 15, 2, 1, 11, 16 },
+{ 16, 3, 10, 9, 14, 13, 12, 6, 7, 8, 4, 5, 15, 2, 1, 11, 16 },
+{ 16, 8, 7, 6, 12, 13, 14, 9, 10, 3, 4, 5, 15, 2, 1, 11, 16 },
+{ 16, 14, 13, 12, 6, 7, 8, 9, 10, 3, 4, 5, 15, 2, 1, 11, 16 },
+{ 16, 5, 4, 3, 10, 9, 8, 7, 6, 12, 13, 14, 15, 2, 1, 11, 16 },
+{ 16, 3, 4, 5, 10, 9, 8, 7, 6, 12, 13, 14, 15, 2, 1, 11, 16 },
+{ 16, 15, 14, 13, 12, 6, 7, 8, 9, 10, 5, 4, 3, 2, 1, 11, 16 },
+{ 16, 11, 1, 2, 3, 4, 5, 10, 9, 8, 7, 6, 12, 13, 14, 15, 16 },
+{ 16, 6, 7, 8, 9, 10, 5, 4, 3, 2, 1, 11, 12, 13, 14, 15, 16 },
+{ 16, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 11, 12, 13, 14, 15, 16 },
+{ 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }
+};
+
+const static int debug[] = { 10, 9, 10, 8, 2, 6, 7, 1, 5, 4, 3 };
+
 class Dibbs
 {
-  typedef std::unordered_set<Pancake, PancakeHash> hash_set;
   typedef std::set<Pancake, PancakeFBarSortLowG> set;
+  typedef std::unordered_map<const Pancake*, set::const_iterator, PancakeHash, PancakeEqual> hash_set;
 
   set open_f, open_b;
   hash_set open_f_hash, open_b_hash;
-  hash_set closed_f, closed_b;
+  std::unordered_set<Pancake, PancakeHash> closed_f, closed_b;
   size_t expansions;
   size_t UB;
+ 
 
   Dibbs() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0) {}
 
+
   void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, std::unordered_set<Pancake, PancakeHash>& closed) {
     Pancake next_val = *open.begin();
-    open.erase(next_val);
-    auto it_hash = open_hash.find(next_val);
+
+    //for (int i = 0; i < 13; ++i) {
+    //  bool match = true;
+    //  for (int j = 1; j <= NUM_PANCAKES && match; ++j) {
+    //    if (debug_nodes[i][j] != next_val.source[j]) match = false;
+    //  }
+    //  if (match) {
+    //    std::cout << (next_val.dir == Direction::forward ? "F" : "B") << i << "\n";
+    //    break;
+    //  }
+    //}
+
+    auto it_hash = open_hash.find(&next_val);
     assert(it_hash != open_hash.end());
     open_hash.erase(it_hash);
-
+    open.erase(next_val);
 
     ++expansions;
 
@@ -37,7 +69,7 @@ class Dibbs
 
     for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
       Pancake new_action = next_val.apply_action(i);
-
+      
       if (new_action.f > UB) {
         continue;
       }
@@ -45,7 +77,7 @@ class Dibbs
       auto it_closed = closed.find(new_action);
       if (it_closed == closed.end()) {
 
-        auto it_other = other_open.find(new_action);
+        auto it_other = other_open.find(&new_action);
         if (it_other != other_open.end()) {
 #ifdef HISTORY
           if (it_other->g + new_action.g < UB) {
@@ -59,24 +91,23 @@ class Dibbs
             }
           }
 #endif
-          UB = std::min(UB, (size_t)it_other->g + new_action.g);
+          UB = std::min(UB, (size_t)it_other->first->g + new_action.g);
         }
-        else {
-          auto it_open = open_hash.find(new_action);
-          if (it_open != open_hash.end())
-          {
-            if (it_open->g <= new_action.g) {
-              continue;
-            }
-            else {
-              open.erase(new_action);
-              open_hash.erase(new_action);
-            }
+        auto it_open = open_hash.find(&new_action);
+        if (it_open != open_hash.end())
+        {
+          if (it_open->first->g <= new_action.g) {
+            continue;
           }
-
-          open.insert(new_action);
-          open_hash.insert(new_action);
+          else {
+            open.erase(it_open->second);
+            open_hash.erase(it_open);
+          }
         }
+
+        auto insertion = open.insert(new_action);
+        assert(insertion.second);
+        open_hash.insert(std::make_pair(&*insertion.first, insertion.first));
       }
     }
   }
@@ -88,10 +119,10 @@ class Dibbs
   std::pair<double, size_t> run_search(Pancake start, Pancake goal) {
     expansions = 0;
 
-    open_f.insert(start);
-    open_f_hash.insert(start);
-    open_b.insert(goal);
-    open_b_hash.insert(goal);
+    auto insertion = open_f.insert(start);
+    open_f_hash.insert(std::make_pair(&*insertion.first, insertion.first));
+    insertion = open_b.insert(goal);
+    open_b_hash.insert(std::make_pair(&*insertion.first, insertion.first));
 
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
@@ -129,12 +160,12 @@ class Dibbs
 #endif
     if (UB > ceil((open_f.begin()->f_bar + open_b.begin()->f_bar) / 2.0)) {
       return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
-  }
+    }
     else {
       //std::cout << "Size: " << open.size() << '\n';
       return std::make_pair(UB, expansions);
     }
-}
+  }
 
 public:
 

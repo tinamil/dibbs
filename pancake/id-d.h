@@ -12,10 +12,10 @@
 #include <Psapi.h>
 
 Pancake best_pancake_f(Pancake::GetSortedStack(Direction::forward)), best_pancake_b(Pancake::GetSortedStack(Direction::backward));
-typedef std::unordered_set<Pancake, PancakeHash> hash_set;
-
 class ID_D
 {
+  typedef std::unordered_set<Pancake, PancakeHash> hash_set;
+
   hash_set open_f, open_b;
   std::stack<Pancake> stack;
   size_t LB;
@@ -60,32 +60,30 @@ class ID_D
             }
           }
         }
-        else {
-          if (new_node.f_bar <= iteration) {
-            stack.push(new_node);
+        if (new_node.f_bar <= iteration) {
+          stack.push(new_node);
+        }
+        else if (current.threshold) {
+          //Inserts both current and new_node (current MUST be inserted, new_node is speculative)
+          it = my_set.find(current);
+          if (it == my_set.end()) {
+            my_set.insert(current);
           }
-          else if (current.threshold) {
-            //Inserts both current and new_node (current MUST be inserted, new_node is speculative)
-            it = my_set.find(current);
+          else if ((it != my_set.end() && (*it).g > current.g))
+          {
+            my_set.erase(it);
+            my_set.insert(current);
+          }
+
+          if (new_node.h2 - new_node.h > 1) {
+            it = my_set.find(new_node);
             if (it == my_set.end()) {
-              my_set.insert(current);
+              my_set.insert(new_node);
             }
-            else if ((it != my_set.end() && (*it).g > current.g))
+            else if ((it != my_set.end() && (*it).g > new_node.g))
             {
               my_set.erase(it);
-              my_set.insert(current);
-            }
-
-            if (new_node.h2 - new_node.h > 1) {
-              it = my_set.find(new_node);
-              if (it == my_set.end()) {
-                my_set.insert(new_node);
-              }
-              else if ((it != my_set.end() && (*it).g > new_node.g))
-              {
-                my_set.erase(it);
-                my_set.insert(new_node);
-              }
+              my_set.insert(new_node);
             }
           }
         }
