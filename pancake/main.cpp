@@ -102,7 +102,7 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else {
-        assert(answers[i] == cstar);
+        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
       }
     }
     answered = true;
@@ -139,7 +139,7 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else {
-        assert(answers[i] == cstar);
+        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
       }
     }
     answered = true;
@@ -170,7 +170,7 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else {
-        assert(answers[i] == cstar);
+        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
       }
     }
     answered = true;
@@ -208,7 +208,7 @@ void output_data(std::ostream& stream) {
       }
       else {
         //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << " " << std::to_string(expansions) << std::endl;
-        assert(answers[i] == cstar);
+        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
       }
     }
     answered = true;
@@ -245,7 +245,7 @@ void output_data(std::ostream& stream) {
       }
       else {
         //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
-        assert(answers[i] == cstar);
+        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
       }
     }
     answered = true;
@@ -280,7 +280,8 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else {
-        assert(answers[i] == cstar);
+        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
       }
     }
     answered = true;
@@ -315,7 +316,7 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else {
-        assert(answers[i] == cstar);
+        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
       }
     }
     answered = true;
@@ -350,7 +351,8 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else {
-        assert(answers[i] == cstar);
+        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
       }
     }
     answered = true;

@@ -19,7 +19,7 @@ class Nbs {
 
   typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
   typedef std::set<const Pancake*, PancakeFSortLowG> waiting_set;
-  typedef std::set<const Pancake*, PancakeGSort> ready_set;
+  typedef std::set<const Pancake*, PancakeGSortLow> ready_set;
   
   StackArray<Pancake> storage;
   ready_set open_f_ready, open_b_ready;

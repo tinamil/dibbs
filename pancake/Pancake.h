@@ -136,7 +136,7 @@ struct PancakeFSortLowG {
 };
 
 //Returns smallest g value
-struct PancakeGSort {
+struct PancakeGSortLow {
 
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
     return operator()(&lhs, &rhs);
@@ -151,6 +151,24 @@ struct PancakeGSort {
       return cmp < 0;
     else
       return lhs->g < rhs->g;
+  }
+};
+
+struct PancakeGSortHigh {
+
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
+    if (cmp == 0) {
+      return false;
+    }
+    if (lhs->g == rhs->g)
+      return cmp < 0;
+    else
+      return lhs->g > rhs->g;
   }
 };
 
@@ -184,7 +202,7 @@ struct PancakeHash
   }
   inline std::size_t operator() (const Pancake* x) const
   {
-    return SuperFastHash(x->source + 1, NUM_PANCAKES);
+    return SuperFastHash(x->source, NUM_PANCAKES + 1);
   }
 };
 

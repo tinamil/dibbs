@@ -1,6 +1,4 @@
 #pragma once
-#pragma once
-#pragma once
 
 #include "Pancake.h"
 #include <queue>
@@ -20,7 +18,7 @@ class Dvcbs {
 
   typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
   typedef std::set<const Pancake*, PancakeFSortLowG> waiting_set;
-  typedef std::set<const Pancake*, PancakeGSort> ready_set;
+  typedef std::set<const Pancake*, PancakeGSortLow> ready_set;
 
   StackArray<Pancake> storage;
   ready_set open_f_ready, open_b_ready;
@@ -30,16 +28,20 @@ class Dvcbs {
   size_t expansions;
   size_t UB;
   size_t lbmin;
+  PROCESS_MEMORY_COUNTERS memCounter;
 
   Dvcbs() : open_f_ready(), open_b_ready(), open_f_waiting(), open_b_waiting(), open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
 
-  bool expand_node_forward(const Pancake* next_val) {
-    open_f_ready.erase(next_val);
-    open_f_hash.erase(next_val);
+  bool expand_node(const Pancake* next_val, ready_set& ready, waiting_set& waiting, hash_set& hash, hash_set& closed, const hash_set& other_hash) {
+    ready.erase(next_val);
+    hash.erase(next_val);
 
-    closed_f.insert(next_val);
+    if (hash.size() != (ready.size() + waiting.size()))
+      std::cout << expansions << "\n";
+    assert(hash.size() == (ready.size() + waiting.size()));
 
-    PROCESS_MEMORY_COUNTERS memCounter;
+    closed.insert(next_val);
+
     BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
     assert(result);
     if (memCounter.PagefileUsage > MEM_LIMIT) {
@@ -51,57 +53,35 @@ class Dvcbs {
     for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
       Pancake new_action = next_val->apply_action(i);
 
-      auto it_open = open_b_hash.find(&new_action);
-      if (it_open != open_b_hash.end()) {
+      auto it_open = other_hash.find(&new_action);
+      if (it_open != other_hash.end()) {
         UB = std::min(UB, (size_t)(*it_open)->g + new_action.g);
       }
 
-      it_open = open_f_hash.find(&new_action);
-      if (it_open != open_f_hash.end() && (*it_open)->g <= new_action.g) continue;
-      auto it_closed = closed_f.find(&new_action);
-      if (it_closed != closed_f.end() && (*it_closed)->g <= new_action.g) continue;
+      it_open = hash.find(&new_action);
+      if (it_open != hash.end() && (*it_open)->g <= new_action.g) continue;
+      else if (it_open != hash.end()) {
+        ready.erase(&**it_open);
+        waiting.erase(&**it_open);
+        hash.erase(it_open);
+      }
+      auto it_closed = closed.find(&new_action);
+      if (it_closed != closed.end() && (*it_closed)->g <= new_action.g) continue;
 
 
       auto ptr = storage.push_back(new_action);
-      open_f_waiting.insert(ptr);
-      open_f_hash.insert(ptr);
+      waiting.insert(ptr);
+      hash.insert(ptr);
     }
     return true;
   }
 
+  bool expand_node_forward(const Pancake* next_val) {
+    return expand_node(next_val, open_f_ready, open_f_waiting, open_f_hash, closed_f, open_b_hash);
+  }
+
   bool expand_node_backward(const Pancake* next_val) {
-    open_b_ready.erase(next_val);
-    open_b_hash.erase(next_val);
-
-    closed_b.insert(next_val);
-
-    PROCESS_MEMORY_COUNTERS memCounter;
-    BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
-    assert(result);
-    if (memCounter.PagefileUsage > MEM_LIMIT) {
-      return false;
-    }
-
-    ++expansions;
-
-    for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
-      Pancake new_action = next_val->apply_action(i);
-
-      auto it_open = open_f_hash.find(&new_action);
-      if (it_open != open_f_hash.end()) {
-        UB = std::min(UB, (size_t)(*it_open)->g + new_action.g);
-      }
-
-      it_open = open_b_hash.find(&new_action);
-      if (it_open != open_b_hash.end() && (*it_open)->g <= new_action.g) continue;
-      auto it_closed = closed_b.find(&new_action);
-      if (it_closed != closed_b.end() && (*it_closed)->g <= new_action.g) continue;
-
-      auto ptr = storage.push_back(new_action);
-      open_b_waiting.insert(ptr);
-      open_b_hash.insert(ptr);
-    }
-    return true;
+    return expand_node(next_val, open_b_ready, open_b_waiting, open_b_hash, closed_b, open_f_hash);
   }
 
   std::pair<double, size_t> run_search(Pancake start, Pancake goal)
