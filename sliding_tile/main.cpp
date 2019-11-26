@@ -16,13 +16,13 @@
 #include <iomanip>
 
 
-//#define A_STAR
-//#define REVERSE_ASTAR
+#define A_STAR
+#define REVERSE_ASTAR
 #define IDD
-//#define DIBBS
-//#define GBFHS
-//#define NBS
-//#define DVCBS
+#define DIBBS
+#define GBFHS
+#define NBS
+#define DVCBS
 
 
 void define_problems15(int i, unsigned char* tile_in_location)
@@ -281,7 +281,9 @@ void benchmarks(std::ostream& stream)
 
   {
 #ifdef A_STAR
+    std::cout << "\nA*: ";
     for (int i = 1; i <= n_problems; i++) {
+      std::cout << i << " ";
       switch (NUM_TILES) {
       case 16: define_problems15(i, tile_in_location); break;
       case 25: define_problems24(i, tile_in_location); break;
@@ -314,7 +316,9 @@ void benchmarks(std::ostream& stream)
 
   {
 #ifdef REVERSE_ASTAR
+    std::cout << "\nRA: ";
     for (int i = 1; i <= n_problems; i++) {
+      std::cout << i << " ";
       switch (NUM_TILES) {
       case 16: define_problems15(i, tile_in_location); break;
       case 25: define_problems24(i, tile_in_location); break;
@@ -348,7 +352,9 @@ void benchmarks(std::ostream& stream)
 
   {
 #ifdef IDD
+    std::cout << "\nIDD: ";
     for (int i = 1; i <= n_problems; i++) {
+      std::cout << i << " ";
       switch (NUM_TILES) {
       case 16: define_problems15(i, tile_in_location); break;
       case 25: define_problems24(i, tile_in_location); break;
@@ -381,7 +387,9 @@ void benchmarks(std::ostream& stream)
 
   {
 #ifdef DIBBS
+    std::cout << "\nDIBBS: ";
     for (int i = 1; i <= n_problems; i++) {
+      std::cout << i << " ";
       switch (NUM_TILES) {
       case 16: define_problems15(i, tile_in_location); break;
       case 25: define_problems24(i, tile_in_location); break;
@@ -414,7 +422,9 @@ void benchmarks(std::ostream& stream)
 
   {
 #ifdef GBFHS
+    std::cout << "\nGBFHS: ";
     for (int i = 1; i <= n_problems; i++) {
+      std::cout << i << " ";
       switch (NUM_TILES) {
       case 16: define_problems15(i, tile_in_location); break;
       case 25: define_problems24(i, tile_in_location); break;
@@ -448,7 +458,9 @@ void benchmarks(std::ostream& stream)
 
   {
 #ifdef NBS
+    std::cout << "\nNBS: ";
     for (int i = 1; i <= n_problems; i++) {
+      std::cout << i << " ";
       switch (NUM_TILES) {
       case 16: define_problems15(i, tile_in_location); break;
       case 25: define_problems24(i, tile_in_location); break;
@@ -481,7 +493,9 @@ void benchmarks(std::ostream& stream)
 
   {
 #ifdef DVCBS
+    std::cout << "\nDVCBS: ";
     for (int i = 1; i <= n_problems; i++) {
+      std::cout << i << " ";
       switch (NUM_TILES) {
       case 16: define_problems15(i, tile_in_location); break;
       case 25: define_problems24(i, tile_in_location); break;

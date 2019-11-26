@@ -186,12 +186,20 @@ public:
     source[empty_location] = tile;
     source[new_empty_location] = 0;
 
-    h = h + distances[empty_location][tile] - distances[new_empty_location][tile];
-    assert(h == compute_manhattan());
+    if (dir == Direction::forward) {
+      h = h + distances[empty_location][tile] - distances[new_empty_location][tile];
+      assert(h == compute_manhattan());
 
-    h2 = h2 + distances[empty_location][DUAL_SOURCE()[tile]] - distances[new_empty_location][DUAL_SOURCE()[tile]];
-    assert(h2 == compute_manhattan_opposite());
+      h2 = h2 + distances[empty_location][DUAL_SOURCE()[tile]] - distances[new_empty_location][DUAL_SOURCE()[tile]];
+      assert(h2 == compute_manhattan_opposite());
+    }
+    else {
+      h2 = h2 + distances[empty_location][tile] - distances[new_empty_location][tile];
+      assert(h2 == compute_manhattan());
 
+      h = h + distances[empty_location][DUAL_SOURCE()[tile]] - distances[new_empty_location][DUAL_SOURCE()[tile]];
+      assert(h == compute_manhattan_opposite());
+    }
     empty_location = new_empty_location;
   }
 
