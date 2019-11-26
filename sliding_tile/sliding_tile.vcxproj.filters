@@ -32,5 +32,23 @@
     <ClInclude Include="sliding_tile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dibbs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dvcbs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GBFHS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="id-d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nbs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StackArray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

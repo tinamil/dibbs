@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Pancake.h"
+#include "sliding_tile.h"
 #include <queue>
 #include <unordered_set>
 #include <unordered_map>
@@ -8,6 +8,7 @@
 #include <stack>
 #include <cmath>
 #include <set>
+#include <iostream>
 
 #define NOMINMAX
 #include <windows.h>
@@ -16,11 +17,11 @@
 
 class Dvcbs {
 
-  typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
-  typedef std::set<const Pancake*, PancakeFSortLowG> waiting_set;
-  typedef std::set<const Pancake*, PancakeGSortLow> ready_set;
+  typedef std::unordered_set<const SlidingTile*, SlidingTileHash, SlidingTileEqual> hash_set;
+  typedef std::set<const SlidingTile*, FSortLowG> waiting_set;
+  typedef std::set<const SlidingTile*, GSortLow> ready_set;
 
-  StackArray<Pancake> storage;
+  StackArray<SlidingTile> storage;
   ready_set open_f_ready, open_b_ready;
   waiting_set open_f_waiting, open_b_waiting;
   hash_set open_f_hash, open_b_hash;
@@ -32,7 +33,7 @@ class Dvcbs {
 
   Dvcbs() : open_f_ready(), open_b_ready(), open_f_waiting(), open_b_waiting(), open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
 
-  bool expand_node(const Pancake* next_val, ready_set& ready, waiting_set& waiting, hash_set& hash, hash_set& closed, const hash_set& other_hash) {
+  bool expand_node(const SlidingTile* next_val, ready_set& ready, waiting_set& waiting, hash_set& hash, hash_set& closed, const hash_set& other_hash) {
     ready.erase(next_val);
     hash.erase(next_val);
 
@@ -48,8 +49,8 @@ class Dvcbs {
 
     ++expansions;
 
-    for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
-      Pancake new_action = next_val->apply_action(i);
+    for (int i = 1, stop = next_val->num_actions_available(); i <= stop; ++i) {
+      SlidingTile new_action = next_val->apply_action(i);
 
       auto it_open = other_hash.find(&new_action);
       if (it_open != other_hash.end()) {
@@ -74,15 +75,15 @@ class Dvcbs {
     return true;
   }
 
-  bool expand_node_forward(const Pancake* next_val) {
+  bool expand_node_forward(const SlidingTile* next_val) {
     return expand_node(next_val, open_f_ready, open_f_waiting, open_f_hash, closed_f, open_b_hash);
   }
 
-  bool expand_node_backward(const Pancake* next_val) {
+  bool expand_node_backward(const SlidingTile* next_val) {
     return expand_node(next_val, open_b_ready, open_b_waiting, open_b_hash, closed_b, open_f_hash);
   }
 
-  std::pair<double, size_t> run_search(Pancake start, Pancake goal)
+  std::pair<double, size_t> run_search(SlidingTile start, SlidingTile goal)
   {
     if (start == goal) {
       return std::make_pair(0, 0);
@@ -111,7 +112,7 @@ class Dvcbs {
         return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
       }
 
-      std::vector<const Pancake*> nForward, nBackward;
+      std::vector<const SlidingTile*> nForward, nBackward;
       bool result = getVertexCover(nForward, nBackward);
       // if failed, see if we have optimal path (but return)
       if (result == false)
@@ -132,7 +133,7 @@ class Dvcbs {
 
       else if (nForward.size() > 0 && nBackward.size() > 0)
       {
-        std::unordered_map<const Pancake*, bool, PancakeHash, PancakeEqual> mapData;
+        std::unordered_map<const SlidingTile*, bool, SlidingTileHash, SlidingTileEqual> mapData;
         for (int i = 0; i < nForward.size(); i++) {
           mapData[nForward[i]] = true;
         }
@@ -247,7 +248,7 @@ class Dvcbs {
     }
   }
 
-  bool getVertexCover(std::vector<const Pancake*>& nextForward, std::vector<const Pancake*>& nextBackward)
+  bool getVertexCover(std::vector<const SlidingTile*>& nextForward, std::vector<const SlidingTile*>& nextBackward)
   {
     while (true)
     {
@@ -409,7 +410,7 @@ class Dvcbs {
 
 public:
 
-  static std::pair<double, size_t> search(Pancake start, Pancake goal) {
+  static std::pair<double, size_t> search(SlidingTile start, SlidingTile goal) {
     Dvcbs instance;
     return instance.run_search(start, goal);
   }

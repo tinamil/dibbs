@@ -1,5 +1,10 @@
 #include "sliding_tile.h"
 #include "astar.h"
+#include "dibbs.h"
+#include "dvcbs.h"
+#include "GBFHS.h"
+#include "id-d.h"
+#include "nbs.h"
 #include <iostream>
 #include <cassert>
 #include <ctime>
@@ -11,9 +16,9 @@
 #include <iomanip>
 
 
-#define A_STAR
+//#define A_STAR
 //#define REVERSE_ASTAR
-//#define IDD
+#define IDD
 //#define DIBBS
 //#define GBFHS
 //#define NBS
@@ -199,83 +204,313 @@ void define_problems24(int i, unsigned char* tile_in_location)
 
 void benchmarks(std::ostream& stream)
 {
-  int            i, n_problems, z;
-  __int64        n_explored_forward, n_explored_reverse;
-  unsigned char  tile_in_location[NUM_TILES], z_optimal[101];
+  uint8_t z_optimal[101];
+  int n_problems;
 
   switch (NUM_TILES) {
-    case 16:
-      z_optimal[0] = 0; z_optimal[1] = 57; z_optimal[2] = 55; z_optimal[3] = 59; z_optimal[4] = 56;
-      z_optimal[5] = 56; z_optimal[6] = 52; z_optimal[7] = 52; z_optimal[8] = 50; z_optimal[9] = 46;
-      z_optimal[10] = 59; z_optimal[11] = 57; z_optimal[12] = 45; z_optimal[13] = 46; z_optimal[14] = 59;
-      z_optimal[15] = 62; z_optimal[16] = 42; z_optimal[17] = 66; z_optimal[18] = 55; z_optimal[19] = 46;
-      z_optimal[20] = 52; z_optimal[21] = 54; z_optimal[22] = 59; z_optimal[23] = 49; z_optimal[24] = 54;
-      z_optimal[25] = 52; z_optimal[26] = 58; z_optimal[27] = 53; z_optimal[28] = 52; z_optimal[29] = 54;
-      z_optimal[30] = 47; z_optimal[31] = 50; z_optimal[32] = 59; z_optimal[33] = 60; z_optimal[34] = 52;
-      z_optimal[35] = 55; z_optimal[36] = 52; z_optimal[37] = 58; z_optimal[38] = 53; z_optimal[39] = 49;
-      z_optimal[40] = 54; z_optimal[41] = 54; z_optimal[42] = 42; z_optimal[43] = 64; z_optimal[44] = 50;
-      z_optimal[45] = 51; z_optimal[46] = 49; z_optimal[47] = 47; z_optimal[48] = 49; z_optimal[49] = 59;
-      z_optimal[50] = 53; z_optimal[51] = 56; z_optimal[52] = 56; z_optimal[53] = 64; z_optimal[54] = 56;
-      z_optimal[55] = 41; z_optimal[56] = 55; z_optimal[57] = 50; z_optimal[58] = 51; z_optimal[59] = 57;
-      z_optimal[60] = 66; z_optimal[61] = 45; z_optimal[62] = 57; z_optimal[63] = 56; z_optimal[64] = 51;
-      z_optimal[65] = 47; z_optimal[66] = 61; z_optimal[67] = 50; z_optimal[68] = 51; z_optimal[69] = 53;
-      z_optimal[70] = 52; z_optimal[71] = 44; z_optimal[72] = 56; z_optimal[73] = 49; z_optimal[74] = 56;
-      z_optimal[75] = 48; z_optimal[76] = 57; z_optimal[77] = 54; z_optimal[78] = 53; z_optimal[79] = 42;
-      z_optimal[80] = 57; z_optimal[81] = 53; z_optimal[82] = 62; z_optimal[83] = 49; z_optimal[84] = 55;
-      z_optimal[85] = 44; z_optimal[86] = 45; z_optimal[87] = 52; z_optimal[88] = 65; z_optimal[89] = 54;
-      z_optimal[90] = 50; z_optimal[91] = 57; z_optimal[92] = 57; z_optimal[93] = 46; z_optimal[94] = 53;
-      z_optimal[95] = 50; z_optimal[96] = 49; z_optimal[97] = 44; z_optimal[98] = 54; z_optimal[99] = 57;
-      z_optimal[100] = 54;
-      n_problems = 100;
-      break;
-    case 25:
-      z_optimal[0] = 0; z_optimal[1] = 95; z_optimal[2] = 96; z_optimal[3] = 97; z_optimal[4] = 98;
-      z_optimal[5] = 100; z_optimal[6] = 101; z_optimal[7] = 104; z_optimal[8] = 108; z_optimal[9] = 113;
-      z_optimal[10] = 114; z_optimal[11] = 106; z_optimal[12] = 109; z_optimal[13] = 101; z_optimal[14] = 111;
-      z_optimal[15] = 103; z_optimal[16] = 96; z_optimal[17] = 109; z_optimal[18] = 110; z_optimal[19] = 106;
-      z_optimal[20] = 92; z_optimal[21] = 103; z_optimal[22] = 95; z_optimal[23] = 104; z_optimal[24] = 107;
-      z_optimal[25] = 81; z_optimal[26] = 105; z_optimal[27] = 99; z_optimal[28] = 98; z_optimal[29] = 88;
-      z_optimal[30] = 92; z_optimal[31] = 99; z_optimal[32] = 97; z_optimal[33] = 106; z_optimal[34] = 102;
-      z_optimal[35] = 98; z_optimal[36] = 90; z_optimal[37] = 100; z_optimal[38] = 96; z_optimal[39] = 104;
-      z_optimal[40] = 82; z_optimal[41] = 106; z_optimal[42] = 108; z_optimal[43] = 104; z_optimal[44] = 93;
-      z_optimal[45] = 101; z_optimal[46] = 100; z_optimal[47] = 92; z_optimal[48] = 107; z_optimal[49] = 100;
-      z_optimal[50] = 113;
-      n_problems = 50;
-      break;
-    default: std::cerr << "Illegal value of N_LOCATIONS in benchmarks\n"; exit(1); break;
+  case 16:
+    z_optimal[0] = 0; z_optimal[1] = 57; z_optimal[2] = 55; z_optimal[3] = 59; z_optimal[4] = 56;
+    z_optimal[5] = 56; z_optimal[6] = 52; z_optimal[7] = 52; z_optimal[8] = 50; z_optimal[9] = 46;
+    z_optimal[10] = 59; z_optimal[11] = 57; z_optimal[12] = 45; z_optimal[13] = 46; z_optimal[14] = 59;
+    z_optimal[15] = 62; z_optimal[16] = 42; z_optimal[17] = 66; z_optimal[18] = 55; z_optimal[19] = 46;
+    z_optimal[20] = 52; z_optimal[21] = 54; z_optimal[22] = 59; z_optimal[23] = 49; z_optimal[24] = 54;
+    z_optimal[25] = 52; z_optimal[26] = 58; z_optimal[27] = 53; z_optimal[28] = 52; z_optimal[29] = 54;
+    z_optimal[30] = 47; z_optimal[31] = 50; z_optimal[32] = 59; z_optimal[33] = 60; z_optimal[34] = 52;
+    z_optimal[35] = 55; z_optimal[36] = 52; z_optimal[37] = 58; z_optimal[38] = 53; z_optimal[39] = 49;
+    z_optimal[40] = 54; z_optimal[41] = 54; z_optimal[42] = 42; z_optimal[43] = 64; z_optimal[44] = 50;
+    z_optimal[45] = 51; z_optimal[46] = 49; z_optimal[47] = 47; z_optimal[48] = 49; z_optimal[49] = 59;
+    z_optimal[50] = 53; z_optimal[51] = 56; z_optimal[52] = 56; z_optimal[53] = 64; z_optimal[54] = 56;
+    z_optimal[55] = 41; z_optimal[56] = 55; z_optimal[57] = 50; z_optimal[58] = 51; z_optimal[59] = 57;
+    z_optimal[60] = 66; z_optimal[61] = 45; z_optimal[62] = 57; z_optimal[63] = 56; z_optimal[64] = 51;
+    z_optimal[65] = 47; z_optimal[66] = 61; z_optimal[67] = 50; z_optimal[68] = 51; z_optimal[69] = 53;
+    z_optimal[70] = 52; z_optimal[71] = 44; z_optimal[72] = 56; z_optimal[73] = 49; z_optimal[74] = 56;
+    z_optimal[75] = 48; z_optimal[76] = 57; z_optimal[77] = 54; z_optimal[78] = 53; z_optimal[79] = 42;
+    z_optimal[80] = 57; z_optimal[81] = 53; z_optimal[82] = 62; z_optimal[83] = 49; z_optimal[84] = 55;
+    z_optimal[85] = 44; z_optimal[86] = 45; z_optimal[87] = 52; z_optimal[88] = 65; z_optimal[89] = 54;
+    z_optimal[90] = 50; z_optimal[91] = 57; z_optimal[92] = 57; z_optimal[93] = 46; z_optimal[94] = 53;
+    z_optimal[95] = 50; z_optimal[96] = 49; z_optimal[97] = 44; z_optimal[98] = 54; z_optimal[99] = 57;
+    z_optimal[100] = 54;
+    n_problems = 100;
+    break;
+  case 25:
+    z_optimal[0] = 0; z_optimal[1] = 95; z_optimal[2] = 96; z_optimal[3] = 97; z_optimal[4] = 98;
+    z_optimal[5] = 100; z_optimal[6] = 101; z_optimal[7] = 104; z_optimal[8] = 108; z_optimal[9] = 113;
+    z_optimal[10] = 114; z_optimal[11] = 106; z_optimal[12] = 109; z_optimal[13] = 101; z_optimal[14] = 111;
+    z_optimal[15] = 103; z_optimal[16] = 96; z_optimal[17] = 109; z_optimal[18] = 110; z_optimal[19] = 106;
+    z_optimal[20] = 92; z_optimal[21] = 103; z_optimal[22] = 95; z_optimal[23] = 104; z_optimal[24] = 107;
+    z_optimal[25] = 81; z_optimal[26] = 105; z_optimal[27] = 99; z_optimal[28] = 98; z_optimal[29] = 88;
+    z_optimal[30] = 92; z_optimal[31] = 99; z_optimal[32] = 97; z_optimal[33] = 106; z_optimal[34] = 102;
+    z_optimal[35] = 98; z_optimal[36] = 90; z_optimal[37] = 100; z_optimal[38] = 96; z_optimal[39] = 104;
+    z_optimal[40] = 82; z_optimal[41] = 106; z_optimal[42] = 108; z_optimal[43] = 104; z_optimal[44] = 93;
+    z_optimal[45] = 101; z_optimal[46] = 100; z_optimal[47] = 92; z_optimal[48] = 107; z_optimal[49] = 100;
+    z_optimal[50] = 113;
+    n_problems = 50;
+    break;
+  default: std::cerr << "Illegal value of N_LOCATIONS in benchmarks\n"; exit(1); break;
   }
+
+  stream << "Sliding Tile = " << NUM_TILES << " with Manhattan Distance\n";
+  stream << "Algorithms: ";
+#ifdef A_STAR
+  stream << "A* ";
+#endif
+#ifdef REVERSE_ASTAR
+  stream << "RA* ";
+#endif
+#ifdef IDD
+  stream << "IDD ";
+#endif
+#ifdef DIBBS
+  stream << "DIBBS ";
+#endif
+#ifdef GBFHS
+  stream << "GBFHS ";
+#endif
+#ifdef NBS
+  stream << "NBS ";
+#endif
+#ifdef DVCBS
+  stream << "DVCBS ";
+#endif
+  stream << "\n";
 
   std::stringstream expansion_stream;
   std::stringstream time_stream;
   typedef std::chrono::nanoseconds precision;
-  SlidingTile goal_state = SlidingTile::GetSolvedPuzzle(Direction::backward);
+  uint8_t tile_in_location[NUM_TILES];
 
-  for (i = 1; i <= n_problems; i++) {
-    switch (NUM_TILES) {
+  {
+#ifdef A_STAR
+    for (int i = 1; i <= n_problems; i++) {
+      switch (NUM_TILES) {
       case 16: define_problems15(i, tile_in_location); break;
       case 25: define_problems24(i, tile_in_location); break;
       default: fprintf(stderr, "Illegal value of N_LOCATIONS in benchmarks\n"); exit(1); break;
+      }
+
+      SlidingTile::initialize(tile_in_location);
+      SlidingTile goal_state = SlidingTile::GetSolvedPuzzle(Direction::backward);
+      SlidingTile starting_state(tile_in_location, Direction::forward);
+
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions] = Astar::search(starting_state, goal_state);
+      auto end = std::chrono::system_clock::now();
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!std::isinf(cstar) && z_optimal[i] != cstar) { std::cout << "ERROR Cstar mismatch: " << std::to_string(cstar) << " instead of " << std::to_string(z_optimal[i]); return; }
     }
 
-    SlidingTile::initialize(tile_in_location);
-    SlidingTile starting_state(tile_in_location, Direction::forward);
-
-    auto start = std::chrono::system_clock::now();
-    auto [cstar, expansions] = Astar::search(starting_state, goal_state);
-    auto end = std::chrono::system_clock::now();
-    if (std::isinf(cstar)) {
-      expansion_stream << "NAN ";
-    }
-    else {
-      expansion_stream << std::to_string(expansions) << " ";
-    }
-
-    time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
-
-    if (!std::isinf(cstar) && z_optimal[i] != cstar) { std::cout << "ERROR Cstar mismatch: " << std::to_string(cstar) << " instead of " << std::to_string(z_optimal[i]); return; }
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+#endif
   }
-  stream << expansion_stream.rdbuf() << std::endl;
-  stream << time_stream.rdbuf() << std::endl;
+
+  {
+#ifdef REVERSE_ASTAR
+    for (int i = 1; i <= n_problems; i++) {
+      switch (NUM_TILES) {
+      case 16: define_problems15(i, tile_in_location); break;
+      case 25: define_problems24(i, tile_in_location); break;
+      default: fprintf(stderr, "Illegal value of N_LOCATIONS in benchmarks\n"); exit(1); break;
+      }
+
+      SlidingTile::initialize(tile_in_location);
+      SlidingTile goal_state = SlidingTile::GetSolvedPuzzle(Direction::backward);
+      SlidingTile starting_state(tile_in_location, Direction::forward);
+
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions] = Astar::search(goal_state, starting_state);
+      auto end = std::chrono::system_clock::now();
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!std::isinf(cstar) && z_optimal[i] != cstar) { std::cout << "ERROR Cstar mismatch: " << std::to_string(cstar) << " instead of " << std::to_string(z_optimal[i]); return; }
+    }
+
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+#endif
+  }
+
+
+  {
+#ifdef IDD
+    for (int i = 1; i <= n_problems; i++) {
+      switch (NUM_TILES) {
+      case 16: define_problems15(i, tile_in_location); break;
+      case 25: define_problems24(i, tile_in_location); break;
+      default: fprintf(stderr, "Illegal value of N_LOCATIONS in benchmarks\n"); exit(1); break;
+      }
+
+      SlidingTile::initialize(tile_in_location);
+      SlidingTile goal_state = SlidingTile::GetSolvedPuzzle(Direction::backward);
+      SlidingTile starting_state(tile_in_location, Direction::forward);
+
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions] = ID_D::search(starting_state, goal_state);
+      auto end = std::chrono::system_clock::now();
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!std::isinf(cstar) && z_optimal[i] != cstar) { std::cout << "ERROR Cstar mismatch: " << std::to_string(cstar) << " instead of " << std::to_string(z_optimal[i]); return; }
+    }
+
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+#endif
+  }
+
+  {
+#ifdef DIBBS
+    for (int i = 1; i <= n_problems; i++) {
+      switch (NUM_TILES) {
+      case 16: define_problems15(i, tile_in_location); break;
+      case 25: define_problems24(i, tile_in_location); break;
+      default: fprintf(stderr, "Illegal value of N_LOCATIONS in benchmarks\n"); exit(1); break;
+      }
+
+      SlidingTile::initialize(tile_in_location);
+      SlidingTile goal_state = SlidingTile::GetSolvedPuzzle(Direction::backward);
+      SlidingTile starting_state(tile_in_location, Direction::forward);
+
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions] = Dibbs::search(starting_state, goal_state);
+      auto end = std::chrono::system_clock::now();
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!std::isinf(cstar) && z_optimal[i] != cstar) { std::cout << "ERROR Cstar mismatch: " << std::to_string(cstar) << " instead of " << std::to_string(z_optimal[i]); return; }
+    }
+
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+#endif
+  }
+
+  {
+#ifdef GBFHS
+    for (int i = 1; i <= n_problems; i++) {
+      switch (NUM_TILES) {
+      case 16: define_problems15(i, tile_in_location); break;
+      case 25: define_problems24(i, tile_in_location); break;
+      default: fprintf(stderr, "Illegal value of N_LOCATIONS in benchmarks\n"); exit(1); break;
+      }
+
+      SlidingTile::initialize(tile_in_location);
+      SlidingTile goal_state = SlidingTile::GetSolvedPuzzle(Direction::backward);
+      SlidingTile starting_state(tile_in_location, Direction::forward);
+
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions] = Gbfhs::search(starting_state, goal_state);
+      auto end = std::chrono::system_clock::now();
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!std::isinf(cstar) && z_optimal[i] != cstar) { std::cout << "ERROR Cstar mismatch: " << std::to_string(cstar) << " instead of " << std::to_string(z_optimal[i]); return; }
+    }
+
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+#endif
+  }
+
+
+  {
+#ifdef NBS
+    for (int i = 1; i <= n_problems; i++) {
+      switch (NUM_TILES) {
+      case 16: define_problems15(i, tile_in_location); break;
+      case 25: define_problems24(i, tile_in_location); break;
+      default: fprintf(stderr, "Illegal value of N_LOCATIONS in benchmarks\n"); exit(1); break;
+      }
+
+      SlidingTile::initialize(tile_in_location);
+      SlidingTile goal_state = SlidingTile::GetSolvedPuzzle(Direction::backward);
+      SlidingTile starting_state(tile_in_location, Direction::forward);
+
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions] = Nbs::search(starting_state, goal_state);
+      auto end = std::chrono::system_clock::now();
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!std::isinf(cstar) && z_optimal[i] != cstar) { std::cout << "ERROR Cstar mismatch: " << std::to_string(cstar) << " instead of " << std::to_string(z_optimal[i]); return; }
+    }
+
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+#endif
+  }
+
+  {
+#ifdef DVCBS
+    for (int i = 1; i <= n_problems; i++) {
+      switch (NUM_TILES) {
+      case 16: define_problems15(i, tile_in_location); break;
+      case 25: define_problems24(i, tile_in_location); break;
+      default: fprintf(stderr, "Illegal value of N_LOCATIONS in benchmarks\n"); exit(1); break;
+      }
+
+      SlidingTile::initialize(tile_in_location);
+      SlidingTile goal_state = SlidingTile::GetSolvedPuzzle(Direction::backward);
+      SlidingTile starting_state(tile_in_location, Direction::forward);
+
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions] = Dvcbs::search(starting_state, goal_state);
+      auto end = std::chrono::system_clock::now();
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!std::isinf(cstar) && z_optimal[i] != cstar) { std::cout << "ERROR Cstar mismatch: " << std::to_string(cstar) << " instead of " << std::to_string(z_optimal[i]); return; }
+    }
+
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+#endif
+  }
 }
 
 std::string return_formatted_time(std::string format)

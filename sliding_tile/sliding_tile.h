@@ -78,7 +78,7 @@ public:
     }
 
     uint8_t LB = 0;
-    for (int i = 0; i < NUM_TILES; i++) {
+    for (int i = 1; i < NUM_TILES; i++) {
       LB += distances[location_of_tile1[i]][location_of_tile2[i]];
     }
 
@@ -142,7 +142,7 @@ public:
       }
     }
   }
-
+  SlidingTile() {}
   SlidingTile(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), f(0), f_bar(0)
   {
     memcpy(source, data, NUM_TILES);
@@ -181,19 +181,21 @@ public:
   }
 
   void apply_move(int move) {
-    uint8_t new_location = moves[empty_location][move];
-    uint8_t tile = source[new_location];
+    uint8_t new_empty_location = moves[empty_location][move];
+    uint8_t tile = source[new_empty_location];
     source[empty_location] = tile;
-    source[new_location] = 0;
+    source[new_empty_location] = 0;
 
-    h = h + distances[empty_location][tile] - distances[new_location][tile];
-    //assert(h == compute_manhattan());
+    h = h + distances[empty_location][tile] - distances[new_empty_location][tile];
+    assert(h == compute_manhattan());
 
-    h2 = h2 + distances[empty_location][DUAL_SOURCE()[tile]] - distances[new_location][DUAL_SOURCE()[tile]];
-    //assert(h2 == compute_manhattan_opposite());
+    h2 = h2 + distances[empty_location][DUAL_SOURCE()[tile]] - distances[new_empty_location][DUAL_SOURCE()[tile]];
+    assert(h2 == compute_manhattan_opposite());
+
+    empty_location = new_empty_location;
   }
 
-  size_t num_actions_available() {
+  size_t num_actions_available() const {
     return moves[empty_location][0];
   }
 
