@@ -73,7 +73,10 @@ void output_data(std::ostream& stream) {
   std::stringstream time_stream;
   uint8_t problem[NUM_PANCAKES + 1];
   double answers[NUM_PROBLEMS + 1];
-  bool answered = false;
+  for (int i = 0; i <= NUM_PROBLEMS; ++i) {
+    answers[i] = -1;
+  }
+
   {
 #ifdef A_STAR
     std::cout << "A*\n";
@@ -98,14 +101,11 @@ void output_data(std::ostream& stream) {
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
-      if (!answered) {
+      if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else {
-        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
-      }
+      else if (!std::isinf(cstar) && answers[i] != cstar) { std::cout << "ERROR Cstar mismatch"; return; }
     }
-    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -135,14 +135,11 @@ void output_data(std::ostream& stream) {
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
-      if (!answered) {
+      if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else {
-        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
-      }
+      else if (!std::isinf(cstar) && answers[i] != cstar) { std::cout << "ERROR Cstar mismatch"; return; }
     }
-    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -166,14 +163,11 @@ void output_data(std::ostream& stream) {
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
-      if (!answered) {
+      if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else {
-        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
-      }
+      else if (!std::isinf(cstar) && answers[i] != cstar) { std::cout << "ERROR Cstar mismatch"; return; }
     }
-    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -203,15 +197,11 @@ void output_data(std::ostream& stream) {
       }
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
-      if (!answered) {
+      if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else {
-        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << " " << std::to_string(expansions) << std::endl;
-        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
-      }
+      else if (!std::isinf(cstar) && answers[i] != cstar) { std::cout << "ERROR Cstar mismatch"; return; }
     }
-    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -240,15 +230,14 @@ void output_data(std::ostream& stream) {
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
-      if (!answered) {
+      if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else {
+      else if (!std::isinf(cstar) && answers[i] != cstar) {
         //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
-        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
+        std::cout << "ERROR Cstar mismatch"; return; 
       }
     }
-    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -276,15 +265,14 @@ void output_data(std::ostream& stream) {
       }
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
-      if (!answered) {
+      if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else {
+      else if (!std::isinf(cstar) && answers[i] != cstar) {
         //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
-        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
+        std::cout << "ERROR Cstar mismatch"; return;
       }
     }
-    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -312,14 +300,14 @@ void output_data(std::ostream& stream) {
       }
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
-      if (!answered) {
+      if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else {
-        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
+      else if (!std::isinf(cstar) && answers[i] != cstar) {
+        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch"; return;
       }
     }
-    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
@@ -347,15 +335,14 @@ void output_data(std::ostream& stream) {
       }
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
-      if (!answered) {
+      if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else {
+      else if (!std::isinf(cstar) && answers[i] != cstar) {
         //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
-        if (answers[i] != cstar) { std::cout << "ERROR"; return; }
+        std::cout << "ERROR Cstar mismatch"; return;
       }
     }
-    answered = true;
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
 #endif
