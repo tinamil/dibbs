@@ -97,34 +97,38 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ClCompile>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="bidirectional.cpp" />
-    <ClCompile Include="bimemory.cpp" />
-    <ClCompile Include="cbfs.cpp" />
-    <ClCompile Include="hash_table.cpp" />
-    <ClCompile Include="heuristics.cpp" />
-    <ClCompile Include="ID_DIBBS.cpp" />
-    <ClCompile Include="io.cpp" />
-    <ClCompile Include="iterative_deepening.cpp" />
-    <ClCompile Include="lb.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="memory.cpp" />
-    <ClCompile Include="min_max_heap.cpp" />
-    <ClCompile Include="min_max_stacks.cpp" />
-    <ClCompile Include="PDB.cpp" />
-    <ClCompile Include="random.cpp" />
+    <ClCompile Include="astar.h" />
+    <ClCompile Include="sliding_tile.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="bistates.h" />
-    <ClInclude Include="hash_table.h" />
-    <ClInclude Include="heap_record.h" />
-    <ClInclude Include="in_set.h" />
-    <ClInclude Include="main.h" />
-    <ClInclude Include="min_max_heap.h" />
-    <ClInclude Include="min_max_stacks.h" />
-    <ClInclude Include="PDB.h" />
-    <ClInclude Include="stack_int.h" />
-    <ClInclude Include="states.h" />
+    <ClInclude Include="hash.hpp" />
+    <ClInclude Include="sliding_tile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
