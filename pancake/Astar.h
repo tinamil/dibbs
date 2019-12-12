@@ -35,12 +35,13 @@ class Astar
 
       if (next_val == goal) {
         UB = next_val.g;
-        //std::cout << "Solution: " << UB << '\n';
-        //std::cout << "Actions: ";
-        //for (int i = 0; i < next_val.actions.size(); ++i) {
-        //  std::cout << std::to_string(next_val.actions[i]) << " ";
-        //}
-        //std::cout << std::endl;
+#ifdef HISTORY
+        std::cout << "\nSolution: ";
+        for (int i = 0; i < next_val.actions.size(); ++i) {
+          std::cout << std::to_string(next_val.actions[i]) << " ";
+        }
+        std::cout << std::endl;
+#endif
         assert(next_val.h == 0);
         break;
       }

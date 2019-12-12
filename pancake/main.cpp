@@ -82,6 +82,7 @@ void output_data(std::ostream& stream) {
     std::cout << "A*\n";
     double seed = 3.1567;
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
       generate_random_instance(seed, problem);
 
       //define_problems(NUM_PANCAKES, GAPX, i, problem);
@@ -113,9 +114,10 @@ void output_data(std::ostream& stream) {
 
   {
 #ifdef REVERSE_ASTAR
-    std::cout << "RA*\n";
+    std::cout << "\nRA*\n";
     double seed = 3.1567;
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
       generate_random_instance(seed, problem);
       //define_problems(NUM_PANCAKES, GAPX, i, problem);
       //easy_problem(NUM_PANCAKES, problem);
@@ -138,7 +140,11 @@ void output_data(std::ostream& stream) {
       if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else if (!std::isinf(cstar) && answers[i] != cstar) { std::cout << "ERROR Cstar mismatch"; return; }
+      else if (!std::isinf(cstar) && answers[i] != cstar) {
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
+      }
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
@@ -147,9 +153,10 @@ void output_data(std::ostream& stream) {
 
   {
 #ifdef IDA_STAR
-    std::cout << "IDA\n";
+    std::cout << "\nIDA\n";
     double seed = 3.1567;
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
       generate_random_instance(seed, problem);
       //define_problems(NUM_PANCAKES, GAPX, i, problem);
       //easy_problem(NUM_PANCAKES, problem);
@@ -166,7 +173,11 @@ void output_data(std::ostream& stream) {
       if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else if (!std::isinf(cstar) && answers[i] != cstar) { std::cout << "ERROR Cstar mismatch"; return; }
+      else if (!std::isinf(cstar) && answers[i] != cstar) {
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
+      }
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
@@ -176,9 +187,10 @@ void output_data(std::ostream& stream) {
   {
 #ifdef IDD
     //ID-D
-    std::cout << "ID-D\n";
+    std::cout << "\nID-D\n";
     double seed = 3.1567;
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
       generate_random_instance(seed, problem);
       //define_problems(NUM_PANCAKES, GAPX, i, problem);
       //easy_problem(NUM_PANCAKES, problem);
@@ -200,7 +212,11 @@ void output_data(std::ostream& stream) {
       if (answers[i] < 0 && !std::isinf(cstar)) {
         answers[i] = cstar;
       }
-      else if (!std::isinf(cstar) && answers[i] != cstar) { std::cout << "ERROR Cstar mismatch"; return; }
+      else if (!std::isinf(cstar) && answers[i] != cstar) {
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
+      }
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
@@ -209,9 +225,10 @@ void output_data(std::ostream& stream) {
   {
 #ifdef DIBBS
     //DIBBS
-    std::cout << "DIBBS\n";
+    std::cout << "\nDIBBS\n";
     double seed = 3.1567;
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
       generate_random_instance(seed, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
@@ -234,8 +251,9 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else if (!std::isinf(cstar) && answers[i] != cstar) {
-        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
-        std::cout << "ERROR Cstar mismatch"; return; 
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
@@ -245,9 +263,10 @@ void output_data(std::ostream& stream) {
 
   {
 #ifdef GBFHS
-    std::cout << "GBFHS\n";
+    std::cout << "\nGBFHS\n";
     double seed = 3.1567;
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
       generate_random_instance(seed, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
@@ -269,8 +288,9 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else if (!std::isinf(cstar) && answers[i] != cstar) {
-        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
-        std::cout << "ERROR Cstar mismatch"; return;
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
@@ -280,9 +300,10 @@ void output_data(std::ostream& stream) {
 
   {
 #ifdef NBS
-    std::cout << "NBS\n";
+    std::cout << "\nNBS\n";
     double seed = 3.1567;
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
       generate_random_instance(seed, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
@@ -304,8 +325,9 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else if (!std::isinf(cstar) && answers[i] != cstar) {
-        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
-        std::cout << "ERROR Cstar mismatch"; return;
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
@@ -315,9 +337,10 @@ void output_data(std::ostream& stream) {
 
   {
 #ifdef DVCBS
-    std::cout << "DVCBS\n";
+    std::cout << "\nDVCBS\n";
     double seed = 3.1567;
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
       generate_random_instance(seed, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
@@ -339,7 +362,7 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else if (!std::isinf(cstar) && answers[i] != cstar) {
-        //std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch"; return;
       }
     }
@@ -402,4 +425,32 @@ void run_random_test() {
 int main()
 {
   run_random_test();
+  /* uint8_t problem[NUM_PANCAKES + 1] = { 20, 10, 3, 7, 5, 1, 8, 12, 19, 11, 14, 15, 13, 16, 17, 20, 18, 6, 4, 2, 9 };
+   Pancake::Initialize_Dual(problem);
+   Pancake node(problem, Direction::forward);
+   Pancake goal = Pancake::GetSortedStack(Direction::backward);*/
+   /*
+   node = node.apply_action(8);
+   node = node.apply_action(15);
+   node = node.apply_action(20);
+   node = node.apply_action(7);
+   node = node.apply_action(16);
+   node = node.apply_action(17);
+   node = node.apply_action(15);
+   node = node.apply_action(13);
+   node = node.apply_action(19);
+   node = node.apply_action(17);
+
+   node = node.apply_action(7);
+   node = node.apply_action(6);
+   node = node.apply_action(5);
+   node = node.apply_action(3);
+   node = node.apply_action(9);
+   node = node.apply_action(5);
+
+   goal = goal.apply_action(7);
+   goal = goal.apply_action(4);*/
+
+   //auto [cstar, expansions] = Nbs::search(node, goal);
+
 }

@@ -53,13 +53,13 @@ class Dibbs
         auto it_other = other_open.find(&new_action);
         if (it_other != other_open.end()) {
 #ifdef HISTORY
-          if (it_other->g + new_action.g < UB) {
+          if ((*it_other)->g + new_action.g < UB) {
             if (new_action.dir == Direction::forward) {
               best_f = new_action;
-              best_b = *it_other;
+              best_b = **it_other;
             }
             else {
-              best_f = *it_other;
+              best_f = **it_other;
               best_b = new_action;
             }
           }

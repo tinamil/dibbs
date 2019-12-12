@@ -202,7 +202,7 @@ struct PancakeHash
   }
   inline std::size_t operator() (const Pancake* x) const
   {
-    return SuperFastHash(x->source, NUM_PANCAKES + 1);
+    return SuperFastHash(x->source + 1, NUM_PANCAKES);
   }
 };
 
@@ -210,7 +210,7 @@ struct PancakeEqual
 {
   inline bool operator() (const Pancake* x, const Pancake* y) const
   {
-    return *x == *y;
+    return memcmp(x->source, y->source, NUM_PANCAKES + 1) == 0;
   }
   inline bool operator() (const Pancake x, const Pancake y) const
   {
