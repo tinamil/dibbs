@@ -129,6 +129,7 @@
     <ClCompile Include="problems.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="id-d with closed.h" />
     <ClInclude Include="Nbs.h" />
     <ClInclude Include="StackArray.h" />
     <ClInclude Include="Astar.h" />

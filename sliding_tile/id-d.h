@@ -18,6 +18,7 @@ class ID_D
 
   hash_set open_f, open_b;
   std::stack<SlidingTile> stack;
+  hash_set closed;
   size_t LB;
   size_t UB;
   size_t expansions;
@@ -27,6 +28,7 @@ class ID_D
 
   void expand_layer(std::stack<SlidingTile>& stack, std::unordered_set<SlidingTile, SlidingTileHash>& my_set, const std::unordered_set<SlidingTile, SlidingTileHash>& other_set, const size_t iteration) {
     my_set.clear();
+    closed.clear();
     PROCESS_MEMORY_COUNTERS memCounter;
     while (!stack.empty() && LB < UB) {
       SlidingTile current = stack.top();
@@ -39,10 +41,25 @@ class ID_D
         break;
       }
 
+      auto closed_pair = closed.insert(current);
+      if (!closed_pair.second) {
+        if (closed_pair.first->g > current.g) {
+          closed.erase(closed_pair.first);
+          closed.insert(current);
+        }
+        else {
+          continue;
+        }
+      }
       expansions += 1;
 
       for (int i = 1, stop = current.num_actions_available(); i <= stop; ++i) {
         SlidingTile new_node = current.apply_action(i);
+
+        auto closed_it = closed.find(new_node);
+        if (closed_it != closed.end() && closed_it->g <= new_node.g) {
+          continue;
+        }
 
         //Check for intersection with other direction
         auto it = other_set.find(new_node);
@@ -92,13 +109,31 @@ class ID_D
   }
 
   void id_check_layer(std::stack<SlidingTile>& stack, const std::unordered_set<SlidingTile, SlidingTileHash>& other_set, const size_t iteration) {
+    closed.clear();
     while (!stack.empty() && LB < UB && !abort) {
       SlidingTile current = stack.top();
       stack.pop();
+
+      auto closed_pair = closed.insert(current);
+      if (!closed_pair.second) {
+        if (closed_pair.first->g > current.g) {
+          closed.erase(closed_pair.first);
+          closed.insert(current);
+        }
+        else {
+          continue;
+        }
+      }
+
       expansions += 1;
 
       for (int i = 1, stop = current.num_actions_available(); i <= stop; ++i) {
         SlidingTile new_node = current.apply_action(i);
+
+        auto closed_it = closed.find(new_node);
+        if (closed_it != closed.end() && closed_it->g <= new_node.g) {
+          continue;
+        }
 
         auto it = other_set.find(new_node);
         if (it != other_set.end()) {
