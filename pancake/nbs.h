@@ -20,7 +20,7 @@ class Nbs {
   typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
   typedef std::set<const Pancake*, PancakeFSortLowG> waiting_set;
   typedef std::set<const Pancake*, PancakeGSortLow> ready_set;
-
+  
   StackArray<Pancake> storage;
   ready_set open_f_ready, open_b_ready;
   waiting_set open_f_waiting, open_b_waiting;
@@ -129,7 +129,6 @@ class Nbs {
         hash.erase(it_open);
       }
 
-
       auto ptr = storage.push_back(new_action);
       auto open_insertion_result = waiting.insert(ptr);
       assert(open_insertion_result.second);
@@ -173,8 +172,8 @@ class Nbs {
         break;
       }
 
-      expand_node_forward();
-      expand_node_backward();
+      if(expand_node_forward() == false) break;
+      if (expand_node_backward() == false) break;
     }
 
     if (finished) {

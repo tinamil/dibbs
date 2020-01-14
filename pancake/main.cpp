@@ -425,32 +425,5 @@ void run_random_test() {
 int main()
 {
   run_random_test();
-  /* uint8_t problem[NUM_PANCAKES + 1] = { 20, 10, 3, 7, 5, 1, 8, 12, 19, 11, 14, 15, 13, 16, 17, 20, 18, 6, 4, 2, 9 };
-   Pancake::Initialize_Dual(problem);
-   Pancake node(problem, Direction::forward);
-   Pancake goal = Pancake::GetSortedStack(Direction::backward);*/
-   /*
-   node = node.apply_action(8);
-   node = node.apply_action(15);
-   node = node.apply_action(20);
-   node = node.apply_action(7);
-   node = node.apply_action(16);
-   node = node.apply_action(17);
-   node = node.apply_action(15);
-   node = node.apply_action(13);
-   node = node.apply_action(19);
-   node = node.apply_action(17);
-
-   node = node.apply_action(7);
-   node = node.apply_action(6);
-   node = node.apply_action(5);
-   node = node.apply_action(3);
-   node = node.apply_action(9);
-   node = node.apply_action(5);
-
-   goal = goal.apply_action(7);
-   goal = goal.apply_action(4);*/
-
-   //auto [cstar, expansions] = Nbs::search(node, goal);
 
 }

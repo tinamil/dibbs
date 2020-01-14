@@ -151,7 +151,7 @@ class Dvcbs {
         for (int j = 0; j < ((int)nBackward.size()); j++) {
           double oldKey = (*open_b_ready.begin())->g;
           if (closed_b.find(nBackward[j]) == closed_b.end()) {
-            expand_node_backward(nBackward[j]);
+            if (expand_node_backward(nBackward[j]) == false)  return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
           }
           if (lbmin >= UB) {
             return std::make_pair(UB, expansions);
@@ -168,7 +168,7 @@ class Dvcbs {
         for (int i = 0; i < ((int)nForward.size()); i++) {
           double oldKey = (*open_f_ready.begin())->g;
           if (closed_f.find(nForward[i]) == closed_f.end()) {
-            expand_node_forward(nForward[i]);
+            if (expand_node_forward(nForward[i]) == false)  return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
           }
           if (lbmin >= UB) {
             return std::make_pair(UB, expansions);
@@ -205,13 +205,12 @@ class Dvcbs {
           }
           if (expandForward) {
             if (closed_f.find(nForward[i]) == closed_f.end()) {
-              expand_node_forward(nForward[i]);
             }
             i--;
           }
           else {
             if (closed_b.find(nBackward[j]) == closed_b.end()) {
-              expand_node_backward(nBackward[j]);
+              if (expand_node_backward(nBackward[j]) == false)  return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
             }
             j--;
           }
