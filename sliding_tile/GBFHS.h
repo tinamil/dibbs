@@ -25,6 +25,7 @@ class Gbfhs {
   size_t expansions;
   size_t UB;
   size_t f_lim; //Also LB
+  size_t memory;
 
   Gbfhs() : open_f(), open_b(), open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), f_lim(0) {}
 
@@ -61,6 +62,7 @@ class Gbfhs {
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
+      memory = std::max(memory, memCounter.PagefileUsage);
       if (memCounter.PagefileUsage > MEM_LIMIT) {
         return false;
       }
@@ -106,6 +108,7 @@ class Gbfhs {
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
+      memory = std::max(memory, memCounter.PagefileUsage);
       if (memCounter.PagefileUsage > MEM_LIMIT) {
         return false;
       }
@@ -135,10 +138,10 @@ class Gbfhs {
     return true;
   }
 
-  std::pair<double, size_t> run_search(SlidingTile start, SlidingTile goal)
+  std::tuple<double, size_t, size_t> run_search(SlidingTile start, SlidingTile goal)
   {
     if (start == goal) {
-      return std::make_pair(0, 0);
+      return std::make_tuple(0, 0, 0);
     }
 
     expansions = 0;
@@ -161,7 +164,7 @@ class Gbfhs {
 
       auto [glim_f, glim_b] = gbfhs_split(f_lim);
       if (!expand_level(glim_f, glim_b, f_lim)) {
-        return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
+        return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
       }
 
       if (UB == f_lim) {
@@ -170,13 +173,13 @@ class Gbfhs {
       f_lim += 1;
     }
 
-    return std::make_pair(UB, expansions);
+    return std::make_tuple(UB, expansions, memory);
   }
 
 
 public:
 
-  static std::pair<double, size_t> search(SlidingTile start, SlidingTile goal) {
+  static std::tuple<double, size_t, size_t> search(SlidingTile start, SlidingTile goal) {
     Gbfhs instance;
     return instance.run_search(start, goal);
   }

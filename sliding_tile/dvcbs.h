@@ -30,6 +30,7 @@ class Dvcbs {
   size_t UB;
   size_t lbmin;
   PROCESS_MEMORY_COUNTERS memCounter;
+  size_t memory;
 
   Dvcbs() : open_f_ready(), open_b_ready(), open_f_waiting(), open_b_waiting(), open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
 
@@ -83,10 +84,11 @@ class Dvcbs {
     return expand_node(next_val, open_b_ready, open_b_waiting, open_b_hash, closed_b, open_f_hash);
   }
 
-  std::pair<double, size_t> run_search(SlidingTile start, SlidingTile goal)
+  std::tuple<double, size_t, size_t> run_search(SlidingTile start, SlidingTile goal)
   {
+    memory = 0;
     if (start == goal) {
-      return std::make_pair(0, 0);
+      return std::make_tuple(0, 0, 0);
     }
 
     expansions = 0;
@@ -108,8 +110,9 @@ class Dvcbs {
     {
       BOOL proc_result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(proc_result);
+      memory = std::max(memory, memCounter.PagefileUsage);
       if (memCounter.PagefileUsage > MEM_LIMIT) {
-        return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
+        return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
       }
 
       std::vector<const SlidingTile*> nForward, nBackward;
@@ -119,16 +122,16 @@ class Dvcbs {
       {
         if (UB == std::numeric_limits<double>::max())
         {
-          return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
+          return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
         }
         else {
-          return std::make_pair(UB, expansions);
+          return std::make_tuple(UB, expansions, memory);
         }
       }
 
 
       if (lbmin >= UB) {
-        return std::make_pair(UB, expansions);
+        return std::make_tuple(UB, expansions, memory);
       }
 
       else if (nForward.size() > 0 && nBackward.size() > 0)
@@ -139,7 +142,7 @@ class Dvcbs {
         }
         for (int j = 0; j < nBackward.size(); j++) {
           if (mapData.find(nBackward[j]) != mapData.end()) {
-            return std::make_pair(UB, expansions);
+            return std::make_tuple(UB, expansions, memory);
           }
         }
 
@@ -155,7 +158,7 @@ class Dvcbs {
             expand_node_backward(nBackward[j]);
           }
           if (lbmin >= UB) {
-            return std::make_pair(UB, expansions);
+            return std::make_tuple(UB, expansions, memory);
           }
           if (currentLowerBound != lbmin || open_b_ready.empty() || oldKey != (*open_b_ready.begin())->g) {
             skip_loop = true;
@@ -172,7 +175,7 @@ class Dvcbs {
             expand_node_forward(nForward[i]);
           }
           if (lbmin >= UB) {
-            return std::make_pair(UB, expansions);
+            return std::make_tuple(UB, expansions, memory);
           }
           if (currentLowerBound != lbmin || open_f_ready.empty() || oldKey != (*open_f_ready.begin())->g) {
             skip_loop = true;
@@ -187,7 +190,7 @@ class Dvcbs {
         while (i >= 0 || j >= 0) {
           if (lbmin >= UB)
           {
-            return std::make_pair(UB, expansions);
+            return std::make_tuple(UB, expansions, memory);
           }
           bool expandForward;
           if (i < 0) {
@@ -410,7 +413,7 @@ class Dvcbs {
 
 public:
 
-  static std::pair<double, size_t> search(SlidingTile start, SlidingTile goal) {
+  static std::tuple<double, size_t, size_t> search(SlidingTile start, SlidingTile goal) {
     Dvcbs instance;
     return instance.run_search(start, goal);
   }

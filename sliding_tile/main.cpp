@@ -276,6 +276,7 @@ void benchmarks(std::ostream& stream)
 
   std::stringstream expansion_stream;
   std::stringstream time_stream;
+  std::stringstream memory_stream;
   typedef std::chrono::nanoseconds precision;
   uint8_t tile_in_location[NUM_TILES];
 
@@ -295,7 +296,7 @@ void benchmarks(std::ostream& stream)
       SlidingTile starting_state(tile_in_location, Direction::forward);
 
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Astar::search(starting_state, goal_state);
+      auto [cstar, expansions, memory] = Astar::search(starting_state, goal_state);
       auto end = std::chrono::system_clock::now();
       if (std::isinf(cstar)) {
         expansion_stream << "NAN ";
@@ -303,6 +304,7 @@ void benchmarks(std::ostream& stream)
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -311,6 +313,7 @@ void benchmarks(std::ostream& stream)
 
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -330,7 +333,7 @@ void benchmarks(std::ostream& stream)
       SlidingTile starting_state(tile_in_location, Direction::forward);
 
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Astar::search(goal_state, starting_state);
+      auto [cstar, expansions, memory] = Astar::search(goal_state, starting_state);
       auto end = std::chrono::system_clock::now();
       if (std::isinf(cstar)) {
         expansion_stream << "NAN ";
@@ -338,6 +341,7 @@ void benchmarks(std::ostream& stream)
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -346,6 +350,7 @@ void benchmarks(std::ostream& stream)
 
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -366,7 +371,7 @@ void benchmarks(std::ostream& stream)
       SlidingTile starting_state(tile_in_location, Direction::forward);
 
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = ID_D::search(starting_state, goal_state);
+      auto [cstar, expansions, memory] = ID_D::search(starting_state, goal_state);
       auto end = std::chrono::system_clock::now();
       if (std::isinf(cstar)) {
         expansion_stream << "NAN ";
@@ -374,6 +379,7 @@ void benchmarks(std::ostream& stream)
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -382,6 +388,7 @@ void benchmarks(std::ostream& stream)
 
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -401,7 +408,7 @@ void benchmarks(std::ostream& stream)
       SlidingTile starting_state(tile_in_location, Direction::forward);
 
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Dibbs::search(starting_state, goal_state);
+      auto [cstar, expansions, memory] = Dibbs::search(starting_state, goal_state);
       auto end = std::chrono::system_clock::now();
       if (std::isinf(cstar)) {
         expansion_stream << "NAN ";
@@ -409,6 +416,7 @@ void benchmarks(std::ostream& stream)
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -417,6 +425,7 @@ void benchmarks(std::ostream& stream)
 
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -436,7 +445,7 @@ void benchmarks(std::ostream& stream)
       SlidingTile starting_state(tile_in_location, Direction::forward);
 
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Gbfhs::search(starting_state, goal_state);
+      auto [cstar, expansions, memory] = Gbfhs::search(starting_state, goal_state);
       auto end = std::chrono::system_clock::now();
       if (std::isinf(cstar)) {
         expansion_stream << "NAN ";
@@ -444,6 +453,7 @@ void benchmarks(std::ostream& stream)
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -452,6 +462,7 @@ void benchmarks(std::ostream& stream)
 
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -472,7 +483,7 @@ void benchmarks(std::ostream& stream)
       SlidingTile starting_state(tile_in_location, Direction::forward);
 
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Nbs::search(starting_state, goal_state);
+      auto [cstar, expansions, memory] = Nbs::search(starting_state, goal_state);
       auto end = std::chrono::system_clock::now();
       if (std::isinf(cstar)) {
         expansion_stream << "NAN ";
@@ -480,6 +491,7 @@ void benchmarks(std::ostream& stream)
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -488,6 +500,7 @@ void benchmarks(std::ostream& stream)
 
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -507,7 +520,7 @@ void benchmarks(std::ostream& stream)
       SlidingTile starting_state(tile_in_location, Direction::forward);
 
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Dvcbs::search(starting_state, goal_state);
+      auto [cstar, expansions, memory] = Dvcbs::search(starting_state, goal_state);
       auto end = std::chrono::system_clock::now();
       if (std::isinf(cstar)) {
         expansion_stream << "NAN ";
@@ -515,6 +528,7 @@ void benchmarks(std::ostream& stream)
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -523,6 +537,7 @@ void benchmarks(std::ostream& stream)
 
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 }

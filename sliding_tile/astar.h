@@ -13,11 +13,13 @@ class Astar
 {
   std::priority_queue<SlidingTile, std::vector<SlidingTile>, FSort> open;
   std::unordered_set<SlidingTile, SlidingTileHash> closed;
+  size_t memory;
 
   Astar() : open() {}
 
-  std::pair<double, size_t> run_search(SlidingTile start, SlidingTile goal) {
+  std::tuple<double, size_t, size_t> run_search(SlidingTile start, SlidingTile goal) {
     size_t expansions = 0;
+    memory = 0;
     open.push(start);
 
     PROCESS_MEMORY_COUNTERS memCounter;
@@ -47,6 +49,7 @@ class Astar
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
+      memory = std::max(memory, memCounter.PagefileUsage);
       if (memCounter.PagefileUsage > MEM_LIMIT) {
         break;
       }
@@ -61,12 +64,12 @@ class Astar
       }
     }
     //std::cout << "Size: " << open.size() << '\n';
-    return std::make_pair(UB, expansions);
+    return std::make_tuple(UB, expansions, memory);
   }
 
 public:
 
-  static std::pair<double, size_t> search(SlidingTile start, SlidingTile goal) {
+  static std::tuple<double, size_t, size_t> search(SlidingTile start, SlidingTile goal) {
     Astar instance;
     return instance.run_search(start, goal);
   }
