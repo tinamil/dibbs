@@ -11,6 +11,8 @@
 #include <windows.h>
 #include <Psapi.h>
 
+#define CLOSED
+
 SlidingTile best_SlidingTile_f(SlidingTile::GetSolvedPuzzle(Direction::forward)), best_SlidingTile_b(SlidingTile::GetSolvedPuzzle(Direction::backward));
 class ID_D
 {
@@ -18,17 +20,22 @@ class ID_D
 
   hash_set open_f, open_b;
   std::stack<SlidingTile> stack;
+#ifdef CLOSED
   hash_set closed;
+#endif
   size_t LB;
   size_t UB;
   size_t expansions;
   bool abort;
+  size_t memory_usage = 0;
 
   ID_D() : open_f(), open_b(), stack(), LB(0), UB(0), expansions(0), abort(false) {}
 
   void expand_layer(std::stack<SlidingTile>& stack, std::unordered_set<SlidingTile, SlidingTileHash>& my_set, const std::unordered_set<SlidingTile, SlidingTileHash>& other_set, const size_t iteration) {
     my_set.clear();
+#ifdef CLOSED
     closed.clear();
+#endif
     PROCESS_MEMORY_COUNTERS memCounter;
     while (!stack.empty() && LB < UB) {
       SlidingTile current = stack.top();
@@ -36,11 +43,15 @@ class ID_D
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
+      if (memory_usage < memCounter.PagefileUsage) {
+        memory_usage = memCounter.PagefileUsage;
+      }
       if (memCounter.PagefileUsage > MEM_LIMIT) {
         abort = true;
         break;
       }
 
+#ifdef CLOSED
       auto closed_pair = closed.insert(current);
       if (!closed_pair.second) {
         if (closed_pair.first->g > current.g) {
@@ -51,15 +62,18 @@ class ID_D
           continue;
         }
       }
+#endif
       expansions += 1;
 
       for (int i = 1, stop = current.num_actions_available(); i <= stop; ++i) {
         SlidingTile new_node = current.apply_action(i);
 
+#ifdef CLOSED
         auto closed_it = closed.find(new_node);
         if (closed_it != closed.end() && closed_it->g <= new_node.g) {
           continue;
         }
+#endif
 
         //Check for intersection with other direction
         auto it = other_set.find(new_node);
@@ -109,11 +123,14 @@ class ID_D
   }
 
   void id_check_layer(std::stack<SlidingTile>& stack, const std::unordered_set<SlidingTile, SlidingTileHash>& other_set, const size_t iteration) {
+#ifdef CLOSED
     closed.clear();
+#endif
     while (!stack.empty() && LB < UB && !abort) {
       SlidingTile current = stack.top();
       stack.pop();
 
+#ifdef CLOSED
       auto closed_pair = closed.insert(current);
       if (!closed_pair.second) {
         if (closed_pair.first->g > current.g) {
@@ -124,16 +141,19 @@ class ID_D
           continue;
         }
       }
+#endif
 
       expansions += 1;
 
       for (int i = 1, stop = current.num_actions_available(); i <= stop; ++i) {
         SlidingTile new_node = current.apply_action(i);
 
+#ifdef CLOSED
         auto closed_it = closed.find(new_node);
         if (closed_it != closed.end() && closed_it->g <= new_node.g) {
           continue;
         }
+#endif
 
         auto it = other_set.find(new_node);
         if (it != other_set.end()) {
@@ -235,6 +255,9 @@ class ID_D
     //  std::cout << std::to_string(best_SlidingTile_b.actions[i]) << " ";
     //}
     //std::cout << std::endl;
+
+    std::cout << std::endl << std::to_string(memory_usage) << std::endl;
+
     if (LB >= UB)
       return std::make_pair(UB, expansions);
     else
