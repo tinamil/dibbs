@@ -8,7 +8,6 @@
 #include <stack>
 #include <cmath>
 #include <set>
-#include <iostream>
 
 #define NOMINMAX
 #include <windows.h>
@@ -86,11 +85,10 @@ class Dvcbs {
 
   std::tuple<double, size_t, size_t> run_search(SlidingTile start, SlidingTile goal)
   {
-    memory = 0;
     if (start == goal) {
       return std::make_tuple(0, 0, 0);
     }
-
+    memory = 0;
     expansions = 0;
     UB = std::numeric_limits<size_t>::max();
 
@@ -155,7 +153,7 @@ class Dvcbs {
         for (int j = 0; j < ((int)nBackward.size()); j++) {
           double oldKey = (*open_b_ready.begin())->g;
           if (closed_b.find(nBackward[j]) == closed_b.end()) {
-            expand_node_backward(nBackward[j]);
+            if (expand_node_backward(nBackward[j]) == false)  return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
           }
           if (lbmin >= UB) {
             return std::make_tuple(UB, expansions, memory);
@@ -172,7 +170,7 @@ class Dvcbs {
         for (int i = 0; i < ((int)nForward.size()); i++) {
           double oldKey = (*open_f_ready.begin())->g;
           if (closed_f.find(nForward[i]) == closed_f.end()) {
-            expand_node_forward(nForward[i]);
+            if (expand_node_forward(nForward[i]) == false)  return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
           }
           if (lbmin >= UB) {
             return std::make_tuple(UB, expansions, memory);
@@ -209,13 +207,12 @@ class Dvcbs {
           }
           if (expandForward) {
             if (closed_f.find(nForward[i]) == closed_f.end()) {
-              expand_node_forward(nForward[i]);
             }
             i--;
           }
           else {
             if (closed_b.find(nBackward[j]) == closed_b.end()) {
-              expand_node_backward(nBackward[j]);
+              if (expand_node_backward(nBackward[j]) == false)  return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
             }
             j--;
           }

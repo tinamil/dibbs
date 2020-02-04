@@ -18,13 +18,13 @@
 
 //#define IDA_STAR
 
-#define A_STAR
-#define REVERSE_ASTAR
+//#define A_STAR
+//#define REVERSE_ASTAR
 #define IDD
 #define DIBBS
-#define GBFHS
-#define NBS
-#define DVCBS
+//#define GBFHS
+//#define NBS
+//#define DVCBS
 
 constexpr int NUM_PROBLEMS = 100;
 
@@ -70,6 +70,7 @@ void output_data(std::ostream& stream) {
   typedef std::chrono::nanoseconds precision;
 
   std::stringstream expansion_stream;
+  std::stringstream memory_stream;
   std::stringstream time_stream;
   uint8_t problem[NUM_PANCAKES + 1];
   double answers[NUM_PROBLEMS + 1];
@@ -90,7 +91,7 @@ void output_data(std::ostream& stream) {
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::forward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Astar::search(node, goal);
+      auto [cstar, expansions, memory] = Astar::search(node, goal);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       if (std::isinf(cstar)) {
@@ -99,6 +100,7 @@ void output_data(std::ostream& stream) {
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -109,6 +111,7 @@ void output_data(std::ostream& stream) {
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -125,7 +128,7 @@ void output_data(std::ostream& stream) {
       Pancake node(problem, Direction::backward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Astar::search(goal, node);
+      auto [cstar, expansions, memory] = Astar::search(goal, node);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       if (std::isinf(cstar)) {
@@ -134,6 +137,7 @@ void output_data(std::ostream& stream) {
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -148,6 +152,7 @@ void output_data(std::ostream& stream) {
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -163,11 +168,12 @@ void output_data(std::ostream& stream) {
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::forward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = IDAstar::search(node, goal);
+      auto [cstar, expansions, memory] = IDAstar::search(node, goal);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       expansion_stream << std::to_string(expansions) << " ";
 
+      memory_stream << std::to_string(memory) << " ";
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
       if (answers[i] < 0 && !std::isinf(cstar)) {
@@ -181,6 +187,7 @@ void output_data(std::ostream& stream) {
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -198,7 +205,7 @@ void output_data(std::ostream& stream) {
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = ID_D::search(node, goal);
+      auto [cstar, expansions, memory] = ID_D::search(node, goal);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       if (std::isinf(cstar)) {
@@ -207,6 +214,7 @@ void output_data(std::ostream& stream) {
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
       if (answers[i] < 0 && !std::isinf(cstar)) {
@@ -220,6 +228,7 @@ void output_data(std::ostream& stream) {
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
   {
@@ -235,7 +244,7 @@ void output_data(std::ostream& stream) {
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Dibbs::search(node, goal);
+      auto [cstar, expansions, memory] = Dibbs::search(node, goal);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       if (std::isinf(cstar)) {
@@ -244,6 +253,7 @@ void output_data(std::ostream& stream) {
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
 
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
@@ -258,6 +268,7 @@ void output_data(std::ostream& stream) {
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -273,7 +284,7 @@ void output_data(std::ostream& stream) {
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Gbfhs::search(node, goal);
+      auto [cstar, expansions, memory] = Gbfhs::search(node, goal);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       if (std::isinf(cstar)) {
@@ -282,6 +293,7 @@ void output_data(std::ostream& stream) {
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
       if (answers[i] < 0 && !std::isinf(cstar)) {
@@ -295,6 +307,7 @@ void output_data(std::ostream& stream) {
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -310,7 +323,7 @@ void output_data(std::ostream& stream) {
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Nbs::search(node, goal);
+      auto [cstar, expansions, memory] = Nbs::search(node, goal);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       if (std::isinf(cstar)) {
@@ -319,6 +332,7 @@ void output_data(std::ostream& stream) {
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
       if (answers[i] < 0 && !std::isinf(cstar)) {
@@ -332,6 +346,7 @@ void output_data(std::ostream& stream) {
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -347,7 +362,7 @@ void output_data(std::ostream& stream) {
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions] = Dvcbs::search(node, goal);
+      auto [cstar, expansions, memory] = Dvcbs::search(node, goal);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       if (std::isinf(cstar)) {
@@ -356,6 +371,7 @@ void output_data(std::ostream& stream) {
       else {
         expansion_stream << std::to_string(expansions) << " ";
       }
+      memory_stream << std::to_string(memory) << " ";
       time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
 
       if (answers[i] < 0 && !std::isinf(cstar)) {
@@ -368,6 +384,7 @@ void output_data(std::ostream& stream) {
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
 }

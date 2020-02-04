@@ -21,6 +21,7 @@ class ID_D
   size_t LB;
   size_t UB;
   size_t expansions;
+  size_t memory;
   bool abort;
 
   ID_D() : open_f(), open_b(), stack(), LB(0), UB(0), expansions(0), abort(false) {}
@@ -34,6 +35,7 @@ class ID_D
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
+      memory = std::max(memory, memCounter.PagefileUsage);
       if (memCounter.PagefileUsage > MEM_LIMIT) {
         abort = true;
         break;
@@ -159,11 +161,12 @@ class ID_D
     }
   }
 
-  std::pair<double, size_t> run_search(Pancake start, Pancake goal) {
+  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal) {
 
     if (start == goal) {
-      return std::make_pair(0, 0);
+      return std::make_tuple(0, 0, 0);
     }
+    memory = 0;
     expansions = 0;
     UB = std::numeric_limits<size_t>::max();
     LB = 1;
@@ -206,14 +209,14 @@ class ID_D
     }
 #endif
     if (LB >= UB)
-      return std::make_pair(UB, expansions);
+      return std::make_tuple(UB, expansions, memory);
     else
-      return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
+      return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
   }
 
 public:
 
-  static std::pair<double, size_t> search(Pancake start, Pancake goal) {
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal) {
     ID_D instance;
     return instance.run_search(start, goal);
   }

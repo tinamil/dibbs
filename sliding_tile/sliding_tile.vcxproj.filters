@@ -50,5 +50,8 @@
     <ClInclude Include="StackArray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ida.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

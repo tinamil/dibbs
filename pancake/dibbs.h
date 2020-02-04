@@ -23,6 +23,8 @@ class Dibbs
   hash_set closed_f, closed_b;
   size_t expansions;
   size_t UB;
+  size_t memory;
+
 
 
   Dibbs() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0) {}
@@ -89,9 +91,9 @@ class Dibbs
   Pancake best_f, best_b;
 #endif
 
-  std::pair<double, size_t> run_search(Pancake start, Pancake goal) {
+  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal) {
     expansions = 0;
-
+    memory = 0;
     auto ptr = storage.push_back(start);
     open_f.insert(ptr);
     open_f_hash.insert(ptr);
@@ -105,6 +107,7 @@ class Dibbs
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
+      memory = std::max(memory, memCounter.PagefileUsage);
       if (memCounter.PagefileUsage > MEM_LIMIT) {
         break;
       }
@@ -134,17 +137,17 @@ class Dibbs
     std::cout << std::endl;
 #endif
     if (UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
-      return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
+      return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
     }
     else {
       //std::cout << "Size: " << open.size() << '\n';
-      return std::make_pair(UB, expansions);
+      return std::make_tuple(UB, expansions, memory);
     }
   }
 
 public:
 
-  static std::pair<double, size_t> search(Pancake start, Pancake goal) {
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal) {
     Dibbs instance;
     return instance.run_search(start, goal);
   }

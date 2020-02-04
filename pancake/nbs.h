@@ -29,6 +29,7 @@ class Nbs {
   size_t expansions;
   size_t UB;
   size_t lbmin;
+  size_t memory;
 
 #ifdef HISTORY
   Pancake best_f;
@@ -96,6 +97,7 @@ class Nbs {
     PROCESS_MEMORY_COUNTERS memCounter;
     BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
     assert(result);
+    memory = std::max(memory, memCounter.PagefileUsage);
     if (memCounter.PagefileUsage > MEM_LIMIT) {
       return false;
     }
@@ -146,11 +148,12 @@ class Nbs {
     return expand_node(open_b_hash, open_b_ready, open_b_waiting, closed_b, open_f_hash);
   }
 
-  std::pair<double, size_t> run_search(Pancake start, Pancake goal)
+  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal)
   {
     if (start == goal) {
-      return std::make_pair(0, 0);
+      return std::make_tuple(0, 0, 0);
     }
+    memory = 0;
     expansions = 0;
     UB = std::numeric_limits<size_t>::max();
 
@@ -188,15 +191,15 @@ class Nbs {
       }
       std::cout << "\n";
 #endif 
-      return std::make_pair(UB, expansions);
+      return std::make_tuple(UB, expansions, memory);
     }
-    else return std::make_pair(std::numeric_limits<double>::infinity(), expansions);
+    else return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
   }
 
 
 public:
 
-  static std::pair<double, size_t> search(Pancake start, Pancake goal) {
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal) {
     Nbs instance;
     return instance.run_search(start, goal);
   }

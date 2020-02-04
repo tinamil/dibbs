@@ -61,7 +61,7 @@ void search_cubes()
       auto [count, time_elapsed] = search::multithreaded_disk_dibbs(cubes[i], type);
       count_results.push_back(count);
       time_results.push_back(time_elapsed);
-      cout << "DIBBS CPU time used: " << time_elapsed << " s" << endl;
+      cout << "IDD-DISK CPU time used: " << time_elapsed << " s" << endl;
     }
     #endif
     #ifdef GBFHS

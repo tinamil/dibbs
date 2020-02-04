@@ -145,6 +145,7 @@ class Gbfhs {
     }
 
     expansions = 0;
+    memory = 0;
     UB = std::numeric_limits<size_t>::max();
 
     size_t iteration = 0;

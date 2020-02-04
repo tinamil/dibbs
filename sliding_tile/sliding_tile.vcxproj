@@ -132,6 +132,7 @@
     <ClInclude Include="GBFHS.h" />
     <ClInclude Include="hash.hpp" />
     <ClInclude Include="id-d.h" />
+    <ClInclude Include="ida.h" />
     <ClInclude Include="nbs.h" />
     <ClInclude Include="sliding_tile.h" />
     <ClInclude Include="StackArray.h" />
