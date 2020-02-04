@@ -18,19 +18,20 @@ using namespace std;
 using namespace Rubiks;
 
 //#define ASTAR 
-//#define DIBBS 
-#define DISK_DIBBS
+#define DIBBS 
+//#define DISK_DIBBS
 //#define GBFHS
 
 void search_cubes()
 {
   vector<uint8_t*> cubes = RubiksLoader::load_cubes("korf1997.txt");
-  PDB type = PDB::a888;
+  PDB type = PDB::a1997;
   vector<uint64_t> count_results;
   vector<double> time_results;
 
   for (size_t i = 0; i < cubes.size(); ++i)
   {
+    if (i != 2) continue;
     //Trigger PDB generation before beginning search to remove from timing
     Rubiks::pattern_lookup(Rubiks::__goal, type);
     Rubiks::pattern_lookup(__goal, cubes[i], type);

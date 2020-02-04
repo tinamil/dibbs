@@ -4,7 +4,7 @@ using namespace search;
 
 #ifndef HISTORY
 
-std::atomic_uint64_t hmiddle, total, small_diff, large_diff;
+//std::atomic_uint64_t hmiddle, total, small_diff, large_diff;
 
 Node make_node(const concurrent_set* other_set,
   const Node* prev_node,
@@ -63,10 +63,10 @@ void expand_node(const Node prev_node,
         my_stack.push((new_node));
       }
       else if (my_set != nullptr && prev_node.passed_threshold) {
-        hmiddle++;
-        total++;
-        if ((new_node.reverse_heuristic - new_node.heuristic) > 1) {
-          large_diff++;
+        //hmiddle++;
+        //total++;
+        if (id_depth < 17 && (new_node.reverse_heuristic - new_node.heuristic) > 1) {
+          //large_diff++;
           auto [existing, success] = my_set->insert(new_node);
           if (!success && (*existing).depth > new_node.depth) {
             my_set_mutex.lock();
@@ -77,7 +77,7 @@ void expand_node(const Node prev_node,
           }
         }
         else {
-          small_diff++;
+          //small_diff++;
           auto [existing, success] = my_set->insert(prev_node);
           if (!success && (*existing).depth > prev_node.depth) {
             my_set_mutex.lock();
@@ -89,7 +89,7 @@ void expand_node(const Node prev_node,
         }
       }
       else {
-        total++;
+        //total++;
       }
     }
   }
@@ -160,6 +160,7 @@ bool expand_layer(stack& my_stack,
   }
 
   if (my_stack.size() > 0) {
+    std::cout << "ERROR, stack wasn't empty, shouldn't have stopped.";
     return false;
   }
 
@@ -189,8 +190,8 @@ bool iterative_layer(stack my_stack,
   concurrent_set* my_set,
   concurrent_set* other_set,
   unsigned int& iteration,
-  unsigned int& c_star,
-  std::atomic_uint8_t& upper_bound,
+  unsigned int& LB,
+  std::atomic_uint8_t& UB,
   const bool reverse,
   const Rubiks::PDB pdb_type,
   const uint8_t* start_state,
@@ -202,38 +203,38 @@ bool iterative_layer(stack my_stack,
   size_t start_count;
   start_count = count;
   my_stack.push(my_stack_initializer);
-  if (!expand_layer(my_stack, my_set, other_set, upper_bound, reverse, pdb_type, start_state, iteration, c_star, count, thread_count)) {
+  if (!expand_layer(my_stack, my_set, other_set, UB, reverse, pdb_type, start_state, iteration, LB, count, thread_count)) {
     return false;
   }
   my_last_count = count - start_count;
 
-  if (upper_bound <= c_star) return true;
+  if (UB <= LB) return true;
 
   if (my_set->size() > 0) {
     other_stack.push(other_stack_initializer);
-    if (id_check_layer(other_stack, my_set, upper_bound, !reverse, pdb_type, start_state, iteration - 1, c_star, count, thread_count)) {
+    if (id_check_layer(other_stack, my_set, UB, !reverse, pdb_type, start_state, iteration - 1, LB, count, thread_count)) {
       return true;
     }
   }
 
   iteration += 1;
-  c_star = iteration;
+  LB = iteration;
 
-  if (upper_bound <= c_star) return true;
+  if (UB <= LB) return true;
 
   start_count = count;
   other_stack.push(other_stack_initializer);
-  if (!expand_layer(other_stack, other_set, my_set, upper_bound, !reverse, pdb_type, start_state, iteration - 1, c_star, count, thread_count)) {
+  if (!expand_layer(other_stack, other_set, my_set, UB, !reverse, pdb_type, start_state, iteration - 1, LB, count, thread_count)) {
     return false;
   }
   other_last_count = count - start_count;
 
-  if (upper_bound <= c_star) return true;
+  if (UB <= LB) return true;
 
   //Extra check, unnecessary but might find an early solution for next depth 
   if (other_set->size() > 0) {
     my_stack.push(my_stack_initializer);
-    if (id_check_layer(my_stack, other_set, upper_bound, reverse, pdb_type, start_state, iteration - 1, c_star, count, thread_count)) {
+    if (id_check_layer(my_stack, other_set, UB, reverse, pdb_type, start_state, iteration - 1, LB, count, thread_count)) {
       std::cout << "FOUND SOLUTION DURING 2nd EXTRA CHECK!!!!!\n";
       return true;
     }
@@ -303,7 +304,7 @@ std::pair<uint64_t, double> search::multithreaded_id_dibbs(const uint8_t* start_
     else {
       iterative_layer(backward_stack, goal, forward_stack, start, other_set, storage_set, iteration, c_star, upper_bound, true, pdb_type, start_state, count, last_backward_size, last_forward_size, thread_count);
     }
-    if (upper_bound > c_star && reached_depth_limit(iteration, pdb_type)) {
+    /*if (upper_bound > c_star && reached_depth_limit(iteration, pdb_type)) {
       std::cout << "Reached node limit: " << std::to_string(storage_set->size()) << " + " << std::to_string(other_set->size()) << "; switching to disk" << std::endl;
       std::thread thread1 = std::thread([&forward_set]() {
         forward_set.clear();
@@ -316,11 +317,11 @@ std::pair<uint64_t, double> search::multithreaded_id_dibbs(const uint8_t* start_
       thread2.join();
       upper_bound = c_star = result.first;
       count += result.second;
-    }
+    }*/
   }
 
   std::cout << "Solved DIBBS: " << std::to_string(upper_bound) << " Count = " << std::to_string(count) << std::endl;
-  std::cout << "Stats: " << "total=" << std::to_string(total) << "; hmiddle=" << std::to_string(hmiddle) << "; small_diff=" << std::to_string(small_diff) << "; large_diff=" << std::to_string(large_diff) << std::endl;
+  //std::cout << "Stats: " << "total=" << std::to_string(total) << "; hmiddle=" << std::to_string(hmiddle) << "; small_diff=" << std::to_string(small_diff) << "; large_diff=" << std::to_string(large_diff) << std::endl;
   std::cout << "Set sizes: forward= " << std::to_string(forward_set.size()) << "; backward= " << std::to_string(backward_set.size()) << std::endl;
   auto c_end = clock();
   auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;

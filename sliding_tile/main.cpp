@@ -17,13 +17,14 @@
 #include <iomanip>
 
 
-#define A_STAR
-#define REVERSE_ASTAR
-#define IDD
-#define DIBBS
-#define GBFHS
-#define NBS
-#define DVCBS
+//#define A_STAR
+//#define REVERSE_ASTAR
+#define IDA
+//#define IDD
+//#define DIBBS
+//#define GBFHS
+//#define NBS
+//#define DVCBS
 
 
 void define_problems15(int i, unsigned char* tile_in_location)
