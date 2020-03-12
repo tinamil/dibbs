@@ -9,6 +9,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
+    <Filter Include="Header Files\tsl">
+      <UniqueIdentifier>{c4ef1a17-c358-469e-a2d9-02564f948f1b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="a_star.cpp">
@@ -48,6 +51,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="multithreaded_disk_dibbs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="multithreaded_compressed_id_dibbs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PEMM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -107,6 +116,27 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DiskHash.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tsl\hopscotch_set.h">
+      <Filter>Header Files\tsl</Filter>
+    </ClInclude>
+    <ClInclude Include="tsl\bhopscotch_map.h">
+      <Filter>Header Files\tsl</Filter>
+    </ClInclude>
+    <ClInclude Include="tsl\bhopscotch_set.h">
+      <Filter>Header Files\tsl</Filter>
+    </ClInclude>
+    <ClInclude Include="tsl\hopscotch_growth_policy.h">
+      <Filter>Header Files\tsl</Filter>
+    </ClInclude>
+    <ClInclude Include="tsl\hopscotch_hash.h">
+      <Filter>Header Files\tsl</Filter>
+    </ClInclude>
+    <ClInclude Include="tsl\hopscotch_map.h">
+      <Filter>Header Files\tsl</Filter>
+    </ClInclude>
+    <ClInclude Include="PEMM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

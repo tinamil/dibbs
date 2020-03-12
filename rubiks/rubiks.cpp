@@ -109,17 +109,17 @@ uint32_t Rubiks::get_corner_index(const uint8_t* state)
   return corner_index * 2187 + rot_index;
 }
 
+
 void Rubiks::restore_corner(const uint64_t hash_index, uint8_t* state) {
   uint8_t puzzle[12];
   uint8_t dual[12];
   assert(hash_index < corner_max_count);
   const uint64_t pos_index = hash_index / 2187ui64;
   mr::unrank(pos_index, puzzle, dual, 8, 8);
-  for (int i = 0; i < 20; ++i) {
-    state[i] = 20ui8;
-  }
-  for (int i = 20; i < 40; ++i) {
-    state[i] = 3ui8;
+
+  for (int i = 0; i < 8; ++i) {
+    state[__corner_pos_indices[i]] = 20ui8;
+    state[__corner_rot_indices[i]] = 3ui8;
   }
 
   for (int i = 0; i < 8; ++i) {
@@ -163,25 +163,25 @@ uint64_t Rubiks::get_index(const uint8_t* state, const int order, const Rubiks::
   }
   switch (type)
   {
-  case PDB::a1997:
-    if (order == 1)       return get_edge_index6a(state);
-    else                  return get_edge_index6b(state);
-  case PDB::a888:
-    if (order == 1)       return get_edge_index8a(state);
-    else                  return get_edge_index8b(state);
-  case PDB::a12:
-    if (order == 1)       return get_new_edge_pos_index(state);
-    else                  return get_new_edge_rot_index(state);
-  case PDB::a81220:
-    if (order == 1)       return get_edge_index8a(state);
-    else if (order == 2)  return get_edge_index8b(state);
-    else if (order == 3)  return get_new_edge_pos_index(state);
-    else if (order == 4)  return get_new_edge_rot_index(state);
-  case PDB::zero:
-  case PDB::clear_state:
-    throw std::runtime_error("Tried to get edge index when using zero heuristic or clearing state.");
-  default:
-    throw std::runtime_error("Failed to find edge_index type");
+    case PDB::a1997:
+      if (order == 1)       return get_edge_index6a(state);
+      else                  return get_edge_index6b(state);
+    case PDB::a888:
+      if (order == 1)       return get_edge_index8a(state);
+      else                  return get_edge_index8b(state);
+    case PDB::a12:
+      if (order == 1)       return get_new_edge_pos_index(state);
+      else                  return get_new_edge_rot_index(state);
+    case PDB::a81220:
+      if (order == 1)       return get_edge_index8a(state);
+      else if (order == 2)  return get_edge_index8b(state);
+      else if (order == 3)  return get_new_edge_pos_index(state);
+      else if (order == 4)  return get_new_edge_rot_index(state);
+    case PDB::zero:
+    case PDB::clear_state:
+      throw std::runtime_error("Tried to get edge index when using zero heuristic or clearing state.");
+    default:
+      throw std::runtime_error("Failed to find edge_index type");
   }
 }
 
@@ -222,11 +222,10 @@ void Rubiks::restore_state_from_index(const uint64_t hash_index, uint8_t* state,
   assert(hash_index < (npr(12, size) * (1i64 << size)));
   const uint64_t pos_index = hash_index / (1i64 << size);
   mr::unrank(pos_index, puzzle, dual, size, 12);
-  for (int i = 0; i < 20; ++i) {
-    state[i] = 20ui8;
-  }
-  for (int i = 20; i < 40; ++i) {
-    state[i] = 3ui8;
+
+  for (int i = 0; i < 12; ++i) {
+    state[edge_pos_indices_12[i]] = 20ui8;
+    state[edge_rot_indices_12[i]] = 3ui8;
   }
 
   for (int i = 0; i < size; ++i) {
@@ -514,7 +513,7 @@ void Rubiks::generate_pattern_database(
   const uint8_t* state,
   const uint8_t max_depth,
   const uint64_t max_count,
-  const std::function<uint64_t(const uint8_t* state)> lookup_func
+  const std::function<uint64_t(const uint8_t * state)> lookup_func
 )
 {
   std::cout << "Generating edges db\n";
@@ -619,8 +618,8 @@ void Rubiks::pdb_expand_nodes(
   const uint64_t max_count,
   std::mutex& pattern_lookup_mutex,
   std::vector<uint8_t>& pattern_lookup,
-  const std::function<uint64_t(const uint8_t* state)> lookup_func,
-  const std::function<void(const uint64_t hash, uint8_t* state)> reverse_func,
+  const std::function<uint64_t(const uint8_t * state)> lookup_func,
+  const std::function<void(const uint64_t hash, uint8_t * state)> reverse_func,
   const uint8_t id_depth,
   const bool reverse_direction
 )
@@ -681,8 +680,8 @@ void Rubiks::generate_pattern_database_multithreaded(
   const std::string filename,
   const uint8_t* state,
   const uint64_t max_count,
-  const std::function<uint64_t(const uint8_t* state)> lookup_func,
-  const std::function<void(const uint64_t hash, uint8_t* state)> reverse_func
+  const std::function<uint64_t(const uint8_t * state)> lookup_func,
+  const std::function<void(const uint64_t hash, uint8_t * state)> reverse_func
 )
 {
   using namespace std::chrono_literals;

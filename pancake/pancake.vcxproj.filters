@@ -68,5 +68,8 @@
     <ClInclude Include="id-d with closed.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dibbs-nbs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

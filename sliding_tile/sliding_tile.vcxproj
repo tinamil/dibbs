@@ -127,6 +127,7 @@
     <ClCompile Include="sliding_tile.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dibbs-nbs.h" />
     <ClInclude Include="dibbs.h" />
     <ClInclude Include="dvcbs.h" />
     <ClInclude Include="GBFHS.h" />

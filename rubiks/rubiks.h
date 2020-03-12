@@ -58,7 +58,7 @@ namespace Rubiks
     }
   };
 
-  enum PDB
+  enum class PDB
   {
     a1997, a888, zero, a12, a81220, clear_state
   };
@@ -126,6 +126,7 @@ namespace Rubiks
   const uint8_t edges_6b[] = { 6, 7, 8, 9, 10, 11 };
   const uint8_t edges_8a[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
   const uint8_t edges_8b[] = { 4, 5, 6, 7, 8, 9, 10, 11 };
+  const uint8_t edges_12[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
 
   constexpr uint32_t base3[] = { 729, 243, 81, 27, 9, 3, 1 };
 
@@ -213,6 +214,7 @@ namespace Rubiks
   inline uint64_t get_edge_index6b(const uint8_t* state) { return get_edge_index(state, 6, edges_6b, edge_rot_indices_6b); }
   inline uint64_t get_edge_index8a(const uint8_t* state) { return get_edge_index(state, 8, edges_8a, edge_rot_indices_8a); }
   inline uint64_t get_edge_index8b(const uint8_t* state) { return get_edge_index(state, 8, edges_8b, edge_rot_indices_8b); }
+  inline uint64_t get_edge_index12(const uint8_t* state) { return get_edge_index(state, 12, edges_12, edge_rot_indices_12); }
 
 
   extern uint64_t get_new_edge_pos_index(const uint8_t* state);
@@ -225,6 +227,7 @@ namespace Rubiks
   inline void restore_index6b(const uint64_t index, uint8_t* state) { restore_state_from_index(index, state, 6, edges_6b, edge_rot_indices_6b); }
   inline void restore_index8a(const uint64_t index, uint8_t* state) { restore_state_from_index(index, state, 8, edges_8a, edge_rot_indices_8a); }
   inline void restore_index8b(const uint64_t index, uint8_t* state) { restore_state_from_index(index, state, 8, edges_8b, edge_rot_indices_8b); }
+  inline void restore_index12(const uint64_t index, uint8_t* state) { restore_state_from_index(index, state, 12, edges_12, edge_rot_indices_12); }
 
   extern bool is_solved(const uint8_t* state);
   extern bool is_solved(const uint8_t* cube, const uint8_t* target);

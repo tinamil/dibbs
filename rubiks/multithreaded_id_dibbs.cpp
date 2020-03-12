@@ -63,21 +63,17 @@ void expand_node(const Node prev_node,
         my_stack.push((new_node));
       }
       else if (my_set != nullptr && prev_node.passed_threshold) {
-        //hmiddle++;
-        //total++;
         if (id_depth < 17 && (new_node.reverse_heuristic - new_node.heuristic) > 1) {
-          //large_diff++;
           auto [existing, success] = my_set->insert(new_node);
           if (!success && (*existing).depth > new_node.depth) {
             my_set_mutex.lock();
-            //Must check because we are searching in DFS order, not BFS
+            //must check because we are searching in dfs order, not bfs
             my_set->unsafe_erase(existing);
             my_set->insert(new_node);
             my_set_mutex.unlock();
           }
         }
         else {
-          //small_diff++;
           auto [existing, success] = my_set->insert(prev_node);
           if (!success && (*existing).depth > prev_node.depth) {
             my_set_mutex.lock();
@@ -87,9 +83,6 @@ void expand_node(const Node prev_node,
             my_set_mutex.unlock();
           }
         }
-      }
-      else {
-        //total++;
       }
     }
   }
@@ -243,15 +236,15 @@ bool iterative_layer(stack my_stack,
   return true;
 }
 
-bool reached_depth_limit(unsigned int iteration, const Rubiks::PDB pdb_type) {
+bool search::reached_depth_limit(unsigned int iteration, const Rubiks::PDB pdb_type) {
   switch (pdb_type)
   {
-  case Rubiks::PDB::a1997:
-    return iteration >= 17;
-  case Rubiks::PDB::a888:
-    return iteration >= 18;
-  default:
-    return iteration >= 19;
+    case Rubiks::PDB::a1997:
+      return iteration >= 17;
+    case Rubiks::PDB::a888:
+      return iteration >= 18;
+    default:
+      return iteration >= 19;
   }
 }
 

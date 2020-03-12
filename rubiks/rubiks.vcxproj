@@ -26,9 +26,11 @@
     <ClCompile Include="id_gbfhs.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mr_rank.cpp" />
+    <ClCompile Include="multithreaded_compressed_id_dibbs.cpp" />
     <ClCompile Include="multithreaded_disk_dibbs.cpp" />
     <ClCompile Include="multithreaded_id_dibbs.cpp" />
     <ClCompile Include="node.cpp" />
+    <ClCompile Include="PEMM.cpp" />
     <ClCompile Include="rubiks.cpp" />
     <ClCompile Include="rubiks_loader.cpp" />
     <ClCompile Include="utility.cpp" />
@@ -49,9 +51,16 @@
     <ClInclude Include="multithreaded_id_dibbs.h" />
     <ClInclude Include="node.h" />
     <ClInclude Include="npy.hpp" />
+    <ClInclude Include="PEMM.h" />
     <ClInclude Include="rubiks.h" />
     <ClInclude Include="rubiks_loader.h" />
     <ClInclude Include="thread_safe_stack.hpp" />
+    <ClInclude Include="tsl\bhopscotch_map.h" />
+    <ClInclude Include="tsl\bhopscotch_set.h" />
+    <ClInclude Include="tsl\hopscotch_growth_policy.h" />
+    <ClInclude Include="tsl\hopscotch_hash.h" />
+    <ClInclude Include="tsl\hopscotch_map.h" />
+    <ClInclude Include="tsl\hopscotch_set.h" />
     <ClInclude Include="utility.h" />
   </ItemGroup>
   <ItemGroup>

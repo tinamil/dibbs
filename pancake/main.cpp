@@ -7,6 +7,7 @@
 #include "Nbs.h"
 #include "dvcbs.h"
 #include "problems.h"
+#include "dibbs-nbs.h"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -21,10 +22,11 @@
 //#define A_STAR
 //#define REVERSE_ASTAR
 #define IDD
-#define DIBBS
+//#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
+#define DIBBS_NBS
 
 constexpr int NUM_PROBLEMS = 100;
 
@@ -64,6 +66,9 @@ void output_data(std::ostream& stream) {
 #endif
 #ifdef DVCBS
   stream << "DVCBS ";
+#endif
+#ifdef DIBBS_NBS
+  stream << "DIBBS_NBS ";
 #endif
   stream << "\n";
 
@@ -387,6 +392,46 @@ void output_data(std::ostream& stream) {
     stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
+  {
+#ifdef DIBBS_NBS
+    //DIBBS_NBS
+    std::cout << "\nDIBBS_NBS\n";
+    double seed = 3.1567;
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
+      generate_random_instance(seed, problem);
+      //easy_problem(NUM_PANCAKES, problem);
+      Pancake::Initialize_Dual(problem);
+      Pancake node(problem, Direction::forward);
+      Pancake goal = Pancake::GetSortedStack(Direction::backward);
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions, memory] = DibbsNbs::search(node, goal);
+      auto end = std::chrono::system_clock::now();
+      //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+      memory_stream << std::to_string(memory) << " ";
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (answers[i] < 0 && !std::isinf(cstar)) {
+        answers[i] = cstar;
+      }
+      else if (!std::isinf(cstar) && answers[i] != cstar) {
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
+      }
+    }
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
+#endif
+  }
 }
 
 std::string return_formatted_time(std::string format)
@@ -426,6 +471,9 @@ void run_random_test() {
 #endif
 #ifdef DVCBS
   name += "_DVCBS";
+#endif
+#ifdef DIBBS_NBS
+  name += "_DIBNBS";
 #endif
   name += ".txt";
   file.open(dir + name, std::ios::app);

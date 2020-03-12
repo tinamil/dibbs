@@ -236,6 +236,27 @@ struct FSort {
   }
 };
 
+struct FSortLowGSetComparer {
+  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_TILES);
+    if (cmp == 0) {
+      return false;
+    }
+    else if (lhs->f == rhs->f) {
+      if (lhs->g == rhs->g)
+        return cmp < 0;
+      else
+        return lhs->g > rhs->g;
+    }
+    else {
+      return lhs->f < rhs->f;
+    }
+  }
+};
+
 //Returns smallest f value with smallest g value
 struct FSortLowG {
 
@@ -328,6 +349,30 @@ struct SlidingTileHash
   inline std::size_t operator() (const SlidingTile* x) const
   {
     return SuperFastHash(x->source, NUM_TILES);
+  }
+};
+
+struct FSortHighDuplicate {
+  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+
+  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const {
+    return lhs->f > rhs->f;
+  }
+};
+
+struct FBarSortHighGLowDuplicate {
+  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const {
+    if (lhs->f_bar == rhs->f_bar) {
+      return lhs->g < rhs->g;
+    }
+    else {
+      return lhs->f_bar > rhs->f_bar;
+    }
   }
 };
 

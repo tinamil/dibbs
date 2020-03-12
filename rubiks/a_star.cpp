@@ -112,10 +112,10 @@ void expand_node(
     state_stack.pop();
 
     ++count;
-    if (count % 1000000 == 0)
-    {
-      std::cout << count << std::endl;
-    }
+    //if (count % 1000000 == 0)
+    //{
+    //  std::cout << count << std::endl;
+    //}
 
     for (int face = 0; face < 6; ++face)
     {
@@ -127,9 +127,9 @@ void expand_node(
       {
         std::shared_ptr<Node> new_node = std::make_shared<Node>(next_node, nullptr, next_node->depth + 1, face, rotation, reverse, pdb_type);
 
-        if (new_node->combined < next_node->combined) {
-          std::cout << "Consistency error: " << unsigned(new_node->combined) << " < " << unsigned(next_node->combined) << " " << std::endl;
-        }
+        //if (new_node->combined < next_node->combined) {
+        //  std::cout << "Consistency error: " << unsigned(new_node->combined) << " < " << unsigned(next_node->combined) << " " << std::endl;
+        //}
 
         if (new_node->combined > id_depth)
         {

@@ -6,6 +6,7 @@
 #include "id-d.h"
 #include "nbs.h"
 #include "ida.h"
+#include "dibbs-nbs.h"
 #include <iostream>
 #include <cassert>
 #include <ctime>
@@ -19,12 +20,13 @@
 
 //#define A_STAR
 //#define REVERSE_ASTAR
-#define IDA
+//#define IDA
 //#define IDD
 //#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
+#define DIBBS_NBS
 
 
 void define_problems15(int i, unsigned char* tile_in_location)
@@ -273,6 +275,9 @@ void benchmarks(std::ostream& stream)
 #endif
 #ifdef DVCBS
   stream << "DVCBS ";
+#endif
+#ifdef DIBBS_NBS
+  stream << "DIBBS_NBS ";
 #endif
   stream << "\n";
 
@@ -579,6 +584,43 @@ void benchmarks(std::ostream& stream)
     stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
+
+  {
+#ifdef DIBBS_NBS
+    std::cout << "\nDIBBS_NBS: ";
+    for (int i = 1; i <= n_problems; i++) {
+      std::cout << i << " ";
+      switch (NUM_TILES) {
+        case 16: define_problems15(i, tile_in_location); break;
+        case 25: define_problems24(i, tile_in_location); break;
+        default: fprintf(stderr, "Illegal value of N_LOCATIONS in benchmarks\n"); exit(1); break;
+      }
+
+      SlidingTile::initialize(tile_in_location);
+      SlidingTile goal_state = SlidingTile::GetSolvedPuzzle(Direction::backward);
+      SlidingTile starting_state(tile_in_location, Direction::forward);
+
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions, memory] = DibbsNbs::search(starting_state, goal_state);
+      auto end = std::chrono::system_clock::now();
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+      memory_stream << std::to_string(memory) << " ";
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (!std::isinf(cstar) && z_optimal[i] != cstar) { std::cout << "ERROR Cstar mismatch: " << std::to_string(cstar) << " instead of " << std::to_string(z_optimal[i]); return; }
+    }
+
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
+#endif
+  }
 }
 
 std::string return_formatted_time(std::string format)
@@ -618,6 +660,9 @@ void run_test() {
 #endif
 #ifdef DVCBS
   name += "_DVCBS";
+#endif
+#ifdef DIBBS_NBS
+  name += "_DBSNBS";
 #endif
   name += ".txt";
   file.open(dir + name, std::ios::app);

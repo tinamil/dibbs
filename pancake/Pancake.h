@@ -111,6 +111,37 @@ struct PancakeFSort {
   }
 };
 
+struct PancakeFSortLowGSetComparer {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
+    if (cmp == 0) {
+      return false;
+    }
+    else if (lhs->f == rhs->f) {
+      if (lhs->g == rhs->g)
+        return cmp < 0;
+      else
+        return lhs->g > rhs->g;
+    }
+    else {
+      return lhs->f < rhs->f;
+    }
+  }
+};
+
+struct FSortHighDuplicate {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    return lhs->f > rhs->f;
+  }
+};
+
 //Returns smallest f value with smallest g value
 struct PancakeFSortLowG {
 
@@ -190,6 +221,28 @@ struct PancakeFBarSortLowG {
     }
     else {
       return lhs->f_bar < rhs->f_bar;
+    }
+  }
+};
+
+struct GSortHighDuplicate {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    return lhs->g > rhs->g;
+  }
+};
+struct FBarSortHighGLowDuplicate {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    if (lhs->f_bar == rhs->f_bar) {
+      return lhs->g < rhs->g;
+    }
+    else {
+      return lhs->f_bar > rhs->f_bar;
     }
   }
 };
