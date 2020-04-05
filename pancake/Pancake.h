@@ -8,7 +8,7 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 10;
+constexpr int NUM_PANCAKES = 30;
 constexpr int GAPX = 0;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 
@@ -233,17 +233,64 @@ struct GSortHighDuplicate {
     return lhs->g > rhs->g;
   }
 };
-struct FBarSortHighGLowDuplicate {
+
+struct FBarSortHighHBDuplicate {
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
     return operator()(&lhs, &rhs);
   }
   bool operator()(const Pancake* lhs, const Pancake* rhs) const {
-    if (lhs->f_bar == rhs->f_bar) {
-      return lhs->g < rhs->g;
+    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
+    if (cmp == 0) {
+      return false;
+    }
+    else if (lhs->f_bar == rhs->f_bar) {
+      if (lhs->g == rhs->g)
+        return cmp < 0;
+      else
+        return lhs->g < rhs->g;
     }
     else {
-      return lhs->f_bar > rhs->f_bar;
+      return lhs->f_bar < rhs->f_bar;
     }
+  }
+};
+
+struct FBarSortHighHFDuplicate {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
+    if (cmp == 0) { 
+      return false;
+    }
+    else if (lhs->f_bar == rhs->f_bar) {
+      if (lhs->g == rhs->g)
+        return cmp < 0;
+      else
+        return lhs->g < rhs->g;
+    }
+    else {
+      return lhs->f_bar < rhs->f_bar;
+    }
+  }
+};
+
+struct HfSortHighDuplicate {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    return lhs->h > rhs->h;
+  }
+};
+
+struct HbSortHighDuplicate {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    return lhs->h2 > rhs->h2;
   }
 };
 

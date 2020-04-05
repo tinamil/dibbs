@@ -204,6 +204,12 @@ void output_data(std::ostream& stream) {
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       std::cout << i << " ";
       generate_random_instance(seed, problem);
+      //if (i != 19) continue;
+      /*std::cout << "Problem:";
+      for (int j = 0; j < 21; ++j) {
+        std::cout << std::to_string(problem[j]) << " ";
+      }
+      std::cout << "\n";*/
       //define_problems(NUM_PANCAKES, GAPX, i, problem);
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
@@ -400,6 +406,7 @@ void output_data(std::ostream& stream) {
     for (int i = 1; i <= NUM_PROBLEMS; ++i) {
       std::cout << i << " ";
       generate_random_instance(seed, problem);
+      //if (i != 19) continue;
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
       Pancake node(problem, Direction::forward);
@@ -491,4 +498,51 @@ int main()
 {
   run_random_test();
 
+  //uint8_t problem[] = { 20, 14, 4, 2, 19, 11, 7, 8, 20, 18, 3, 10, 6, 17, 5, 15, 1, 12, 13, 9, 16 };
+  //Pancake::Initialize_Dual(problem);
+  //Pancake start(problem, Direction::forward);
+  //Pancake goal = Pancake::GetSortedStack(Direction::backward);
+
+  //Pancake idd_f(problem, Direction::forward);
+  //Pancake idd_b = Pancake::GetSortedStack(Direction::backward);
+  //std::cout << "s " << " g = " << (int)idd_f.g << " h = " << (int)idd_f.h << " h2 = " << (int)idd_f.h2 << " fbar = " << (int)idd_f.f_bar << "\n";
+  //std::cout << "t " << " g = " << (int)idd_b.g << " h = " << (int)idd_b.h << " h2 = " << (int)idd_b.h2 << " fbar = " << (int)idd_b.f_bar << "\n";
+  //std::vector<int> moves = { 14, 2, 5, 15, 19, 11, 20, 17, 13, 8 };
+  //for (int i = 0; i < moves.size(); ++i) {
+  //  idd_f = idd_f.apply_action(moves[i]);
+  //  std::cout << "After move " << moves[i] << " g = " << (int)idd_f.g << " h = " << (int)idd_f.h << " h2 = " << (int)idd_f.h2 << " fbar = " << (int)idd_f.f_bar << "\n";
+
+  //  std::cout << "Node: ";
+  //  for (int i = 0; i < NUM_PANCAKES + 1; ++i) {
+  //    std::cout << std::to_string(idd_f.source[i]) << " ";
+  //  }
+  //  std::cout << "\n";
+  //}
+  //std::vector<int> moves2 = { 5, 11, 8, 14, 7, 11, 19, 18, 2 };
+  //for (int i = moves2.size() - 1; i >= 0; --i) {
+  //  idd_b = idd_b.apply_action(moves2[i]);
+  //  std::cout << "After backward move " << moves2[i] << " g = " << (int)idd_b.g << " h = " << (int)idd_b.h << " h2 = " << (int)idd_b.h2 << " fbar = " << (int)idd_b.f_bar << "\n";
+  //}
+  //assert(idd_f == idd_b);
+
+  //std::cout << "\n2nd algorithm:\n";
+  //Pancake nbs_f(problem, Direction::forward);
+  //Pancake nbs_b = Pancake::GetSortedStack(Direction::backward);
+  //std::vector<int> moves3 = { 14, 12, 7, 10, 11, 5, 10, 4, 7, 6, 15 };
+  //for (int i = 0; i < moves3.size(); ++i) {
+  //  nbs_f = nbs_f.apply_action(moves3[i]);
+  //  std::cout << "After move " << moves3[i] << " g = " << (int)nbs_f.g << " h = " << (int)nbs_f.h << " h2 = " << (int)nbs_f.h2 << " fbar = " << (int)nbs_f.f_bar << "\n";
+  //}
+  //std::vector<int> moves4 = { 3, 13, 18, 6, 8, 19, 7, 20, 16, 11 };
+  //for (int i = moves4.size() - 1; i >= 0; --i) {
+  //  nbs_b = nbs_b.apply_action(moves4[i]);
+  //  std::cout << "After backward move " << moves4[i] << " g = " << (int)nbs_b.g << " h = " << (int)nbs_b.h << " h2 = " << (int)nbs_b.h2 << " fbar = " << (int)nbs_b.f_bar << "\n";
+  //}
+
+  //assert(nbs_f == nbs_b);
+
+  //std::cout << "\nMeeting point: ";
+  //for (int i = 0; i < NUM_PANCAKES + 1; ++i) {
+  //  std::cout << std::to_string(idd_f.source[i]) << " ";
+  //}
 }

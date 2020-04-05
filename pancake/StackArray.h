@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <vector>
 
 template <typename T>
@@ -21,6 +20,10 @@ public:
     }
   }
 
+  size_t size() {
+    return (storage.size() - 1) * SIZE + sizes.back();
+  }
+
   T* push_back(T type) {
     if (*sizes.rbegin() < SIZE) {
       storage.back()[sizes.back()++] = type;
@@ -31,5 +34,52 @@ public:
       (*storage.rbegin())[0] = type;
     }
     return storage.back() + sizes.back() - 1;
+  }
+
+  T& operator[](std::size_t index) {
+    size_t large_index = index / SIZE;
+    size_t small_index = index % SIZE;
+    return storage[large_index][small_index];
+  }
+  const T& operator[](std::size_t index) const {
+    size_t large_index = index / SIZE;
+    size_t small_index = index % SIZE;
+    return storage[large_index][small_index];
+  }
+
+  class Iterator {
+  private:
+    StackArray* arch_ptr;
+    size_t index;
+
+  public:
+    Iterator(StackArray* _arch_ptr, bool end = false) : arch_ptr(_arch_ptr), index(0) {
+      assert(arch_ptr != nullptr);
+      if (end) {
+        index = arch_ptr->size();
+      }
+    }
+    Iterator& operator++() {
+      ++index;
+      return *this;
+    }
+
+    bool operator==(Iterator other) const {
+      return index == other.index;
+    }
+    bool operator!=(Iterator other) const {
+      return !(*this == other);
+    }
+    T operator*() {
+      return arch_ptr[index];
+    }
+  };
+
+  Iterator begin() {
+    return Iterator(this);
+  }
+
+  Iterator end() {
+    return Iterator(this, true);
   }
 };
