@@ -129,7 +129,9 @@
     <ClCompile Include="problems.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dibbs-nbs.h" />
+    <ClInclude Include="dibbs-array.hpp" />
+    <ClInclude Include="dibbs-global.hpp" />
+    <ClInclude Include="dibbs-nbs.hpp" />
     <ClInclude Include="id-d with closed.h" />
     <ClInclude Include="Nbs.h" />
     <ClInclude Include="StackArray.h" />

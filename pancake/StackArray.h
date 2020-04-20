@@ -4,7 +4,7 @@
 
 template <typename T>
 class StackArray {
-  const static size_t SIZE = 1000000;
+  constexpr static size_t SIZE = 1000000;
   std::vector<T*> storage;
   std::vector<size_t> sizes;
 
@@ -34,6 +34,23 @@ public:
       (*storage.rbegin())[0] = type;
     }
     return storage.back() + sizes.back() - 1;
+  }
+
+  bool pop_back() {
+    if (sizes.size() > 1 && sizes.back() == 0) {
+      sizes.pop_back();
+      delete[] storage[sizes.size()];
+    }
+    if (sizes.back() == 0 && sizes.size() == 1) {
+      return false;
+    }
+    assert(sizes.back() != 0);
+    --sizes.back();
+    return true;
+  }
+
+  const T& top(const uint32_t optional = 0) {
+    return this->operator[](size() - 1);
   }
 
   T& operator[](std::size_t index) {

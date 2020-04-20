@@ -35,6 +35,7 @@ public:
   uint8_t h2;
   uint8_t f;
   uint8_t f_bar;
+  int hdiff;
   bool threshold;
 
   uint8_t compute_manhattan() {
@@ -150,7 +151,7 @@ public:
     f = h;
     f_bar = f;
     threshold = h == 0;
-
+    hdiff = h;
     // Find the location of the empty tile.
     for (int i = 0; i < NUM_TILES; i++) {
       if (source[i] == 0) {
@@ -160,7 +161,7 @@ public:
     }
   }
 
-  SlidingTile(const SlidingTile& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar), threshold(copy.threshold), empty_location(copy.empty_location)
+  SlidingTile(const SlidingTile& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar), hdiff(copy.hdiff), threshold(copy.threshold), empty_location(copy.empty_location)
 #ifdef HISTORY
     , actions(copy.actions)
 #endif
@@ -202,7 +203,6 @@ public:
     }
     empty_location = new_empty_location;
   }
-
   size_t num_actions_available() const {
     return moves[empty_location][0];
   }
@@ -217,6 +217,7 @@ public:
     new_node.f = new_node.g + new_node.h;
     new_node.f_bar = 2 * new_node.g + new_node.h - new_node.h2;
     new_node.threshold = threshold || new_node.h <= new_node.h2;
+    new_node.hdiff = new_node.h - new_node.h2;
     assert(new_node.f >= f); //Consistency check
     return new_node;
   }
@@ -352,16 +353,6 @@ struct SlidingTileHash
   }
 };
 
-struct FSortHighDuplicate {
-  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
-    return operator()(&lhs, &rhs);
-  }
-
-  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const {
-    return lhs->f > rhs->f;
-  }
-};
-
 struct FBarSortHighGLowDuplicate {
   bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
     return operator()(&lhs, &rhs);
@@ -385,5 +376,59 @@ struct SlidingTileEqual
   inline bool operator() (const SlidingTile x, const SlidingTile y) const
   {
     return x == y;
+  }
+};
+
+struct FSortHighDuplicate {
+  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+
+  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const {
+    if (lhs->f == rhs->f) {
+      return lhs->g > rhs->g;
+    }
+    return lhs->f > rhs->f;
+  }
+};
+
+struct GSortHighDuplicate {
+  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const {
+    if (lhs->g == rhs->g) {
+      return lhs->h < rhs->h;
+    }
+    return lhs->g > rhs->g;
+  }
+};
+
+struct DeltaSortHighDuplicate {
+  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const {
+    uint8_t ld = lhs->g - lhs->h2;
+    uint8_t rd = rhs->g - rhs->h2;
+
+    if (ld == rd) {
+      return lhs->g < rhs->g;
+    }
+    return ld > rd;
+  }
+};
+
+struct FBarSortHighDuplicate {
+  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const {
+    if (lhs->f_bar == rhs->f_bar) {
+      return lhs->g > rhs->g;
+    }
+    else {
+      return lhs->f_bar > rhs->f_bar;
+    }
   }
 };

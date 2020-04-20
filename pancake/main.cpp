@@ -7,7 +7,7 @@
 #include "Nbs.h"
 #include "dvcbs.h"
 #include "problems.h"
-#include "dibbs-nbs.h"
+#include "dibbs-nbs.hpp"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -21,8 +21,8 @@
 
 //#define A_STAR
 //#define REVERSE_ASTAR
-#define IDD
-//#define DIBBS
+//#define IDD
+#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS

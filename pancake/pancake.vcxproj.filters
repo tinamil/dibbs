@@ -68,7 +68,13 @@
     <ClInclude Include="id-d with closed.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dibbs-nbs.h">
+    <ClInclude Include="dibbs-array.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dibbs-global.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dibbs-nbs.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

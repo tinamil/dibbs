@@ -1,7 +1,7 @@
 #pragma once
 #pragma once
 
-#include "sliding_tile.h"
+#include "Pancake.h"
 #include <queue>
 #include <unordered_set>
 #include <unordered_map>
@@ -12,6 +12,7 @@
 #include <set>
 #include <queue>
 #include "StackArray.h"
+#include <exception>
 
 #define NOMINMAX
 #include <windows.h>
@@ -41,6 +42,7 @@ T variadic_max(T val, Ts... other) {
   T other_max = (T)variadic_max(other...);
   return std::max(val, other_max);
 }
+
 template <typename T, typename THash, typename TEqual>
 class Pairs {
 
@@ -57,7 +59,7 @@ class Pairs {
   struct GDiff {
     bool operator()(T lhs, T rhs) const {
       if (lhs->g == rhs->g) {
-        return lhs->f_bar > rhs->f_bar;
+        return lhs->hdiff > rhs->hdiff;
       }
       else {
         return lhs->g > rhs->g;
@@ -120,6 +122,8 @@ class Pairs {
   typedef std::unordered_set<T, THash, TEqual> hash_set;
   typedef queue_wrapper<FBarDiff> fbar_set;
   typedef queue_wrapper<GDiff> g_set;
+  typedef set_wrapper<PancakeFBarSortLowG> fbar_backup;
+  typedef set_wrapper<PancakeGSortLow> g_backup;
 
 
   fbar_set fbset;
@@ -161,6 +165,40 @@ public:
     return std::make_tuple(true, min_front, min_back);
   }
 
+  /* template<typename U, typename V>
+   static std::tuple<bool, T, T> set_queue(U& front, V& back, T f_val, const hash_set& closed_f, const hash_set& closed_b) {
+     if (closed_b.find(back.top()) != closed_b.end()) {
+       back.pop();
+       return std::make_tuple(false, nullptr, nullptr);
+     }
+     else if (closed_f.find(f_val) != closed_f.end()) {
+       front.erase(f_val);
+       return std::make_tuple(false, nullptr, nullptr);
+     }
+     auto min_front = f_val;
+     auto min_back = back.top();
+     back.pop();
+     front.erase(f_val);
+     return std::make_tuple(true, min_front, min_back);
+   }
+   template<typename U, typename V>
+   static std::tuple<bool, T, T> queue_set(U& front, V& back, T b_val, const hash_set& closed_f, const hash_set& closed_b) {
+     if (closed_f.find(front.top()) != closed_f.end()) {
+       front.pop();
+       return std::make_tuple(false, nullptr, nullptr);
+     }
+     else if (closed_b.find(b_val) != closed_b.end()) {
+       back.erase(b_val);
+       return std::make_tuple(false, nullptr, nullptr);
+     }
+     auto min_front = front.top();
+     auto min_back = b_val;
+     front.pop();
+     back.erase(b_val);
+     return std::make_tuple(true, min_front, min_back);
+   }*/
+
+
   static decltype(auto) query_pair(
     Pairs<T, THash, TEqual>& front,
     Pairs<T, THash, TEqual>& back,
@@ -197,20 +235,127 @@ public:
         }
       }
       else if (!front.fbset.empty() && !back.fbset2.empty() && (front.fbset.top()->f_bar + back.fbset2.top()->f_bar) <= (2 * min)) {
-        auto [success, f, b] = pop_pair(front.fbset, back.fbset2, closed_f, closed_b);
-        done = success;
-        min_front = f;
-        min_back = b;
+        if (front.fbset.top()->f_bar > back.fbset2.top()->f_bar) {
+          if (closed_b.find(back.fbset2.top()) != closed_b.end()) {
+            back.fbset2.pop();
+            done = false;
+            continue;
+          }
+          else {
+            done = true;
+            min_back = back.fbset2.top();
+            back.fbset2.pop();
+          }
+        }
+        else {
+          if (closed_f.find(front.fbset.top()) != closed_f.end()) {
+            front.fbset.pop();
+            done = false;
+            continue;
+          }
+          else {
+            done = true;
+            min_front = front.fbset.top();
+            front.fbset.pop();
+          }
+        }
       }
       else if (!front.fbset2.empty() && !back.fbset.empty() && (front.fbset2.top()->f_bar + back.fbset.top()->f_bar) <= (2 * min)) {
-        auto [success, f, b] = pop_pair(front.fbset2, back.fbset, closed_f, closed_b);
-        done = success;
-        min_front = f;
-        min_back = b;
+        if (front.fbset2.top()->f_bar <= back.fbset.top()->f_bar) {
+          if (closed_b.find(back.fbset.top()) != closed_b.end()) {
+            back.fbset.pop();
+            done = false;
+            continue;
+          }
+          else {
+            done = true;
+            min_back = back.fbset.top();
+            back.fbset.pop();
+          }
+        }
+        else {
+          if (closed_f.find(front.fbset2.top()) != closed_f.end()) {
+            front.fbset2.pop();
+            done = false;
+            continue;
+          }
+          else {
+            done = true;
+            min_front = front.fbset2.top();
+            front.fbset2.pop();
+          }
+        }
       }
       else {
         done = true;
       }
+      //}
+      //else {
+      //  bool loop = false;
+      //  //if (!front.gset.empty() && !back.gset2.empty()) {
+      //  //  for (auto& b_val : back.gset2.data) {
+      //  //    if (front.gset.top()->g + b_val->g + EPSILON <= min /*&& front.gset.top()->f_bar + b_val->f_bar <= (2 * min)*/) {
+      //  //      auto [success, f, b] = queue_set(front.gset, back.gset2, b_val, closed_f, closed_b);
+      //  //      done = success;
+      //  //      loop = true;
+      //  //      min_front = f;
+      //  //      min_back = b;
+      //  //      break;
+      //  //    }
+      //  //    else if (front.gset.top()->g + b_val->g + EPSILON > min) {
+      //  //      break;
+      //  //    }
+      //  //  }
+      //  //}
+      //  //if (!front.gset2.empty() && !back.gset.empty()) {
+      //  //  for (auto& f_val : front.gset2.data) {
+      //  //    if (back.gset.top()->g + f_val->g + EPSILON <= min /*&& back.gset.top()->f_bar + f_val->f_bar <= (2 * min)*/) {
+      //  //      auto [success, f, b] = set_queue(front.gset2, back.gset, f_val, closed_f, closed_b);
+      //  //      done = success;
+      //  //      loop = true;
+      //  //      min_front = f;
+      //  //      min_back = b;
+      //  //      break;
+      //  //    }
+      //  //    else if (back.gset.top()->g + f_val->g + EPSILON > min) {
+      //  //      break;
+      //  //    }
+      //  //  }
+      //  //}
+      //  if (!front.fbset.empty() && !back.fbset2.empty()) {
+      //    for (auto& b_val : back.fbset2.data) {
+      //      if (/*front.fbset.top()->g + b_val->g + EPSILON <= min &&*/ front.fbset.top()->f_bar + b_val->f_bar <= (2 * min)) {
+      //        auto [success, f, b] = queue_set(front.fbset, back.fbset2, b_val, closed_f, closed_b);
+      //        done = success;
+      //        loop = true;
+      //        min_front = f;
+      //        min_back = b;
+      //        break;
+      //      }
+      //      else if (front.fbset.top()->f_bar + b_val->f_bar > 2 * min) {
+      //        break;
+      //      }
+      //    }
+      //  }
+      //  if (!front.fbset2.empty() && !back.fbset.empty()) {
+      //    for (auto& f_val : front.fbset2.data) {
+      //      if (/*back.fbset.top()->g + f_val->g + EPSILON <= min &&*/ back.fbset.top()->f_bar + f_val->f_bar <= (2 * min)) {
+      //        auto [success, f, b] = set_queue(front.fbset2, back.fbset, f_val, closed_f, closed_b);
+      //        done = success;
+      //        loop = true;
+      //        min_front = f;
+      //        min_back = b;
+      //        break;
+      //      }
+      //      else if (back.fbset.top()->f_bar + f_val->f_bar > 2 * min) {
+      //        break;
+      //      }
+      //    }
+      //  }
+      //  if (!loop && min_front == nullptr && min_back == nullptr) {
+      //    done = true;
+      //  }
+      //}
     }
     return std::make_tuple(min_front, min_back, min);
   }
@@ -218,16 +363,11 @@ public:
 
 class DibbsNbs {
 
-  typedef Pairs<const SlidingTile*, SlidingTileHash, SlidingTileEqual> TypedPairs;
-  typedef std::unordered_set<const SlidingTile*, SlidingTileHash, SlidingTileEqual> hash_set;
+  typedef Pairs<const Pancake*, PancakeHash, PancakeEqual> TypedPairs;
+  typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
 
-  StackArray<SlidingTile> storage;
+  StackArray<Pancake> storage;
   TypedPairs open_f_data, open_b_data;
-  //triple open_f_data;
-  //triple open_b_data;
-  //g_set open_f_gset, open_b_gset;
-  //f_set open_f_fset, open_b_fset;
-  //d_set open_f_dset, open_b_dset;
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
   size_t expansions;
@@ -236,30 +376,30 @@ class DibbsNbs {
   size_t memory;
 
 #ifdef HISTORY
-  SlidingTile best_f;
-  SlidingTile best_b;
+  Pancake best_f;
+  Pancake best_b;
 #endif
 
-  std::optional<std::tuple<const SlidingTile*, const SlidingTile*>> select_pair() {
+  std::optional<std::tuple<const Pancake*, const Pancake*>> select_pair() {
     while (true) {
       if (open_f_data.empty()) return std::nullopt;
       else if (open_b_data.empty()) return std::nullopt;
       else {
         auto [front, back, min] = TypedPairs::query_pair(open_f_data, open_b_data, lbmin, closed_f, closed_b);
-        if (front == nullptr) {
+        //if (min > lbmin) {
+        //  lbmin = min;
+        //}
+        if (front == nullptr && back == nullptr) {
           lbmin += 1;
           continue;
         }
-        /*if (min > lbmin) {
-          lbmin = min;
-        }*/
-        assert(front != nullptr && back != nullptr);
         return std::make_tuple(front, back);
       }
     }
   }
 
-  bool expand_node(const SlidingTile* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, TypedPairs& data) {
+  bool expand_node(const Pancake* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, TypedPairs& data) {
+    if (next_val == nullptr) return true;
     auto removed = hash.erase(next_val);
     if (removed == 0) return true;
     assert(removed == 1);
@@ -277,8 +417,8 @@ class DibbsNbs {
 
     ++expansions;
 
-    for (int i = 1, stop = next_val->num_actions_available(); i <= stop; ++i) {
-      SlidingTile new_action = next_val->apply_action(i);
+    for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
+      Pancake new_action = next_val->apply_action(i);
 
       auto it_open = other_hash.find(&new_action);
       if (it_open != other_hash.end()) {
@@ -318,15 +458,15 @@ class DibbsNbs {
     return true;
   }
 
-  bool expand_node_forward(const SlidingTile* SlidingTile) {
-    return expand_node(SlidingTile, open_f_hash, closed_f, open_b_hash, open_f_data);
+  bool expand_node_forward(const Pancake* pancake) {
+    return expand_node(pancake, open_f_hash, closed_f, open_b_hash, open_f_data);
   }
 
-  bool expand_node_backward(const SlidingTile* SlidingTile) {
-    return expand_node(SlidingTile, open_b_hash, closed_b, open_f_hash, open_b_data);
+  bool expand_node_backward(const Pancake* pancake) {
+    return expand_node(pancake, open_b_hash, closed_b, open_f_hash, open_b_data);
   }
 
-  std::tuple<double, size_t, size_t> run_search(SlidingTile start, SlidingTile goal)
+  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal)
   {
     if (start == goal) {
       return std::make_tuple(0, 0, 0);
@@ -346,7 +486,7 @@ class DibbsNbs {
     lbmin = std::max(1ui8, std::max(start.h, goal.h));
 
     bool finished = false;
-    std::optional<std::tuple<const SlidingTile*, const SlidingTile*>> pair;
+    std::optional<std::tuple<const Pancake*, const Pancake*>> pair;
     while ((pair = select_pair()).has_value())
     {
       if (lbmin >= UB) { //>= for first stop
@@ -378,7 +518,7 @@ class DibbsNbs {
 
 public:
 
-  static std::tuple<double, size_t, size_t> search(SlidingTile start, SlidingTile goal) {
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal) {
     DibbsNbs instance;
     auto result = instance.run_search(start, goal);
     return result;

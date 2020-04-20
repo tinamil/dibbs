@@ -8,8 +8,8 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 30;
-constexpr int GAPX = 0;
+constexpr int NUM_PANCAKES = 14;
+constexpr int GAPX = 1;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 
 class Pancake {
@@ -28,6 +28,7 @@ public:
   uint8_t h2;
   uint8_t f;
   uint8_t f_bar;
+  int32_t hdiff;
   bool threshold;
 
   uint8_t gap_lb(Direction dir) const;
@@ -43,10 +44,11 @@ public:
     h = gap_lb(dir);
     f = h;
     f_bar = f;
+    hdiff = h;
     threshold = h == 0;
   }
 
-  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar), threshold(copy.threshold)
+  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar), hdiff(copy.hdiff), threshold(copy.threshold)
 #ifdef HISTORY
     , actions(copy.actions)
 #endif
@@ -89,7 +91,9 @@ public:
     new_node.h2 = new_node.update_gap_lb(OppositeDirection(dir), i, new_node.h2);
     new_node.g = g + 1;
     new_node.f = new_node.g + new_node.h;
+
     new_node.f_bar = 2 * new_node.g + new_node.h - new_node.h2;
+    new_node.hdiff = new_node.h - new_node.h2;
     new_node.threshold = threshold || new_node.h <= new_node.h2;
     new_node.apply_flip(i);
     assert(new_node.f >= f); //Consistency check
@@ -138,6 +142,9 @@ struct FSortHighDuplicate {
   }
 
   bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    if (lhs->f == rhs->f) {
+      return lhs->g > rhs->g;
+    }
     return lhs->f > rhs->f;
   }
 };
@@ -230,48 +237,38 @@ struct GSortHighDuplicate {
     return operator()(&lhs, &rhs);
   }
   bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+    if (lhs->g == rhs->g) {
+      return lhs->h < rhs->h;
+    }
     return lhs->g > rhs->g;
   }
 };
 
-struct FBarSortHighHBDuplicate {
+struct DeltaSortHighDuplicate {
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
     return operator()(&lhs, &rhs);
   }
   bool operator()(const Pancake* lhs, const Pancake* rhs) const {
-    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
-    if (cmp == 0) {
-      return false;
+    uint8_t ld = lhs->g - lhs->h2;
+    uint8_t rd = rhs->g - rhs->h2;
+
+    if (ld == rd) {
+      return lhs->g < rhs->g;
     }
-    else if (lhs->f_bar == rhs->f_bar) {
-      if (lhs->g == rhs->g)
-        return cmp < 0;
-      else
-        return lhs->g < rhs->g;
-    }
-    else {
-      return lhs->f_bar < rhs->f_bar;
-    }
+    return ld > rd;
   }
 };
 
-struct FBarSortHighHFDuplicate {
+struct FBarSortHighDuplicate {
   bool operator()(const Pancake& lhs, const Pancake& rhs) const {
     return operator()(&lhs, &rhs);
   }
   bool operator()(const Pancake* lhs, const Pancake* rhs) const {
-    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
-    if (cmp == 0) { 
-      return false;
-    }
-    else if (lhs->f_bar == rhs->f_bar) {
-      if (lhs->g == rhs->g)
-        return cmp < 0;
-      else
-        return lhs->g < rhs->g;
+    if (lhs->f_bar == rhs->f_bar) {
+      return lhs->g > rhs->g;
     }
     else {
-      return lhs->f_bar < rhs->f_bar;
+      return lhs->f_bar > rhs->f_bar;
     }
   }
 };
