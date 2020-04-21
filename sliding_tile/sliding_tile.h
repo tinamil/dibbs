@@ -36,6 +36,7 @@ public:
   uint8_t f;
   uint8_t f_bar;
   int hdiff;
+  uint8_t delta;
   bool threshold;
 
   uint8_t compute_manhattan() {
@@ -144,7 +145,7 @@ public:
     }
   }
   SlidingTile() {}
-  SlidingTile(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), f(0), f_bar(0)
+  SlidingTile(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), f(0), f_bar(0), delta(0)
   {
     memcpy(source, data, NUM_TILES);
     h = compute_manhattan();
@@ -161,7 +162,7 @@ public:
     }
   }
 
-  SlidingTile(const SlidingTile& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar), hdiff(copy.hdiff), threshold(copy.threshold), empty_location(copy.empty_location)
+  SlidingTile(const SlidingTile& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar), hdiff(copy.hdiff), delta(copy.delta), threshold(copy.threshold), empty_location(copy.empty_location)
 #ifdef HISTORY
     , actions(copy.actions)
 #endif
@@ -218,6 +219,7 @@ public:
     new_node.f_bar = 2 * new_node.g + new_node.h - new_node.h2;
     new_node.threshold = threshold || new_node.h <= new_node.h2;
     new_node.hdiff = new_node.h - new_node.h2;
+    new_node.delta = new_node.g - new_node.h2;
     assert(new_node.f >= f); //Consistency check
     return new_node;
   }

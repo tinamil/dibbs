@@ -79,6 +79,9 @@ class Pairs {
     T top() const {
       return data.top();
     }
+    size_t size() const {
+      return data.size();
+    }
     void pop() {
       data.pop();
     }
@@ -101,6 +104,9 @@ class Pairs {
     }
     bool empty() const {
       return data.empty();
+    }
+    size_t size() const {
+      return data.size();
     }
     T top() const {
       return (*data.begin());
@@ -165,39 +171,49 @@ public:
     return std::make_tuple(true, min_front, min_back);
   }
 
-  /* template<typename U, typename V>
-   static std::tuple<bool, T, T> set_queue(U& front, V& back, T f_val, const hash_set& closed_f, const hash_set& closed_b) {
-     if (closed_b.find(back.top()) != closed_b.end()) {
-       back.pop();
-       return std::make_tuple(false, nullptr, nullptr);
-     }
-     else if (closed_f.find(f_val) != closed_f.end()) {
-       front.erase(f_val);
-       return std::make_tuple(false, nullptr, nullptr);
-     }
-     auto min_front = f_val;
-     auto min_back = back.top();
-     back.pop();
-     front.erase(f_val);
-     return std::make_tuple(true, min_front, min_back);
-   }
-   template<typename U, typename V>
-   static std::tuple<bool, T, T> queue_set(U& front, V& back, T b_val, const hash_set& closed_f, const hash_set& closed_b) {
-     if (closed_f.find(front.top()) != closed_f.end()) {
-       front.pop();
-       return std::make_tuple(false, nullptr, nullptr);
-     }
-     else if (closed_b.find(b_val) != closed_b.end()) {
-       back.erase(b_val);
-       return std::make_tuple(false, nullptr, nullptr);
-     }
-     auto min_front = front.top();
-     auto min_back = b_val;
-     front.pop();
-     back.erase(b_val);
-     return std::make_tuple(true, min_front, min_back);
-   }*/
+  template<typename U>
+  static std::tuple<bool, T, T> pop_minfbar(U& front, U& back, const hash_set& closed_f, const hash_set& closed_b) {
+    if (closed_f.find(front.top()) != closed_f.end()) {
+      front.pop();
+      return std::make_tuple(false, nullptr, nullptr);
+    }
+    else if (closed_b.find(back.top()) != closed_b.end()) {
+      back.pop();
+      return std::make_tuple(false, nullptr, nullptr);
+    }
+    auto min_front = front.top();
+    auto min_back = back.top();
+    if (min_front->f_bar < min_back->f_bar) {
+      front.pop();
+      return std::make_tuple(true, min_front, nullptr);
+    }
+    else {
+      back.pop();
+      return std::make_tuple(true, nullptr, min_back);
+    }
+  }
 
+  template<typename U>
+  static std::tuple<bool, T, T> pop_ming(U& front, U& back, const hash_set& closed_f, const hash_set& closed_b) {
+    if (closed_f.find(front.top()) != closed_f.end()) {
+      front.pop();
+      return std::make_tuple(false, nullptr, nullptr);
+    }
+    else if (closed_b.find(back.top()) != closed_b.end()) {
+      back.pop();
+      return std::make_tuple(false, nullptr, nullptr);
+    }
+    auto min_front = front.top();
+    auto min_back = back.top();
+    if (min_front->g < min_back->g) {
+      front.pop();
+      return std::make_tuple(true, min_front, nullptr);
+    }
+    else {
+      back.pop();
+      return std::make_tuple(true, nullptr, min_back);
+    }
+  }
 
   static decltype(auto) query_pair(
     Pairs<T, THash, TEqual>& front,
@@ -210,152 +226,36 @@ public:
     T min_front = nullptr, min_back = nullptr;
     bool done = false;
     while (!done) {
+      if (!front.fbset.empty() && !back.fbset.empty() && (front.fbset.top()->f_bar + back.fbset.top()->f_bar) <= (2 * min)) {
+        auto [success, f, b] = pop_minfbar(front.fbset, back.fbset, closed_f, closed_b);
+        done = success;
+        min_front = f;
+        min_back = b;
+        continue;
+      }
       if (!front.gset.empty() && !back.gset.empty() && (front.gset.top()->g + back.gset.top()->g + EPSILON) <= min) {
-        auto [success, f, b] = pop_pair(front.gset, back.gset, closed_f, closed_b);
+        auto [success, f, b] = pop_minfbar(front.gset, back.gset, closed_f, closed_b);
         done = success;
         min_front = f;
         min_back = b;
-        if (success && min_front->f_bar + min_back->f_bar > 2 * min) {
-          std::cout << "ERROR";
-        }
-        if (success) {
-          assert(min_front->f_bar + min_back->f_bar <= 2 * min);
-        }
+        continue;
       }
-      else if (!front.fbset.empty() && !back.fbset.empty() && (front.fbset.top()->f_bar + back.fbset.top()->f_bar) <= (2 * min)) {
-        auto [success, f, b] = pop_pair(front.fbset, back.fbset, closed_f, closed_b);
+      if (!front.fbset.empty() && !back.fbset2.empty() && (front.fbset.top()->f_bar + back.fbset2.top()->f_bar) <= (2 * min)) {
+        auto [success, f, b] = pop_minfbar(front.fbset, back.fbset2, closed_f, closed_b);
         done = success;
         min_front = f;
         min_back = b;
-        if (success && min_front->g + min_back->g + EPSILON > min) {
-          std::cout << "ERROR";
-        }
-        if (success) {
-          assert(min_front->g + min_back->g + EPSILON <= min);
-        }
+        continue;
       }
-      else if (!front.fbset.empty() && !back.fbset2.empty() && (front.fbset.top()->f_bar + back.fbset2.top()->f_bar) <= (2 * min)) {
-        if (front.fbset.top()->f_bar > back.fbset2.top()->f_bar) {
-          if (closed_b.find(back.fbset2.top()) != closed_b.end()) {
-            back.fbset2.pop();
-            done = false;
-            continue;
-          }
-          else {
-            done = true;
-            min_back = back.fbset2.top();
-            back.fbset2.pop();
-          }
-        }
-        else {
-          if (closed_f.find(front.fbset.top()) != closed_f.end()) {
-            front.fbset.pop();
-            done = false;
-            continue;
-          }
-          else {
-            done = true;
-            min_front = front.fbset.top();
-            front.fbset.pop();
-          }
-        }
+      if (!front.fbset2.empty() && !back.fbset.empty() && (front.fbset2.top()->f_bar + back.fbset.top()->f_bar) <= (2 * min)) {
+        auto [success, f, b] = pop_minfbar(front.fbset2, back.fbset, closed_f, closed_b);
+        done = success;
+        min_front = f;
+        min_back = b;
+        continue;
       }
-      else if (!front.fbset2.empty() && !back.fbset.empty() && (front.fbset2.top()->f_bar + back.fbset.top()->f_bar) <= (2 * min)) {
-        if (front.fbset2.top()->f_bar <= back.fbset.top()->f_bar) {
-          if (closed_b.find(back.fbset.top()) != closed_b.end()) {
-            back.fbset.pop();
-            done = false;
-            continue;
-          }
-          else {
-            done = true;
-            min_back = back.fbset.top();
-            back.fbset.pop();
-          }
-        }
-        else {
-          if (closed_f.find(front.fbset2.top()) != closed_f.end()) {
-            front.fbset2.pop();
-            done = false;
-            continue;
-          }
-          else {
-            done = true;
-            min_front = front.fbset2.top();
-            front.fbset2.pop();
-          }
-        }
-      }
-      else {
-        done = true;
-      }
-      //}
-      //else {
-      //  bool loop = false;
-      //  //if (!front.gset.empty() && !back.gset2.empty()) {
-      //  //  for (auto& b_val : back.gset2.data) {
-      //  //    if (front.gset.top()->g + b_val->g + EPSILON <= min /*&& front.gset.top()->f_bar + b_val->f_bar <= (2 * min)*/) {
-      //  //      auto [success, f, b] = queue_set(front.gset, back.gset2, b_val, closed_f, closed_b);
-      //  //      done = success;
-      //  //      loop = true;
-      //  //      min_front = f;
-      //  //      min_back = b;
-      //  //      break;
-      //  //    }
-      //  //    else if (front.gset.top()->g + b_val->g + EPSILON > min) {
-      //  //      break;
-      //  //    }
-      //  //  }
-      //  //}
-      //  //if (!front.gset2.empty() && !back.gset.empty()) {
-      //  //  for (auto& f_val : front.gset2.data) {
-      //  //    if (back.gset.top()->g + f_val->g + EPSILON <= min /*&& back.gset.top()->f_bar + f_val->f_bar <= (2 * min)*/) {
-      //  //      auto [success, f, b] = set_queue(front.gset2, back.gset, f_val, closed_f, closed_b);
-      //  //      done = success;
-      //  //      loop = true;
-      //  //      min_front = f;
-      //  //      min_back = b;
-      //  //      break;
-      //  //    }
-      //  //    else if (back.gset.top()->g + f_val->g + EPSILON > min) {
-      //  //      break;
-      //  //    }
-      //  //  }
-      //  //}
-      //  if (!front.fbset.empty() && !back.fbset2.empty()) {
-      //    for (auto& b_val : back.fbset2.data) {
-      //      if (/*front.fbset.top()->g + b_val->g + EPSILON <= min &&*/ front.fbset.top()->f_bar + b_val->f_bar <= (2 * min)) {
-      //        auto [success, f, b] = queue_set(front.fbset, back.fbset2, b_val, closed_f, closed_b);
-      //        done = success;
-      //        loop = true;
-      //        min_front = f;
-      //        min_back = b;
-      //        break;
-      //      }
-      //      else if (front.fbset.top()->f_bar + b_val->f_bar > 2 * min) {
-      //        break;
-      //      }
-      //    }
-      //  }
-      //  if (!front.fbset2.empty() && !back.fbset.empty()) {
-      //    for (auto& f_val : front.fbset2.data) {
-      //      if (/*back.fbset.top()->g + f_val->g + EPSILON <= min &&*/ back.fbset.top()->f_bar + f_val->f_bar <= (2 * min)) {
-      //        auto [success, f, b] = set_queue(front.fbset2, back.fbset, f_val, closed_f, closed_b);
-      //        done = success;
-      //        loop = true;
-      //        min_front = f;
-      //        min_back = b;
-      //        break;
-      //      }
-      //      else if (back.fbset.top()->f_bar + f_val->f_bar > 2 * min) {
-      //        break;
-      //      }
-      //    }
-      //  }
-      //  if (!loop && min_front == nullptr && min_back == nullptr) {
-      //    done = true;
-      //  }
-      //}
+
+      done = true;
     }
     return std::make_tuple(min_front, min_back, min);
   }
@@ -489,7 +389,7 @@ class DibbsNbs {
     std::optional<std::tuple<const Pancake*, const Pancake*>> pair;
     while ((pair = select_pair()).has_value())
     {
-      if (lbmin >= UB) { //>= for first stop
+      if (lbmin > UB) { //>= for first stop
         finished = true;
         break;
       }

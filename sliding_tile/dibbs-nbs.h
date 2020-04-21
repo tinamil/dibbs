@@ -41,9 +41,12 @@ T variadic_max(T val, Ts... other) {
   T other_max = (T)variadic_max(other...);
   return std::max(val, other_max);
 }
+
+
 template <typename T, typename THash, typename TEqual>
 class Pairs {
 
+public:
   struct FBarDiff {
     bool operator()(T lhs, T rhs) const {
       if (lhs->f_bar == rhs->f_bar) {
@@ -57,7 +60,7 @@ class Pairs {
   struct GDiff {
     bool operator()(T lhs, T rhs) const {
       if (lhs->g == rhs->g) {
-        return lhs->f_bar > rhs->f_bar;
+        return lhs->hdiff > rhs->hdiff;
       }
       else {
         return lhs->g > rhs->g;
@@ -91,125 +94,95 @@ class Pairs {
       pop();
     }
   };
-  template<typename Sort>
-  struct set_wrapper {
-    std::set<T, Sort> data;
-    void push(T val) {
-      data.insert(val);
-    }
-    bool empty() const {
-      return data.empty();
-    }
-    T top() const {
-      return (*data.begin());
-    }
-    void pop() {
-      data.erase(data.begin());
-    }
-    void erase(T val) {
-      data.erase(val);
-    }
-
-    decltype(auto) begin() {
-      return data.begin();
-    }
-    decltype(auto) end() {
-      return data.end();
-    }
-  };
   typedef std::unordered_set<T, THash, TEqual> hash_set;
   typedef queue_wrapper<FBarDiff> fbar_set;
-  typedef queue_wrapper<GDiff> g_set;
-
-
   fbar_set fbset;
-  fbar_set fbset2;
-  g_set gset;
-  //g_backup gset2;
-
-
-public:
-  inline void push_back(T val) {
-    if (val->hdiff > EPSILON) {
-      fbset.push(val);
-      //gset2.push(val);
-    }
-    else {
-      gset.push(val);
-      fbset2.push(val);
+  size_t total_size = 0;
+  std::vector<std::vector<std::vector<T>>> data;
+  Pairs() {
+    data.resize(255);
+    for (int i = 0; i < data.size(); ++i) {
+      data[i].resize(255);
     }
   }
 
-  inline bool empty() {
-    return (fbset.empty() /*|| gset2.empty()*/) && (gset.empty() || fbset2.empty());
+  T query(T other, uint8_t lbmin) const {
+    int max_delta = lbmin - other->f;
+    int max_f = lbmin - other->delta;
+    int target_fbar = 2 * lbmin - other->f_bar;
+    int min_fbar = fbset.top()->f_bar;
+    for (int target_f = lbmin - max_delta; target_f <= max_f; ++target_f) {
+      for (int target_delta = std::max(min_fbar - target_f, 0); target_delta <= max_delta; ++target_delta) {
+        auto val = data[target_f][target_delta];
+        if (val.size() > 0) {
+          return val.back();
+        }
+      }
+    }
+    return nullptr;
   }
 
-  template<typename U>
-  static std::tuple<bool, T, T> pop_pair(U& front, U& back, const hash_set& closed_f, const hash_set& closed_b) {
-    if (closed_f.find(front.top()) != closed_f.end()) {
-      front.pop();
-      return std::make_tuple(false, nullptr, nullptr);
-    }
-    else if (closed_b.find(back.top()) != closed_b.end()) {
-      back.pop();
-      return std::make_tuple(false, nullptr, nullptr);
-    }
-    auto min_front = front.top();
-    auto min_back = back.top();
-    front.pop();
-    back.pop();
-    return std::make_tuple(true, min_front, min_back);
+  size_t size() const {
+    return total_size;
   }
 
-  static decltype(auto) query_pair(
-    Pairs<T, THash, TEqual>& front,
-    Pairs<T, THash, TEqual>& back,
-    uint32_t lbmin,
-    const hash_set& closed_f,
-    const hash_set& closed_b)
+  void push_back(T val) {
+    fbset.push(val);
+    data[val->f][val->delta].push_back(val);
+    total_size += 1;
+  }
+
+  void pop_back(T val) {
+    data[val->f][val->delta].pop_back();
+    total_size -= 1;
+  }
+
+  bool empty() const {
+    return size() == 0;
+  }
+
+  static decltype(auto) query_pair(Pairs& front, Pairs& back, uint32_t lbmin, hash_set& closed_f, hash_set& closed_b)
   {
     uint32_t min = lbmin;
     T min_front = nullptr, min_back = nullptr;
     bool done = false;
-    while (!done) {
-      if (!front.gset.empty() && !back.gset.empty() && (front.gset.top()->g + back.gset.top()->g + EPSILON) <= min) {
-        auto [success, f, b] = pop_pair(front.gset, back.gset, closed_f, closed_b);
-        done = success;
-        min_front = f;
-        min_back = b;
-        if (success && min_front->f_bar + min_back->f_bar > 2 * min) {
-          std::cout << "ERROR";
-        }
-        if (success) {
-          assert(min_front->f_bar + min_back->f_bar <= 2 * min);
-        }
+    while (!front.fbset.empty() && closed_f.contains(front.fbset.top())) {
+      front.fbset.pop();
+    }
+    while (!back.fbset.empty() && closed_b.contains(back.fbset.top())) {
+      back.fbset.pop();
+    }
+
+    if (back.fbset.top()->f_bar <= front.fbset.top()->f_bar) {
+      min_back = back.fbset.top();
+      min_front = front.query(min_back, lbmin);
+      while (min_front != nullptr && closed_f.contains(min_front)) {
+        front.pop_back(min_front);
+        min_front = front.query(min_back, lbmin);
       }
-      else if (!front.fbset.empty() && !back.fbset.empty() && (front.fbset.top()->f_bar + back.fbset.top()->f_bar) <= (2 * min)) {
-        auto [success, f, b] = pop_pair(front.fbset, back.fbset, closed_f, closed_b);
-        done = success;
-        min_front = f;
-        min_back = b;
-        if (success && min_front->g + min_back->g + EPSILON > min) {
-          std::cout << "ERROR";
-        }
-        if (success) {
-          assert(min_front->g + min_back->g + EPSILON <= min);
-        }
-      }
-      else if (!front.fbset.empty() && !back.fbset2.empty() && (front.fbset.top()->f_bar + back.fbset2.top()->f_bar) <= (2 * min)) {
-        auto [success, f, b] = pop_pair(front.fbset, back.fbset2, closed_f, closed_b);
-        done = success;
-        min_front = f;
-        min_back = b;
-      }
-      else if (!front.fbset2.empty() && !back.fbset.empty() && (front.fbset2.top()->f_bar + back.fbset.top()->f_bar) <= (2 * min)) {
-        auto [success, f, b] = pop_pair(front.fbset2, back.fbset, closed_f, closed_b);
-        done = success;
-        min_front = f;
-        min_back = b;
+      if (min_front != nullptr && min_front->f_bar + min_back->f_bar <= 2 * lbmin) {
+        back.fbset.pop();
+        front.pop_back(min_front);
       }
       else {
-        done = true;
+        min_front = nullptr;
+        min_back = nullptr;
+      }
+    }
+    else {
+      min_front = front.fbset.top();
+      min_back = back.query(min_front, lbmin);
+      while (min_back != nullptr && closed_b.contains(min_back)) {
+        back.pop_back(min_back);
+        min_back = back.query(min_front, lbmin);
+      }
+      if (min_back != nullptr && min_front->f_bar + min_back->f_bar <= 2 * lbmin) {
+        front.fbset.pop();
+        back.pop_back(min_back);
+      }
+      else {
+        min_front = nullptr;
+        min_back = nullptr;
       }
     }
     return std::make_tuple(min_front, min_back, min);
@@ -246,20 +219,20 @@ class DibbsNbs {
       else if (open_b_data.empty()) return std::nullopt;
       else {
         auto [front, back, min] = TypedPairs::query_pair(open_f_data, open_b_data, lbmin, closed_f, closed_b);
-        if (front == nullptr) {
+        if (front == nullptr && back == nullptr) {
           lbmin += 1;
           continue;
         }
         /*if (min > lbmin) {
           lbmin = min;
         }*/
-        assert(front != nullptr && back != nullptr);
         return std::make_tuple(front, back);
       }
     }
   }
 
   bool expand_node(const SlidingTile* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, TypedPairs& data) {
+    if (next_val == nullptr) return true;
     auto removed = hash.erase(next_val);
     if (removed == 0) return true;
     assert(removed == 1);
@@ -349,7 +322,7 @@ class DibbsNbs {
     std::optional<std::tuple<const SlidingTile*, const SlidingTile*>> pair;
     while ((pair = select_pair()).has_value())
     {
-      if (lbmin >= UB) { //>= for first stop
+      if (lbmin > UB) { //>= for first stop
         finished = true;
         break;
       }

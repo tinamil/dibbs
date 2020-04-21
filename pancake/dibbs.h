@@ -103,7 +103,7 @@ class Dibbs
 
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
-    while (open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+    while (open_f.size() > 0 && open_b.size() > 0 && UB >= ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
@@ -131,12 +131,13 @@ class Dibbs
     for (int i = 0; i < best_f.actions.size(); ++i) {
       std::cout << std::to_string(best_f.actions[i]) << " ";
     }
-    for (int i = 0; i < best_b.actions.size(); ++i) {
+    std::cout << "|" << " ";
+    for (int i = best_b.actions.size() - 1; i >= 0; --i) {
       std::cout << std::to_string(best_b.actions[i]) << " ";
     }
     std::cout << std::endl;
 #endif
-    if (UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+    if (UB >= ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
     }
     else {

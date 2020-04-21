@@ -8,8 +8,8 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 14;
-constexpr int GAPX = 1;
+constexpr int NUM_PANCAKES = 30;
+constexpr int GAPX = 0;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 
 class Pancake {
@@ -29,6 +29,7 @@ public:
   uint8_t f;
   uint8_t f_bar;
   int32_t hdiff;
+  uint8_t delta;
   bool threshold;
 
   uint8_t gap_lb(Direction dir) const;
@@ -36,7 +37,6 @@ public:
   int check_inputs() const;
 
   Pancake() {}
-
   Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), f(0), f_bar(0)
   {
     assert(NUM_PANCAKES > 0);
@@ -45,10 +45,12 @@ public:
     f = h;
     f_bar = f;
     hdiff = h;
+    delta = 0;
     threshold = h == 0;
   }
 
-  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f), f_bar(copy.f_bar), hdiff(copy.hdiff), threshold(copy.threshold)
+  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f),
+    f_bar(copy.f_bar), hdiff(copy.hdiff), delta(copy.delta), threshold(copy.threshold)
 #ifdef HISTORY
     , actions(copy.actions)
 #endif
@@ -95,6 +97,7 @@ public:
     new_node.f_bar = 2 * new_node.g + new_node.h - new_node.h2;
     new_node.hdiff = new_node.h - new_node.h2;
     new_node.threshold = threshold || new_node.h <= new_node.h2;
+    new_node.delta = new_node.g - new_node.h2;
     new_node.apply_flip(i);
     assert(new_node.f >= f); //Consistency check
     return new_node;
