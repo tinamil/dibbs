@@ -123,13 +123,13 @@ class Dvcbs {
           return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
         }
         else {
-          return std::make_tuple(UB, expansions, memory);
+          return std::make_tuple((double)UB, expansions, memory);
         }
       }
 
 
       if (lbmin >= UB) {
-        return std::make_tuple(UB, expansions, memory);
+        return std::make_tuple((double)UB, expansions, memory);
       }
 
       else if (nForward.size() > 0 && nBackward.size() > 0)
@@ -140,7 +140,7 @@ class Dvcbs {
         }
         for (int j = 0; j < nBackward.size(); j++) {
           if (mapData.find(nBackward[j]) != mapData.end()) {
-            return std::make_tuple(UB, expansions, memory);
+            return std::make_tuple((double)UB, expansions, memory);
           }
         }
 
@@ -156,7 +156,7 @@ class Dvcbs {
             if (expand_node_backward(nBackward[j]) == false)  return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
           }
           if (lbmin >= UB) {
-            return std::make_tuple(UB, expansions, memory);
+            return std::make_tuple((double)UB, expansions, memory);
           }
           if (currentLowerBound != lbmin || open_b_ready.empty() || oldKey != (*open_b_ready.begin())->g) {
             skip_loop = true;
@@ -173,7 +173,7 @@ class Dvcbs {
             if (expand_node_forward(nForward[i]) == false)  return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
           }
           if (lbmin >= UB) {
-            return std::make_tuple(UB, expansions, memory);
+            return std::make_tuple((double)UB, expansions, memory);
           }
           if (currentLowerBound != lbmin || open_f_ready.empty() || oldKey != (*open_f_ready.begin())->g) {
             skip_loop = true;
@@ -188,7 +188,7 @@ class Dvcbs {
         while (i >= 0 || j >= 0) {
           if (lbmin >= UB)
           {
-            return std::make_tuple(UB, expansions, memory);
+            return std::make_tuple((double)UB, expansions, memory);
           }
           bool expandForward;
           if (i < 0) {

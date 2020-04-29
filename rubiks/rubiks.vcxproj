@@ -36,6 +36,7 @@
     <ClCompile Include="utility.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Assymetric.h" />
     <ClInclude Include="a_star.h" />
     <ClInclude Include="cameron314\atomicops.h" />
     <ClInclude Include="cameron314\blockingconcurrentqueue.h" />
@@ -54,6 +55,7 @@
     <ClInclude Include="PEMM.h" />
     <ClInclude Include="rubiks.h" />
     <ClInclude Include="rubiks_loader.h" />
+    <ClInclude Include="StackArray.h" />
     <ClInclude Include="thread_safe_stack.hpp" />
     <ClInclude Include="tsl\bhopscotch_map.h" />
     <ClInclude Include="tsl\bhopscotch_set.h" />

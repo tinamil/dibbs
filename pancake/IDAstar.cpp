@@ -63,5 +63,5 @@ std::pair<double, size_t> IDAstar::run_search(Pancake start, Pancake goal)
   }
   auto c_end = clock();
   auto time_elapsed = (c_end - c_start) / CLOCKS_PER_SEC;
-  return std::make_pair(c_star, count);
+  return std::make_pair((double)c_star, count);
 }

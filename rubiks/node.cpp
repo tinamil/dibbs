@@ -5,7 +5,7 @@ Node::Node() :
   parent(nullptr), reverse_parent(nullptr),
   #endif 
   state(), face(0), depth(0), combined(0), f_bar(0), heuristic(0),
-  reverse_heuristic(0), passed_threshold(false) {}
+  reverse_heuristic(0), delta(0), passed_threshold(false) {}
 
 Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::PDB type) :
   #ifdef HISTORY 
@@ -22,6 +22,7 @@ Node::Node(const uint8_t* prev_state, const uint8_t* start_state, const Rubiks::
   reverse_heuristic = 0;
   f_bar = heuristic;
   combined = heuristic;
+  delta = 0;
   passed_threshold = heuristic <= reverse_heuristic;
 }
 
@@ -53,6 +54,7 @@ Node::Node(const std::shared_ptr<Node> node_parent, const uint8_t* start_state, 
     f_bar = 0;
     reverse_heuristic = 0;
   }
+  delta = depth - reverse_heuristic;
   if (node_parent != nullptr && node_parent->passed_threshold) {
     passed_threshold = true;
   }
@@ -90,6 +92,7 @@ Node::Node(const Node* node_parent, const uint8_t* start_state, const uint8_t _d
     f_bar = 0;
     reverse_heuristic = 0;
   }
+  delta = depth - reverse_heuristic;
   if (node_parent != nullptr && node_parent->passed_threshold) {
     passed_threshold = true;
   }
@@ -105,7 +108,7 @@ Node::Node(const Node& old_node) :
   parent(old_node.parent), reverse_parent(old_node.reverse_parent),
   #endif
   state(), face(old_node.face), depth(old_node.depth), combined(old_node.combined), f_bar(old_node.f_bar),
-  heuristic(old_node.heuristic), reverse_heuristic(old_node.reverse_heuristic), passed_threshold(old_node.passed_threshold)
+  heuristic(old_node.heuristic), reverse_heuristic(old_node.reverse_heuristic), delta(old_node.delta), passed_threshold(old_node.passed_threshold)
 {
   memcpy(state, old_node.state, 40);
 }

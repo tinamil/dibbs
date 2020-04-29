@@ -24,6 +24,7 @@ struct Node
   uint8_t f_bar;
   uint8_t heuristic;
   uint8_t reverse_heuristic;
+  uint8_t delta;
   bool passed_threshold;
 
   Node();

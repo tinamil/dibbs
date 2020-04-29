@@ -70,10 +70,10 @@
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\backup</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\backup</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -136,11 +136,14 @@
     <ClCompile Include="problems.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="asymmetric.h" />
+    <ClInclude Include="dibbs-2phase.h" />
     <ClInclude Include="dibbs-array.hpp" />
     <ClInclude Include="dibbs-global.hpp" />
     <ClInclude Include="dibbs-nbs.hpp" />
     <ClInclude Include="id-d with closed.h" />
     <ClInclude Include="Nbs.h" />
+    <ClInclude Include="PerfectSolution.h" />
     <ClInclude Include="StackArray.h" />
     <ClInclude Include="Astar.h" />
     <ClInclude Include="dibbs.h" />

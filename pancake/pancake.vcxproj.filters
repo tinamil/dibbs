@@ -77,5 +77,14 @@
     <ClInclude Include="dibbs-nbs.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dibbs-2phase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="asymmetric.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectSolution.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

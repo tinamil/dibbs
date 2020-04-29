@@ -139,6 +139,12 @@
     <ClInclude Include="PEMM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Assymetric.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StackArray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="korf1997.txt" />

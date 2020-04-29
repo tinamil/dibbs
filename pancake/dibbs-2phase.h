@@ -1,5 +1,6 @@
 #pragma once
 #pragma once
+#pragma once
 
 #include "Pancake.h"
 #include <queue>
@@ -98,7 +99,7 @@ public:
   };
   typedef std::unordered_set<T, THash, TEqual> hash_set;
   typedef queue_wrapper<FBarDiff> fbar_set;
-  //fbar_set fbset;
+  fbar_set fbset;
   size_t total_size = 0;
   std::vector<std::vector<std::vector<T>>> data;
   triple() {
@@ -111,10 +112,10 @@ public:
   T query(T other, uint8_t lbmin) const {
     int max_delta = lbmin - other->f;
     int max_f = lbmin - other->delta;
-    //int target_fbar = 2 * lbmin - other->f_bar;
-    //int min_fbar = fbset.top()->f_bar;
+    int target_fbar = 2 * lbmin - other->f_bar;
+    int min_fbar = fbset.top()->f_bar;
     for (int target_f = lbmin - max_delta; target_f <= max_f; ++target_f) {
-      for (int target_delta = 0; target_delta <= max_delta; ++target_delta) {
+      for (int target_delta = std::max(min_fbar - target_f, 0); target_delta <= max_delta; ++target_delta) {
         auto val = data[target_f][target_delta];
         if (val.size() > 0) {
           return val.back();
@@ -124,26 +125,12 @@ public:
     return nullptr;
   }
 
-  size_t query_size(int other_f, int other_delta, uint8_t lbmin) const {
-    size_t matches = 0;
-    int max_delta = lbmin - other_f;
-    int max_f = lbmin - other_delta;
-    //int target_fbar = 2 * lbmin - other->f_bar;
-    //int min_fbar = fbset.top()->f_bar;
-    for (int target_f = lbmin - max_delta; target_f <= max_f; ++target_f) {
-      for (int target_delta = 0; target_delta <= max_delta; ++target_delta) {
-        matches += data[target_f][target_delta].size();
-      }
-    }
-    return matches;
-  }
-
   size_t size() const {
     return total_size;
   }
 
   void push_back(T val) {
-    //fbset.push(val);
+    fbset.push(val);
     data[val->f][val->delta].push_back(val);
     total_size += 1;
   }
@@ -162,39 +149,46 @@ public:
     uint32_t min = lbmin;
     T min_front = nullptr, min_back = nullptr;
     bool done = false;
+    while (!front.fbset.empty() && closed_f.contains(front.fbset.top())) {
+      front.fbset.pop();
+    }
+    while (!back.fbset.empty() && closed_b.contains(back.fbset.top())) {
+      back.fbset.pop();
+    }
 
-
-    int max_fsize = 0, front_f = -1, front_delta = -1;
-    int max_bsize = 0, back_f = -1, back_delta = -1;
-    for (int f = 0; f <= lbmin; ++f) {
-      for (int delta = 0; delta <= lbmin - f; ++delta) {
-        if (front.data[f][delta].size() > 0)
-        {
-          auto bsize = back.query_size(f, delta, lbmin);
-          if (bsize > max_bsize) {
-            max_bsize = bsize;
-            front_f = f;
-            front_delta = delta;
-          }
-        }
-        if (back.data[f][delta].size() > 0)
-        {
-          auto fsize = front.query_size(f, delta, lbmin);
-
-          if (fsize > max_fsize) {
-            max_fsize = fsize;
-            back_f = f;
-            back_delta = delta;
-          }
-        }
+    if (back.fbset.top()->f_bar <= front.fbset.top()->f_bar) {
+      min_back = back.fbset.top();
+      min_front = front.query(min_back, lbmin);
+      while (min_front != nullptr && closed_f.contains(min_front)) {
+        front.pop_back(min_front);
+        min_front = front.query(min_back, lbmin);
+      }
+      if (min_front != nullptr && min_front->f_bar + min_back->f_bar <= 2 * lbmin) {
+        back.fbset.pop();
+        front.pop_back(min_front);
+      }
+      else {
+        min_front = nullptr;
+        min_back = nullptr;
       }
     }
-    if (max_fsize >= max_bsize) {
-      return std::make_tuple(back_f, back_delta, false);
-    }
     else {
-      return std::make_tuple(front_f, front_delta, true);
+      min_front = front.fbset.top();
+      min_back = back.query(min_front, lbmin);
+      while (min_back != nullptr && closed_b.contains(min_back)) {
+        back.pop_back(min_back);
+        min_back = back.query(min_front, lbmin);
+      }
+      if (min_back != nullptr && min_front->f_bar + min_back->f_bar <= 2 * lbmin) {
+        front.fbset.pop();
+        back.pop_back(min_back);
+      }
+      else {
+        min_front = nullptr;
+        min_back = nullptr;
+      }
     }
+    return std::make_tuple(min_front, min_back, min);
   }
 };
 
@@ -215,8 +209,6 @@ class DibbsNbs {
   size_t UB;
   size_t lbmin;
   size_t memory;
-  int f = 0, d = 0;
-  bool dir = true;
 
 #ifdef HISTORY
   Pancake best_f;
@@ -226,36 +218,22 @@ class DibbsNbs {
   DibbsNbs() : open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
 
   std::optional<std::tuple<const Pancake*, const Pancake*>> select_pair() {
+
     while (true) {
-
-      if (f >= 0 && dir && open_f_data.data[f][d].size() > 0) {
-        auto val = open_f_data.data[f][d].back();
-        open_f_data.data[f][d].pop_back();
-        return std::make_tuple(val, nullptr);
-      }
-      else if (f >= 0 && open_b_data.data[f][d].size() > 0) {
-        auto val = open_b_data.data[f][d].back();
-        open_b_data.data[f][d].pop_back();
-        return std::make_tuple(nullptr, val);
-      }
-
       if (open_f_data.empty()) return std::nullopt;
       else if (open_b_data.empty()) return std::nullopt;
       else {
-        auto [f1, d1, dir1] = triple<const Pancake*, PancakeHash, PancakeEqual>::query_pair(open_f_data, open_b_data, lbmin, closed_f, closed_b);
-        f = f1;
-        d = d1;
-        dir = dir1;
-        if (f == -1 && d == -1) {
+        auto [front, back, min] = triple<const Pancake*, PancakeHash, PancakeEqual>::query_pair(open_f_data, open_b_data, lbmin, closed_f, closed_b);
+        if (front == nullptr && back == nullptr) {
           lbmin += 1;
           continue;
         }
+        return std::make_tuple(front, back);
       }
     }
   }
 
   bool expand_node(const Pancake* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, triple<const Pancake*, PancakeHash, PancakeEqual>& data) {
-    if (next_val == nullptr) return true;
     auto removed = hash.erase(next_val);
     if (removed == 0) return true;
     assert(removed == 1);
@@ -275,6 +253,13 @@ class DibbsNbs {
 
     for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
       Pancake new_action = next_val->apply_action(i);
+
+      //if (memcmp(new_action.source, meeting_point_f.data(), NUM_PANCAKES + 1) == 0) {
+      //  std::cout << "Found a meeting point node for forward";
+      //}
+      //if (memcmp(new_action.source, meeting_point_b.data(), NUM_PANCAKES + 1) == 0) {
+      //  std::cout << "Found a meeting point node for backward";
+      //}
 
       auto it_open = other_hash.find(&new_action);
       if (it_open != other_hash.end()) {
@@ -346,7 +331,7 @@ class DibbsNbs {
     std::optional<std::tuple<const Pancake*, const Pancake*>> pair;
     while ((pair = select_pair()).has_value())
     {
-      if (lbmin >= UB) { //>= for first stop
+      if (lbmin > UB) { //>= for first stop
         finished = true;
         break;
       }
@@ -367,7 +352,7 @@ class DibbsNbs {
       }
       std::cout << "\n";
 #endif 
-      return std::make_tuple((double)UB, expansions, memory);
+      return std::make_tuple(UB, expansions, memory);
     }
     else return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
   }

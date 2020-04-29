@@ -15,20 +15,24 @@
 #include <ctime>
 #include <sstream>
 #include <iomanip>
+#include "asymmetric.h"
+
+#include "PerfectSolution.h"
 
 
 //#define IDA_STAR
 
 //#define A_STAR
-//#define REVERSE_ASTAR
+#define REVERSE_ASTAR
 //#define IDD
 #define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
-#define DIBBS_NBS
+//#define DIBBS_NBS
+#define ASSYMETRIC
 
-constexpr int NUM_PROBLEMS = 100;
+//constexpr int NUM_PROBLEMS = 100;
 
 
 void generate_random_instance(double& seed, uint8_t problem[]) {
@@ -69,6 +73,9 @@ void output_data(std::ostream& stream) {
 #endif
 #ifdef DIBBS_NBS
   stream << "DIBBS_NBS ";
+#endif
+#ifdef ASSYMETRIC
+  stream << "ASSYMETRIC ";
 #endif
   stream << "\n";
 
@@ -455,6 +462,47 @@ void output_data(std::ostream& stream) {
     stream << memory_stream.rdbuf() << std::endl;
 #endif
   }
+  {
+#ifdef ASSYMETRIC
+    //DIBBS_NBS
+    std::cout << "ASSYMETRIC\n";
+    double seed = 3.1567;
+    for (int i = 1; i <= NUM_PROBLEMS; ++i) {
+      std::cout << i << " ";
+      generate_random_instance(seed, problem);
+      //if (i != 19) continue;
+      //easy_problem(NUM_PANCAKES, problem);
+      Pancake::Initialize_Dual(problem);
+      Pancake node(problem, Direction::forward);
+      Pancake goal = Pancake::GetSortedStack(Direction::backward);
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions, memory] = AssymetricSearch::search(node, goal);
+      auto end = std::chrono::system_clock::now();
+      //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
+      if (std::isinf(cstar)) {
+        expansion_stream << "NAN ";
+      }
+      else {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+      memory_stream << std::to_string(memory) << " ";
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if (answers[i] < 0 && !std::isinf(cstar)) {
+        answers[i] = cstar;
+      }
+      else if (!std::isinf(cstar) && answers[i] != cstar) {
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
+      }
+    }
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+    stream << memory_stream.rdbuf() << std::endl;
+#endif
+  }
 }
 
 std::string return_formatted_time(std::string format)
@@ -498,6 +546,9 @@ void run_random_test() {
 #ifdef DIBBS_NBS
   name += "_DIBNBS";
 #endif
+#ifdef ASSYMETRIC
+  name += "_ASSYM";
+#endif
   name += ".txt";
   file.open(dir + name, std::ios::app);
 
@@ -512,7 +563,8 @@ void run_random_test() {
 
 int main()
 {
-  run_random_test();
+  GeneratePerfectCounts();
+  //run_random_test();
   return 0;
 
   uint8_t problem[] = { 14,  8,  11,  4,  2,  10,  3,  14,  7,  12,  13,  1,  6,  5,  9 };

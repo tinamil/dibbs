@@ -209,7 +209,7 @@ class ID_D
     }
 #endif
     if (LB >= UB)
-      return std::make_tuple(UB, expansions, memory);
+      return std::make_tuple((double)UB, expansions, memory);
     else
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
   }

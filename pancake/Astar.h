@@ -11,6 +11,8 @@
 
 class Astar
 {
+
+public:
   std::priority_queue<Pancake, std::vector<Pancake>, PancakeFSort> open;
   std::unordered_set<Pancake, PancakeHash> closed;
   size_t memory;
@@ -45,15 +47,19 @@ class Astar
         std::cout << std::endl;
 #endif
         assert(next_val.h == 0);
+        //break;
+      }
+
+      if (next_val.f > UB) {
         break;
       }
 
-      BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
+      /*BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
       memory = std::max(memory, memCounter.PagefileUsage);
       if (memCounter.PagefileUsage > MEM_LIMIT) {
         break;
-      }
+      }*/
 
       ++expansions;
 
@@ -68,8 +74,6 @@ class Astar
     //std::cout << "Size: " << open.size() << '\n';
     return std::make_tuple(UB, expansions, memory);
   }
-
-public:
 
   static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal) {
     Astar instance;

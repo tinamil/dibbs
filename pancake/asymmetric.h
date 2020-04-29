@@ -1,7 +1,9 @@
 #pragma once
+#pragma once
 #include "Pancake.h"
 #include <set>
 #include <unordered_set>
+#include <queue>
 #include <unordered_map>
 #include <tuple>
 #include <string>
@@ -12,13 +14,37 @@
 #include <windows.h>
 #include <Psapi.h>
 
-class Dibbs
+class AssymetricSearch
 {
-  typedef std::set<const Pancake*, PancakeFBarSortLowG> set;
+  template <typename T>
+  struct FGDiff {
+    bool operator()(T lhs, T rhs) const {
+      if (lhs->f == rhs->f) {
+        return lhs->g < rhs->g;
+      }
+      else {
+        return lhs->f > rhs->f;
+      }
+    }
+  };
+  template <typename T>
+  struct GDiff {
+    bool operator()(T lhs, T rhs) const {
+      if (lhs->delta == rhs->delta) {
+        return lhs->g < rhs->g;
+      }
+      else {
+        return lhs->delta > rhs->delta;
+      }
+    }
+  };
+  typedef std::priority_queue<const Pancake*, std::vector<const Pancake*>, FGDiff<const Pancake*>> backward_queue;
+  typedef std::priority_queue<const Pancake*, std::vector<const Pancake*>, GDiff<const Pancake*>> forward_queue;
   typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
 
   StackArray<Pancake> storage;
-  set open_f, open_b;
+  forward_queue open_f;
+  backward_queue open_b;
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
   size_t expansions;
@@ -27,16 +53,20 @@ class Dibbs
   size_t expansions_cstar = 0;
 
 
-  Dibbs() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0) {}
+  AssymetricSearch() {}
 
+  template <typename T>
+  void expand_node(T& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed) {
+    const Pancake* next_val = open.top();
+    open.pop();
 
-  void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed) {
-    const Pancake* next_val = *open.begin();
+    if (closed.count(next_val) > 0) {
+      return;
+    }
 
     auto it_hash = open_hash.find(next_val);
     assert(it_hash != open_hash.end());
     open_hash.erase(it_hash);
-    open.erase(next_val);
 
     ++expansions;
     ++expansions_cstar;
@@ -80,13 +110,13 @@ class Dibbs
             continue;
           }
           else {
-            open.erase(&**it_open);
+            //open.erase(&**it_open);
             open_hash.erase(it_open);
           }
         }
 
         auto ptr = storage.push_back(new_action);
-        open.insert(ptr);
+        open.push(ptr);
         open_hash.insert(ptr);
       }
     }
@@ -100,15 +130,15 @@ class Dibbs
     expansions = 0;
     memory = 0;
     auto ptr = storage.push_back(start);
-    open_f.insert(ptr);
+    open_f.push (ptr);
     open_f_hash.insert(ptr);
     ptr = storage.push_back(goal);
-    open_b.insert(ptr);
+    open_b.push(ptr);
     open_b_hash.insert(ptr);
 
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
-    while (open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+    while (open_f.size() > 0 && open_b.size() > 0 && UB > (open_f.top()->delta + open_b.top()->f)) {
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
@@ -117,17 +147,12 @@ class Dibbs
         break;
       }
 
-      if ((*open_f.begin())->f_bar < (*open_b.begin())->f_bar) {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f);
-      }
-      else if ((*open_f.begin())->f_bar > (*open_b.begin())->f_bar) {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b);
-      }
-      else if (open_f.size() <= open_b.size()) {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f);
+
+      if (open_f.top()->delta == 0) {
+        expand_node<forward_queue>(open_f, open_f_hash, open_b_hash, closed_f);
       }
       else {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b);
+        expand_node<backward_queue>(open_b, open_b_hash, open_f_hash, closed_b);
       }
 
     }
@@ -142,7 +167,7 @@ class Dibbs
     }
     std::cout << std::endl;
 #endif
-    if (UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+    if (UB > (open_f.top()->delta + open_b.top()->f)) {
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
     }
     else {
@@ -154,7 +179,7 @@ class Dibbs
 public:
 
   static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal) {
-    Dibbs instance;
+    AssymetricSearch instance;
     return instance.run_search(start, goal);
   }
 };

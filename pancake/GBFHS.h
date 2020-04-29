@@ -173,7 +173,7 @@ class Gbfhs {
       f_lim += 1;
     }
 
-    return std::make_tuple(UB, expansions, memory);
+    return std::make_tuple((double)UB, expansions, memory);
   }
 
 
