@@ -39,6 +39,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -73,7 +74,8 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\vulkan\</OutDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -113,22 +115,48 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;VK_USE_PLATFORM_WIN32_KHR;GLM_FORCE_CXX2A;GLM_FORCE_RADIANS;GLM_FORCE_DEPTH_ZERO_TO_ONE;GLM_ENABLE_EXPERIMENTAL;GLM_FORCE_LEFT_HANDED;GLM_FORCE_SWIZZLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\John\git\dibbs\VulkanStarlight;C:\Users\John\git\dibbs\VulkanMemoryAllocator;C:\Users\John\git\dibbs\tsl;C:\Users\John\git\dibbs\stb-master;C:\Users\John\git\dibbs\tinyobjloader-master;C:\Users\John\git\dibbs\glm;C:\VulkanSDK\1.2.131.2\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
     </ClCompile>
     <Link>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.131.2\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\John\git\dibbs\VulkanStarlight;C:\VulkanSDK\1.2.131.2\Include;C:\Users\John\git\dibbs\VulkanMemoryAllocator;C:\Users\John\git\dibbs\stb-master;C:\Users\John\git\dibbs\tsl;C:\Users\John\git\dibbs\glm;C:\Users\John\git\dibbs\tinyobjloader-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;VK_USE_PLATFORM_WIN32_KHR;GLM_FORCE_CXX2A;GLM_FORCE_RADIANS;GLM_FORCE_DEPTH_ZERO_TO_ONE;GLM_ENABLE_EXPERIMENTAL;GLM_FORCE_LEFT_HANDED;GLM_FORCE_SWIZZLE;VMA_DEBUG_MARGIN=16;VMA_DEBUG_DETECT_CORRUPTION=1;VMA_DEBUG_INITIALIZE_ALLOCATIONS=1;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.131.2\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\VulkanStarlight\Archetype.cpp" />
+    <ClCompile Include="..\VulkanStarlight\compile_headers.cpp" />
+    <ClCompile Include="..\VulkanStarlight\FontComponents.cpp" />
+    <ClCompile Include="..\VulkanStarlight\Input.cpp" />
+    <ClCompile Include="..\VulkanStarlight\Renderer.cpp" />
+    <ClCompile Include="..\VulkanStarlight\UISystem.cpp" />
+    <ClCompile Include="..\VulkanStarlight\VulkanBackgroundRenderer.cpp" />
+    <ClCompile Include="..\VulkanStarlight\VulkanDebug.cpp" />
+    <ClCompile Include="..\VulkanStarlight\VulkanFontRenderer.cpp" />
+    <ClCompile Include="..\VulkanStarlight\VulkanLineRenderer.cpp" />
+    <ClCompile Include="..\VulkanStarlight\VulkanModelRenderer.cpp" />
+    <ClCompile Include="..\VulkanStarlight\VulkanOutlineRenderer.cpp" />
+    <ClCompile Include="..\VulkanStarlight\VulkanSpriteRenderer.cpp" />
+    <ClCompile Include="..\VulkanStarlight\VulkanTools.cpp" />
+    <ClCompile Include="..\VulkanStarlight\Window.cpp" />
     <ClCompile Include="GBFHS.h" />
     <ClCompile Include="IDAstar.cpp" />
     <ClCompile Include="main.cpp" />
@@ -136,6 +164,42 @@
     <ClCompile Include="problems.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\VulkanStarlight\Archetype.h" />
+    <ClInclude Include="..\VulkanStarlight\camera.hpp" />
+    <ClInclude Include="..\VulkanStarlight\defines.h" />
+    <ClInclude Include="..\VulkanStarlight\ECSManager.h" />
+    <ClInclude Include="..\VulkanStarlight\Entity.h" />
+    <ClInclude Include="..\VulkanStarlight\Events.h" />
+    <ClInclude Include="..\VulkanStarlight\FontComponents.h" />
+    <ClInclude Include="..\VulkanStarlight\frustum.hpp" />
+    <ClInclude Include="..\VulkanStarlight\Input.h" />
+    <ClInclude Include="..\VulkanStarlight\keycodes.hpp" />
+    <ClInclude Include="..\VulkanStarlight\Model.hpp" />
+    <ClInclude Include="..\VulkanStarlight\Renderer.h" />
+    <ClInclude Include="..\VulkanStarlight\Screen.h" />
+    <ClInclude Include="..\VulkanStarlight\ScreenElementProcessor.hpp" />
+    <ClInclude Include="..\VulkanStarlight\Serialization.h" />
+    <ClInclude Include="..\VulkanStarlight\sprite.h" />
+    <ClInclude Include="..\VulkanStarlight\static_helpers.h" />
+    <ClInclude Include="..\VulkanStarlight\threadpool.hpp" />
+    <ClInclude Include="..\VulkanStarlight\Timer.hpp" />
+    <ClInclude Include="..\VulkanStarlight\Transform.h" />
+    <ClInclude Include="..\VulkanStarlight\TransientComponents.h" />
+    <ClInclude Include="..\VulkanStarlight\UISystem.h" />
+    <ClInclude Include="..\VulkanStarlight\VulkanBackgroundRenderer.h" />
+    <ClInclude Include="..\VulkanStarlight\VulkanBaseRenderer.h" />
+    <ClInclude Include="..\VulkanStarlight\VulkanDebug.h" />
+    <ClInclude Include="..\VulkanStarlight\VulkanDevice.hpp" />
+    <ClInclude Include="..\VulkanStarlight\VulkanFontRenderer.h" />
+    <ClInclude Include="..\VulkanStarlight\VulkanLineRenderer.h" />
+    <ClInclude Include="..\VulkanStarlight\VulkanModel.hpp" />
+    <ClInclude Include="..\VulkanStarlight\VulkanModelRenderer.h" />
+    <ClInclude Include="..\VulkanStarlight\VulkanOutlineRenderer.h" />
+    <ClInclude Include="..\VulkanStarlight\VulkanSpriteRenderer.h" />
+    <ClInclude Include="..\VulkanStarlight\VulkanSwapChain.hpp" />
+    <ClInclude Include="..\VulkanStarlight\VulkanTexture.hpp" />
+    <ClInclude Include="..\VulkanStarlight\VulkanTools.h" />
+    <ClInclude Include="..\VulkanStarlight\Window.h" />
     <ClInclude Include="asymmetric.h" />
     <ClInclude Include="dibbs-2phase.h" />
     <ClInclude Include="dibbs-array.hpp" />
@@ -144,7 +208,6 @@
     <ClInclude Include="id-d with closed.h" />
     <ClInclude Include="Nbs.h" />
     <ClInclude Include="PerfectSolution.h" />
-    <ClInclude Include="StackArray.h" />
     <ClInclude Include="Astar.h" />
     <ClInclude Include="dibbs.h" />
     <ClInclude Include="Direction.h" />
@@ -154,6 +217,18 @@
     <ClInclude Include="IDAstar.h" />
     <ClInclude Include="Pancake.h" />
     <ClInclude Include="problems.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\VulkanStarlight\shaders\line.frag" />
+    <None Include="..\VulkanStarlight\shaders\line.vert" />
+    <None Include="..\VulkanStarlight\shaders\outline.frag" />
+    <None Include="..\VulkanStarlight\shaders\phong.frag" />
+    <None Include="..\VulkanStarlight\shaders\phong.vert" />
+    <None Include="..\VulkanStarlight\shaders\sdf.frag" />
+    <None Include="..\VulkanStarlight\shaders\sdfsprite.vert" />
+    <None Include="..\VulkanStarlight\shaders\sprite.frag" />
+    <None Include="..\VulkanStarlight\shaders\starsphere.frag" />
+    <None Include="..\VulkanStarlight\shaders\starsphere.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

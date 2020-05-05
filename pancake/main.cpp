@@ -1,3 +1,5 @@
+#include <StackArray.h>
+#include "Transform.h"
 #include "Pancake.h"
 #include "Astar.h"
 #include "id-d.h"
@@ -20,20 +22,57 @@
 #include "PerfectSolution.h"
 
 
+
+#include <iostream>
+#include <stdexcept>
+#include <functional>
+#include <cstdlib>
+#include <cstdio>
+#include <utility>
+#include <type_traits>
+#include <chrono>
+#include <ctime>    
+
+//Windows includes
+#include <windows.h>
+#include <fcntl.h>
+#include <io.h>
+#include <ShellScalingAPI.h>
+
+#include "Renderer.h"
+#include "Timer.hpp"
+#include "Archetype.h"
+#include "ECSManager.h"
+#include "Transform.h"
+#include "static_helpers.h"
+#include "Input.h"
+#include "ScreenElementProcessor.hpp"
+#include "Screen.h"
+#include "Serialization.h"
+#include "UISystem.h"
+
+#include "sprite.h"
+#include "FontComponents.h"
+#include "Model.hpp"
+#include <VulkanLineRenderer.h>
+
 //#define IDA_STAR
 
-//#define A_STAR
+#define A_STAR
 #define REVERSE_ASTAR
 //#define IDD
-#define DIBBS
+//#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
 //#define DIBBS_NBS
-#define ASSYMETRIC
+//#define ASSYMETRIC
 
 //constexpr int NUM_PROBLEMS = 100;
 
+float small_rand() {
+  return -10 + static_cast <float> (rand()) / static_cast <float> (RAND_MAX / 20);
+}
 
 void generate_random_instance(double& seed, uint8_t problem[]) {
   problem[0] = NUM_PANCAKES;
@@ -42,6 +81,68 @@ void generate_random_instance(double& seed, uint8_t problem[]) {
 }
 
 
+void SolveAStar(uint8_t* problem) {
+  Pancake fnode(problem, Direction::forward);
+
+  auto s = globalECS.create_entity(0, Mesh{ 0, 0 }, dWorldPosition{ { 0, 0, 0 } }, Scale{ { .01f, .01f, .01f } });
+
+  for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
+    Pancake new_action = fnode.apply_action(i);
+    auto next_entity = globalECS.create_entity(0, Mesh{ 0, 0 },
+      dWorldPosition{ { small_rand(), small_rand(), small_rand() } },
+      Scale{ { .01f, .01f, .01f } }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
+    globalECS.create_entity(1, SpringForce{ s, next_entity, 1.f });
+    globalECS.create_entity(1, Line{ s, next_entity });
+
+    for (int k = 2, l = NUM_PANCAKES; k <= l; ++k) {
+      Pancake new_action2 = new_action.apply_action(k);
+      auto next_entity2 = globalECS.create_entity(1, Mesh{ 0, 0 },
+        dWorldPosition{ { small_rand(), small_rand(), small_rand() } },
+        Scale{ { .01f, .01f, .01f } }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
+      globalECS.create_entity(2, SpringForce{ next_entity, next_entity2, 1.f });
+      globalECS.create_entity(2, Line{ next_entity, next_entity2 });
+    }
+  }
+
+  /*Pancake::Initialize_Dual(problem);
+  Pancake bnode(problem, Direction::backward);
+  Pancake goal = Pancake::GetSortedStack(Direction::backward);
+
+  uint32_t cstar;
+  std::unordered_set<Pancake, PancakeHash> closed_b, closed_f;
+  {
+    Astar backwardInstance;
+    auto [cstar_b, expansions_b, memory_b] = backwardInstance.run_search(goal, bnode);
+    cstar = cstar_b;
+    closed_b = backwardInstance.closed;
+  }
+
+  goal = Pancake::GetSortedStack(Direction::forward);
+  {
+    Astar forwardInstance;
+    auto [cstar_f, expansions_f, memory_f] = forwardInstance.run_search(fnode, goal);
+    closed_f = forwardInstance.closed;
+
+    if (cstar_f != cstar) std::cout << "ERROR";
+  }
+
+
+  std::vector<Pancake> pancake_expansions;
+  auto [cstar_dibbs, expansions, memory] = Dibbs::search(fnode, goal, &pancake_expansions);
+
+  tsl::hopscotch_map<int, float> offsets;
+  for (const auto& x : pancake_expansions) {
+    auto b = closed_b.find(x);
+    auto f = closed_f.find(x);
+    if (b == closed_b.end() && f == closed_f.end()) {
+      std::cout << "ERROR in finding both";
+    }
+    if (x.dir == Direction::forward) {
+      if (offsets.count(x.g) == 0) offsets[x.g] = 0;
+      globalECS.create_entity(0, Mesh{ 1, 0 }, dWorldPosition{ { 0., offsets[x.g], x.g } }, Scale{ { .01f, .01f, .01f }, RepulsiveForce{1.f} });
+    }
+  }*/
+}
 
 void output_data(std::ostream& stream) {
 
@@ -561,50 +662,142 @@ void run_random_test() {
   output_data(file);
 }
 
-int main()
+class InputHelper {
+public:
+  static void clear() {
+    Input::clear();
+  }
+};
+
+class Engine {
+public:
+  std::unique_ptr<Serialization> serializer;
+  std::unique_ptr<vks::Renderer> renderer;
+  std::unique_ptr<Camera> camera;
+
+  inline bool ProcessWin32() {
+    static MSG msg;
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) == TRUE) {
+      if (msg.message == WM_QUIT) {
+        return false;
+      }
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+    return true;
+  }
+
+  void MainLoop() {
+    while (true) {
+      Timer::Run();
+      globalECS.ClearDeleteQueue();
+      InputHelper::clear();
+      if (!ProcessWin32()) break;
+      serializer->Run();
+      ScreenElementProcessor::Run();
+
+      UISystem::Run();
+
+      for (auto x : globalECS.Query<Acceleration>()) {
+        x.get<Acceleration>()->value = glm::dvec3(0);
+      }
+
+      for (auto x : globalECS.Query<RepulsiveForce, dWorldPosition, Acceleration>()) {
+        for (auto y : globalECS.Query<RepulsiveForce, dWorldPosition, Acceleration>()) {
+          if (x == y) continue;
+          auto x_pos = x.get<dWorldPosition>();
+          auto y_pos = y.get<dWorldPosition>();
+          auto x_accel = x.get<Acceleration>();
+          auto y_accel = y.get<Acceleration>();
+          auto q = x_pos->value - y_pos->value + glm::dvec3(0, 0.001, 0);
+          auto dist = sqrt(std::max(0.01, (q.x * q.x + q.y * q.y + q.z * q.z)));
+          auto inv_dist = 1. / dist;
+          inv_dist /= 2; //Because this is n^2: a pushes b and b pushes a
+          if (x_accel != nullptr)
+            x_accel->value += glm::normalize(q) * inv_dist;
+          if (y_accel != nullptr)
+            y_accel->value -= glm::normalize(q) * inv_dist;
+        }
+      }
+
+      for (auto x : globalECS.Query<SpringForce>()) {
+        auto e1 = globalECS.get<dWorldPosition>(x.get<SpringForce>()->obj1);
+        auto e2 = globalECS.get<dWorldPosition>(x.get<SpringForce>()->obj2);
+        auto e1a = globalECS.get<Acceleration>(x.get<SpringForce>()->obj1);
+        auto e2a = globalECS.get<Acceleration>(x.get<SpringForce>()->obj2);
+        auto q = e1->value - e2->value + glm::dvec3(0, 0.001, 0);;
+        auto dist = sqrt(q.x * q.x + q.y * q.y + q.z * q.z);
+        if (e1a != nullptr)
+          e1a->value -= glm::normalize(q) * dist;
+        if (e2a != nullptr)
+          e2a->value += glm::normalize(q) * dist;
+      }
+
+      for (auto x : globalECS.Query<Drag, Velocity>()) {
+        x.get<Velocity>()->value *= glm::clamp(1 - x.get<Drag>()->strength, 0., 1.);
+      }
+
+      for (auto x : globalECS.Query<dWorldPosition, Velocity>()) {
+        x.get<dWorldPosition>()->value += x.get<Velocity>()->value * Timer::deltaTime;
+        if (std::isnan(x.get<dWorldPosition>()->value.x)) {
+          x.get<dWorldPosition>()->value = glm::vec3(0);
+        }
+      }
+
+      for (auto x : globalECS.Query<Acceleration, Velocity>()) {
+        x.get<Velocity>()->value += x.get<Acceleration>()->value * Timer::deltaTime;
+        if (std::isnan(x.get<Velocity>()->value.x)) {
+          x.get<Velocity>()->value = glm::vec3(0);
+        }
+      }
+
+      for (auto x : globalECS.Query<Line>()) {
+        auto line = x.get<Line>();
+        line->positions.clear();
+        line->positions.push_back({ globalECS.get<dWorldPosition>(line->a)->value, glm::dvec4(1) });
+        line->positions.push_back({ globalECS.get<dWorldPosition>(line->b)->value, glm::dvec4(1) });
+      }
+
+      camera->Run();
+      renderer->Run();
+    }
+  }
+
+  void Initialize(HINSTANCE hInstance) {
+    Timer::Init();
+    serializer = std::make_unique<Serialization>();
+    renderer = std::make_unique<vks::Renderer>("Pancake", hInstance);
+    camera = std::make_unique<Camera>();
+    camera->Initialize();
+    UISystem::Init();
+  }
+};
+
+int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
-  GeneratePerfectCounts();
-  //run_random_test();
-  return 0;
+  try {
+    Engine e;
+    e.Initialize(hInstance);
 
-  uint8_t problem[] = { 14,  8,  11,  4,  2,  10,  3,  14,  7,  12,  13,  1,  6,  5,  9 };
-  Pancake::Initialize_Dual(problem);
+    //Mesh mesh{ 0, 0 };
+    //dWorldPosition dpos{ { 0., 0., 0. } };
+    //Orientation o{ glm::rotate(glm::identity<glm::quat>(), glm::radians(90.f), glm::vec3(1, 0, 0)) };
+    //globalECS.create_entity(0, mesh, dpos, o);
 
-  Pancake idd_f(problem, Direction::forward);
-  Pancake idd_b = Pancake::GetSortedStack(Direction::backward);
-  std::cout << "s " << " g = " << (int)idd_f.g << " h = " << (int)idd_f.h << " h2 = " << (int)idd_f.h2 << " fbar = " << (int)idd_f.f_bar << "\n";
-  std::cout << "t " << " g = " << (int)idd_b.g << " h = " << (int)idd_b.h << " h2 = " << (int)idd_b.h2 << " fbar = " << (int)idd_b.f_bar << "\n";
-  std::vector<int> moves = { 7, 14, 11, 12, 9, 7, 10, 5, 8, 11 };
-  for (int i = 0; i < moves.size(); ++i) {
-    idd_f = idd_f.apply_action(moves[i]);
-    std::cout << "After move " << moves[i] << " g = " << (int)idd_f.g << " h = " << (int)idd_f.h << " h2 = " << (int)idd_f.h2 << " fbar = " << (int)idd_f.f_bar << "\n";
+    //run_random_test();
+    //GeneratePerfectCounts();
+    double seed = 3.1567;
+    uint8_t problem[NUM_PANCAKES + 1];
+    generate_random_instance(seed, problem);
+    SolveAStar(problem);
 
-    //std::cout << "Node: ";
-    //for (int i = 0; i < NUM_PANCAKES + 1; ++i) {
-    //  std::cout << std::to_string(idd_f.source[i]) << " ";
-    //}
-    //std::cout << "\n";
+    e.MainLoop();
   }
-  std::vector<int> moves2 = { 10, 13, 3};
-  for (int i = moves2.size() - 1; i >= 0; --i) {
-    idd_b = idd_b.apply_action(moves2[i]);
-    std::cout << "After backward move " << moves2[i] << " g = " << (int)idd_b.g << " h = " << (int)idd_b.h << " h2 = " << (int)idd_b.h2 << " fbar = " << (int)idd_b.f_bar << "\n";
+  catch (const std::exception& e) {
+    vks::tools::exitFatal(std::string("Fatal exception thrown: ") + e.what(), 0);
+    return EXIT_FAILURE;
   }
-  assert(idd_f == idd_b);
-
-  std::cout << "Middle pancake:\n";
-  for (int i = 0; i < NUM_PANCAKES; ++i) {
-    std::cout << std::to_string(idd_f.source[i]) << " ";
-  }
-  std::cout << "\n";
-  for (int i = 0; i < NUM_PANCAKES; ++i) {
-    std::cout << std::to_string(idd_b.source[i]) << " ";
-  }
-  std::cout << "\n";
-
-  std::cout << "\nMeeting point: ";
-  for (int i = 0; i < NUM_PANCAKES + 1; ++i) {
-    std::cout << std::to_string(idd_f.source[i]) << " ";
-  } 
-  
+  return EXIT_SUCCESS;
 }
+
+

@@ -8,9 +8,8 @@
 #include <stack>
 #include <cmath>
 #include <set>
-#include "StackArray.h"
+#include <StackArray.h>
 
-#define NOMINMAX
 #include <windows.h>
 #include <Psapi.h>
 

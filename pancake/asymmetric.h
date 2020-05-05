@@ -8,9 +8,8 @@
 #include <tuple>
 #include <string>
 #include <algorithm>
-#include "StackArray.h"
+#include <StackArray.h>
 
-#define NOMINMAX
 #include <windows.h>
 #include <Psapi.h>
 

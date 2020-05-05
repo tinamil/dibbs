@@ -9,7 +9,6 @@
 #include <cmath>
 #include <set>
 
-#define NOMINMAX
 #include <windows.h>
 #include <Psapi.h>
 

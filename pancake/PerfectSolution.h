@@ -117,7 +117,7 @@ void GeneratePerfectCounts() {
     for (const auto& f : closed_f) {
       int bindex = 0;
       for (const auto& b : closed_b) {
-        if (f.g + b.g + 1 <= cstar && f.f_bar + b.f_bar <= 2 * cstar && f.f + b.delta <= cstar && b.f + f.delta <= cstar) {
+        if (f.g + b.g + 1 < cstar && f.f_bar + b.f_bar < 2 * cstar && f.f + b.delta < cstar && b.f + f.delta < cstar) {
           addEdge(findex, bindex);
         }
         bindex += 1;

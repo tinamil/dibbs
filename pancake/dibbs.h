@@ -6,14 +6,14 @@
 #include <tuple>
 #include <string>
 #include <algorithm>
-#include "StackArray.h"
+#include <StackArray.h>
 
-#define NOMINMAX
 #include <windows.h>
 #include <Psapi.h>
 
 class Dibbs
 {
+public:
   typedef std::set<const Pancake*, PancakeFBarSortLowG> set;
   typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
 
@@ -30,7 +30,7 @@ class Dibbs
   Dibbs() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0) {}
 
 
-  void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed) {
+  void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, std::vector<Pancake>* expansions_in_order = nullptr) {
     const Pancake* next_val = *open.begin();
 
     auto it_hash = open_hash.find(next_val);
@@ -42,6 +42,8 @@ class Dibbs
     ++expansions_cstar;
 
     closed.insert(next_val);
+
+    expansions_in_order->push_back(*next_val);
 
     for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
       Pancake new_action = next_val->apply_action(i);
@@ -96,7 +98,7 @@ class Dibbs
   Pancake best_f, best_b;
 #endif
 
-  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal) {
+  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr) {
     expansions = 0;
     memory = 0;
     auto ptr = storage.push_back(start);
@@ -118,16 +120,16 @@ class Dibbs
       }
 
       if ((*open_f.begin())->f_bar < (*open_b.begin())->f_bar) {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f);
+        expand_node(open_f, open_f_hash, open_b_hash, closed_f, expansions_in_order);
       }
       else if ((*open_f.begin())->f_bar > (*open_b.begin())->f_bar) {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b);
+        expand_node(open_b, open_b_hash, open_f_hash, closed_b, expansions_in_order);
       }
       else if (open_f.size() <= open_b.size()) {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f);
+        expand_node(open_f, open_f_hash, open_b_hash, closed_f, expansions_in_order);
       }
       else {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b);
+        expand_node(open_b, open_b_hash, open_f_hash, closed_b, expansions_in_order);
       }
 
     }
@@ -146,15 +148,15 @@ class Dibbs
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
     }
     else {
-      std::cout << "Expansions cstar: " << expansions_cstar << " / " << expansions << '\n';
+      //std::cout << "Expansions cstar: " << expansions_cstar << " / " << expansions << '\n';
       return std::make_tuple((double)UB, expansions, memory);
     }
   }
 
 public:
 
-  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal) {
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr) {
     Dibbs instance;
-    return instance.run_search(start, goal);
+    return instance.run_search(start, goal, expansions_in_order);
   }
 };

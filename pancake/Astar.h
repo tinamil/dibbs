@@ -5,7 +5,6 @@
 #include <unordered_set>
 #include <tuple>
 #include <string>
-#define NOMINMAX
 #include <windows.h>
 #include <Psapi.h>
 
@@ -19,7 +18,7 @@ public:
 
   Astar() : open() {}
 
-  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal) {
+  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr) {
     size_t expansions = 0;
     memory = 0;
     open.push(start);
@@ -36,6 +35,9 @@ public:
         continue;
       }
       closed.insert(next_val);
+      if (expansions_in_order != nullptr) {
+        expansions_in_order->push_back(next_val);
+      }
 
       if (next_val == goal) {
         UB = next_val.g;
@@ -54,12 +56,12 @@ public:
         break;
       }
 
-      /*BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
+      BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
       memory = std::max(memory, memCounter.PagefileUsage);
       if (memCounter.PagefileUsage > MEM_LIMIT) {
         break;
-      }*/
+      }
 
       ++expansions;
 
@@ -75,9 +77,9 @@ public:
     return std::make_tuple(UB, expansions, memory);
   }
 
-  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal) {
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr) {
     Astar instance;
-    return instance.run_search(start, goal);
+    return instance.run_search(start, goal, expansions_in_order);
   }
 };
 

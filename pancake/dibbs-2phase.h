@@ -12,9 +12,8 @@
 #include <cmath>
 #include <set>
 #include <queue>
-#include "StackArray.h"
+#include <StackArray.h>
 
-#define NOMINMAX
 #include <windows.h>
 #include <Psapi.h>
 #include <optional>

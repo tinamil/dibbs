@@ -4,7 +4,7 @@
 
 template <typename T>
 class StackArray {
-  constexpr static size_t SIZE = 1000000;
+  const static size_t SIZE = 1000000;
   std::vector<T*> storage;
   std::vector<size_t> sizes;
 
@@ -20,7 +20,45 @@ public:
     }
   }
 
-  size_t size() {
+  void Serialize(std::ofstream& stream) const {
+    size_t size_of_sizes = sizes.size();
+    stream.write(reinterpret_cast<const char*>(&size_of_sizes), sizeof(size_of_sizes));
+    stream.write(reinterpret_cast<const char*>(sizes.data()), sizeof(size_t) * size_of_sizes);
+    for (size_t i = 0, end = storage.size(); i < end; ++i) {
+      stream.write(reinterpret_cast<const char*>(storage[i]), sizeof(T) * sizes[i]);
+    }
+  }
+
+  void Deserialize(std::ifstream& stream) {
+    for (auto& x : storage) {
+      delete[] x;
+    }
+    storage.clear();
+    sizes.clear();
+
+    size_t size_of_sizes;
+    stream.read(reinterpret_cast<char*>(&size_of_sizes), sizeof(size_of_sizes));
+    sizes.resize(size_of_sizes);
+    stream.read(reinterpret_cast<char*>(sizes.data()), sizeof(size_t) * size_of_sizes);
+    for (size_t i = 0; i < size_of_sizes; ++i) {
+      auto ptr = new T[SIZE];
+      storage.push_back(ptr);
+      stream.read(reinterpret_cast<char*>(ptr), sizeof(T) * sizes[i]);
+    }
+  }
+
+  void clear() {
+    for (auto& x : storage) {
+      delete[] x;
+    }
+    storage.clear();
+    sizes.clear();
+
+    storage.push_back(new T[SIZE]);
+    sizes.push_back(0);
+  }
+
+  size_t size() const {
     return (storage.size() - 1) * SIZE + sizes.back();
   }
 
@@ -34,23 +72,6 @@ public:
       (*storage.rbegin())[0] = type;
     }
     return storage.back() + sizes.back() - 1;
-  }
-
-  bool pop_back() {
-    if (sizes.size() > 1 && sizes.back() == 0) {
-      sizes.pop_back();
-      delete[] storage[sizes.size()];
-    }
-    if (sizes.back() == 0 && sizes.size() == 1) {
-      return false;
-    }
-    assert(sizes.back() != 0);
-    --sizes.back();
-    return true;
-  }
-
-  const T& top(const uint32_t optional = 0) {
-    return this->operator[](size() - 1);
   }
 
   T& operator[](std::size_t index) {
@@ -87,8 +108,8 @@ public:
     bool operator!=(Iterator other) const {
       return !(*this == other);
     }
-    T operator*() {
-      return arch_ptr[index];
+    T& operator*() {
+      return (*arch_ptr)[index];
     }
   };
 
