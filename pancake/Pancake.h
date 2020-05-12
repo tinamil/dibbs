@@ -8,8 +8,8 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 10;
-constexpr int GAPX = 0;
+constexpr int NUM_PANCAKES = 16;
+constexpr int GAPX = 2;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 
 class Pancake {
@@ -21,6 +21,7 @@ public:
   Direction dir;
 #ifdef HISTORY
   std::vector<uint8_t> actions;
+  const Pancake* parent = nullptr;
 #endif
   uint8_t source[NUM_PANCAKES + 1];                // source sequence of Pancakes
   uint8_t g;
@@ -52,7 +53,7 @@ public:
   Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f),
     f_bar(copy.f_bar), hdiff(copy.hdiff), delta(copy.delta), threshold(copy.threshold)
 #ifdef HISTORY
-    , actions(copy.actions)
+    , actions(copy.actions), parent(copy.parent)
 #endif
   {
     memcpy(source, copy.source, NUM_PANCAKES + 1);
@@ -88,6 +89,7 @@ public:
     Pancake new_node(*this);
 #ifdef HISTORY
     new_node.actions.push_back(i);
+    new_node.parent = this;
 #endif
     new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
     new_node.h2 = new_node.update_gap_lb(OppositeDirection(dir), i, new_node.h2);

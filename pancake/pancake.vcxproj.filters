@@ -13,11 +13,11 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
-    <Filter Include="Header Files\Vulkan">
-      <UniqueIdentifier>{2cbf00f8-d01a-4dec-9477-e559ecd887ae}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Vulkan">
       <UniqueIdentifier>{f33ca96c-67fe-42d5-bf4c-49a0e789e902}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Vulkan">
+      <UniqueIdentifier>{2b8bb896-2d30-44ad-b3a3-e3a7e942571d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -125,9 +125,6 @@
     <ClInclude Include="dibbs-nbs.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dibbs-2phase.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="asymmetric.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -182,6 +179,9 @@
     <ClInclude Include="..\VulkanStarlight\sprite.h">
       <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
+    <ClInclude Include="..\VulkanStarlight\StackArray.h">
+      <Filter>Header Files\Vulkan</Filter>
+    </ClInclude>
     <ClInclude Include="..\VulkanStarlight\static_helpers.h">
       <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
@@ -215,6 +215,9 @@
     <ClInclude Include="..\VulkanStarlight\VulkanFontRenderer.h">
       <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
+    <ClInclude Include="..\VulkanStarlight\VulkanLineRenderer.h">
+      <Filter>Header Files\Vulkan</Filter>
+    </ClInclude>
     <ClInclude Include="..\VulkanStarlight\VulkanModel.hpp">
       <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
@@ -239,39 +242,39 @@
     <ClInclude Include="..\VulkanStarlight\Window.h">
       <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanLineRenderer.h">
-      <Filter>Header Files\Vulkan</Filter>
+    <ClInclude Include="dibbs-2phase.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\VulkanStarlight\shaders\outline.frag">
+    <None Include="shaders\line.frag">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\VulkanStarlight\shaders\phong.frag">
+    <None Include="shaders\line.vert">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\VulkanStarlight\shaders\phong.vert">
+    <None Include="shaders\outline.frag">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\VulkanStarlight\shaders\sdf.frag">
+    <None Include="shaders\phong.frag">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\VulkanStarlight\shaders\sdfsprite.vert">
+    <None Include="shaders\phong.vert">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\VulkanStarlight\shaders\sprite.frag">
+    <None Include="shaders\sdf.frag">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\VulkanStarlight\shaders\starsphere.frag">
+    <None Include="shaders\sdfsprite.vert">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\VulkanStarlight\shaders\starsphere.vert">
+    <None Include="shaders\sprite.frag">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\VulkanStarlight\shaders\line.frag">
+    <None Include="shaders\starsphere.frag">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\VulkanStarlight\shaders\line.vert">
+    <None Include="shaders\starsphere.vert">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

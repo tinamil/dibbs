@@ -9,7 +9,7 @@
 #include "Nbs.h"
 #include "dvcbs.h"
 #include "problems.h"
-#include "dibbs-array.hpp"
+#include "dibbs-2phase.hpp"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -58,20 +58,22 @@
 
 //#define IDA_STAR
 
-#define A_STAR
-#define REVERSE_ASTAR
+//#define A_STAR
+//#define REVERSE_ASTAR
 //#define IDD
-//#define DIBBS
+#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
-//#define DIBBS_NBS
+#define DIBBS_NBS
 //#define ASSYMETRIC
 
 //constexpr int NUM_PROBLEMS = 100;
 
+//TODO: Setup cpu to gpu line buffer for line rendering
+
 float small_rand() {
-  return -10 + static_cast <float> (rand()) / static_cast <float> (RAND_MAX / 20);
+  return -1 + static_cast <float> (rand()) / static_cast <float> (RAND_MAX / 2);
 }
 
 void generate_random_instance(double& seed, uint8_t problem[]) {
@@ -82,15 +84,79 @@ void generate_random_instance(double& seed, uint8_t problem[]) {
 
 
 void SolveAStar(uint8_t* problem) {
+  glm::vec3 nodeScale = { .03f, .03f, .03f };
+
   Pancake fnode(problem, Direction::forward);
 
-  auto s = globalECS.create_entity(0, Mesh{ 0, 0 }, dWorldPosition{ { 0, 0, 0 } }, Scale{ { .01f, .01f, .01f } });
 
-  for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
+  Pancake::Initialize_Dual(problem);
+  Pancake bnode(problem, Direction::backward);
+  Pancake goal = Pancake::GetSortedStack(Direction::backward);
+
+  std::vector<Pancake*> expansions;
+  uint32_t cstar;
+
+  Astar backwardInstance;
+  auto [cstar_b, expansions_b, memory_b] = backwardInstance.run_search(goal, bnode, &expansions);
+  cstar = cstar_b;
+
+  auto s = globalECS.create_entity(0, Mesh{ 0, 0 }, dWorldPosition{ { 0, 0, 0 } }, Scale{ nodeScale });
+  auto t = globalECS.create_entity(0, Mesh{ 0, 0 }, dWorldPosition{ { 0, 0, cstar } }, Scale{ nodeScale });
+
+  assert(*expansions[0] == goal);
+
+  std::queue<Pancake> queue;
+  queue.push(fnode);
+  std::unordered_set<Pancake, PancakeHash> closed;
+
+  while (queue.empty() == false && closed.size() < 1000) {
+    Pancake parent = queue.front();
+    queue.pop();
+    for (int j = 2; j <= NUM_PANCAKES; ++j) {
+      Pancake node = parent.apply_action(j);
+      if (!closed.contains(node)) {
+        queue.push(node);
+        closed.insert(node);
+        auto next_entity = globalECS.create_entity(0, Mesh{ 0, 0 },
+          dWorldPosition{ { small_rand(), small_rand(), small_rand() + node.g } },
+          Scale{ nodeScale }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
+        //globalECS.create_entity(1, SpringForce{ s, next_entity, 1.f });
+        //globalECS.create_entity(1, Line{ s, next_entity });
+      }
+    }
+  }
+  //goal = Pancake::GetSortedStack(Direction::forward);
+  //{
+  //  Astar forwardInstance;
+  //  auto [cstar_f, expansions_f, memory_f] = forwardInstance.run_search(fnode, goal);
+  //  closed_f = forwardInstance.closed;
+
+  //  if (cstar_f != cstar) std::cout << "ERROR";
+  //}
+
+
+  //std::vector<Pancake> pancake_expansions;
+  //auto [cstar_dibbs, expansions, memory] = Dibbs::search(fnode, goal, &pancake_expansions);
+
+  //tsl::hopscotch_map<int, float> offsets;
+  //for (const auto& x : pancake_expansions) {
+  //  auto b = closed_b.find(x);
+  //  auto f = closed_f.find(x);
+  //  if (b == closed_b.end() && f == closed_f.end()) {
+  //    std::cout << "ERROR in finding both";
+  //  }
+  //  if (x.dir == Direction::forward) {
+  //    if (offsets.count(x.g) == 0) offsets[x.g] = 0;
+  //    globalECS.create_entity(0, Mesh{ 1, 0 }, dWorldPosition{ { 0., offsets[x.g], x.g } }, Scale{ { .01f, .01f, .01f }, RepulsiveForce{1.f} });
+  //  }
+  //}
+
+
+ /* for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
     Pancake new_action = fnode.apply_action(i);
     auto next_entity = globalECS.create_entity(0, Mesh{ 0, 0 },
       dWorldPosition{ { small_rand(), small_rand(), small_rand() } },
-      Scale{ { .01f, .01f, .01f } }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
+      Scale{ nodeScale }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
     globalECS.create_entity(1, SpringForce{ s, next_entity, 1.f });
     globalECS.create_entity(1, Line{ s, next_entity });
 
@@ -98,50 +164,12 @@ void SolveAStar(uint8_t* problem) {
       Pancake new_action2 = new_action.apply_action(k);
       auto next_entity2 = globalECS.create_entity(1, Mesh{ 0, 0 },
         dWorldPosition{ { small_rand(), small_rand(), small_rand() } },
-        Scale{ { .01f, .01f, .01f } }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
+        Scale{ nodeScale }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
       globalECS.create_entity(2, SpringForce{ next_entity, next_entity2, 1.f });
       globalECS.create_entity(2, Line{ next_entity, next_entity2 });
     }
-  }
-
-  /*Pancake::Initialize_Dual(problem);
-  Pancake bnode(problem, Direction::backward);
-  Pancake goal = Pancake::GetSortedStack(Direction::backward);
-
-  uint32_t cstar;
-  std::unordered_set<Pancake, PancakeHash> closed_b, closed_f;
-  {
-    Astar backwardInstance;
-    auto [cstar_b, expansions_b, memory_b] = backwardInstance.run_search(goal, bnode);
-    cstar = cstar_b;
-    closed_b = backwardInstance.closed;
-  }
-
-  goal = Pancake::GetSortedStack(Direction::forward);
-  {
-    Astar forwardInstance;
-    auto [cstar_f, expansions_f, memory_f] = forwardInstance.run_search(fnode, goal);
-    closed_f = forwardInstance.closed;
-
-    if (cstar_f != cstar) std::cout << "ERROR";
-  }
-
-
-  std::vector<Pancake> pancake_expansions;
-  auto [cstar_dibbs, expansions, memory] = Dibbs::search(fnode, goal, &pancake_expansions);
-
-  tsl::hopscotch_map<int, float> offsets;
-  for (const auto& x : pancake_expansions) {
-    auto b = closed_b.find(x);
-    auto f = closed_f.find(x);
-    if (b == closed_b.end() && f == closed_f.end()) {
-      std::cout << "ERROR in finding both";
-    }
-    if (x.dir == Direction::forward) {
-      if (offsets.count(x.g) == 0) offsets[x.g] = 0;
-      globalECS.create_entity(0, Mesh{ 1, 0 }, dWorldPosition{ { 0., offsets[x.g], x.g } }, Scale{ { .01f, .01f, .01f }, RepulsiveForce{1.f} });
-    }
   }*/
+
 }
 
 void output_data(std::ostream& stream) {
@@ -675,7 +703,7 @@ public:
   std::unique_ptr<vks::Renderer> renderer;
   std::unique_ptr<Camera> camera;
 
-  inline bool ProcessWin32() {
+  inline static bool ProcessWin32() {
     static MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) == TRUE) {
       if (msg.message == WM_QUIT) {
@@ -703,20 +731,18 @@ public:
       }
 
       for (auto x : globalECS.Query<RepulsiveForce, dWorldPosition, Acceleration>()) {
+        auto x_pos = x.get<dWorldPosition>();
+        auto x_accel = x.get<Acceleration>();
         for (auto y : globalECS.Query<RepulsiveForce, dWorldPosition, Acceleration>()) {
           if (x == y) continue;
-          auto x_pos = x.get<dWorldPosition>();
-          auto y_pos = y.get<dWorldPosition>();
-          auto x_accel = x.get<Acceleration>();
           auto y_accel = y.get<Acceleration>();
+          auto y_pos = y.get<dWorldPosition>();
           auto q = x_pos->value - y_pos->value + glm::dvec3(0, 0.001, 0);
-          auto dist = sqrt(std::max(0.01, (q.x * q.x + q.y * q.y + q.z * q.z)));
-          auto inv_dist = 1. / dist;
-          inv_dist /= 2; //Because this is n^2: a pushes b and b pushes a
+          auto inv_dist = glm::normalize(q) / std::max(0.01, q.x * q.x + q.y * q.y + q.z * q.z);
           if (x_accel != nullptr)
-            x_accel->value += glm::normalize(q) * inv_dist;
+            x_accel->value += inv_dist;
           if (y_accel != nullptr)
-            y_accel->value -= glm::normalize(q) * inv_dist;
+            y_accel->value -= inv_dist;
         }
       }
 
@@ -775,29 +801,45 @@ public:
 
 int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
-  try {
-    Engine e;
-    e.Initialize(hInstance);
+  Window window("pancake", hInstance, true);
+  std::thread t(run_random_test);
+  //std::thread t(GeneratePerfectCounts);
+  std::thread t2([]() {
+    using namespace std::chrono_literals;
+    while (true)
+    {
+      Engine::ProcessWin32();
+      std::this_thread::sleep_for(10ms);
+    }
+    });
 
-    //Mesh mesh{ 0, 0 };
-    //dWorldPosition dpos{ { 0., 0., 0. } };
-    //Orientation o{ glm::rotate(glm::identity<glm::quat>(), glm::radians(90.f), glm::vec3(1, 0, 0)) };
-    //globalECS.create_entity(0, mesh, dpos, o);
-
-    //run_random_test();
-    //GeneratePerfectCounts();
-    double seed = 3.1567;
-    uint8_t problem[NUM_PANCAKES + 1];
-    generate_random_instance(seed, problem);
-    SolveAStar(problem);
-
-    e.MainLoop();
-  }
-  catch (const std::exception& e) {
-    vks::tools::exitFatal(std::string("Fatal exception thrown: ") + e.what(), 0);
-    return EXIT_FAILURE;
-  }
+  t.join();
+  std::cout << "\nDone\n";
+  while (true);
   return EXIT_SUCCESS;
+
+  //try {
+  //  Engine e;
+  //  e.Initialize(hInstance);
+  //  //Mesh mesh{ 0, 0 };
+  //  //dWorldPosition dpos{ { 0., 0., 0. } };
+  //  //Orientation o{ glm::rotate(glm::identity<glm::quat>(), glm::radians(90.f), glm::vec3(1, 0, 0)) };
+  //  //globalECS.create_entity(0, mesh, dpos, o);
+
+  //  //run_random_test();
+  //  //GeneratePerfectCounts();
+  //  double seed = 3.1567;
+  //  uint8_t problem[NUM_PANCAKES + 1];
+  //  generate_random_instance(seed, problem);
+  //  SolveAStar(problem);
+
+  //  e.MainLoop();
+  //}
+  //catch (const std::exception& e) {
+  //  vks::tools::exitFatal(std::string("Fatal exception thrown: ") + e.what(), 0);
+  //  return EXIT_FAILURE;
+  //}
+  //return EXIT_SUCCESS;
 }
 
 

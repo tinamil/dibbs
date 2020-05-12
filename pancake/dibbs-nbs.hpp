@@ -388,7 +388,7 @@ class DibbsNbs {
     std::optional<std::tuple<const Pancake*, const Pancake*>> pair;
     while ((pair = select_pair()).has_value())
     {
-      if (lbmin > UB) { //>= for first stop
+      if (lbmin >= UB) { //>= for first stop
         finished = true;
         break;
       }

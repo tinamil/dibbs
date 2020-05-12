@@ -74,7 +74,7 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\vulkan\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\16-2\</OutDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -180,6 +180,7 @@
     <ClInclude Include="..\VulkanStarlight\ScreenElementProcessor.hpp" />
     <ClInclude Include="..\VulkanStarlight\Serialization.h" />
     <ClInclude Include="..\VulkanStarlight\sprite.h" />
+    <ClInclude Include="..\VulkanStarlight\StackArray.h" />
     <ClInclude Include="..\VulkanStarlight\static_helpers.h" />
     <ClInclude Include="..\VulkanStarlight\threadpool.hpp" />
     <ClInclude Include="..\VulkanStarlight\Timer.hpp" />
@@ -201,7 +202,7 @@
     <ClInclude Include="..\VulkanStarlight\VulkanTools.h" />
     <ClInclude Include="..\VulkanStarlight\Window.h" />
     <ClInclude Include="asymmetric.h" />
-    <ClInclude Include="dibbs-2phase.h" />
+    <ClInclude Include="dibbs-2phase.hpp" />
     <ClInclude Include="dibbs-array.hpp" />
     <ClInclude Include="dibbs-global.hpp" />
     <ClInclude Include="dibbs-nbs.hpp" />
@@ -219,16 +220,16 @@
     <ClInclude Include="problems.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\VulkanStarlight\shaders\line.frag" />
-    <None Include="..\VulkanStarlight\shaders\line.vert" />
-    <None Include="..\VulkanStarlight\shaders\outline.frag" />
-    <None Include="..\VulkanStarlight\shaders\phong.frag" />
-    <None Include="..\VulkanStarlight\shaders\phong.vert" />
-    <None Include="..\VulkanStarlight\shaders\sdf.frag" />
-    <None Include="..\VulkanStarlight\shaders\sdfsprite.vert" />
-    <None Include="..\VulkanStarlight\shaders\sprite.frag" />
-    <None Include="..\VulkanStarlight\shaders\starsphere.frag" />
-    <None Include="..\VulkanStarlight\shaders\starsphere.vert" />
+    <None Include="shaders\line.frag" />
+    <None Include="shaders\line.vert" />
+    <None Include="shaders\outline.frag" />
+    <None Include="shaders\phong.frag" />
+    <None Include="shaders\phong.vert" />
+    <None Include="shaders\sdf.frag" />
+    <None Include="shaders\sdfsprite.vert" />
+    <None Include="shaders\sprite.frag" />
+    <None Include="shaders\starsphere.frag" />
+    <None Include="shaders\starsphere.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

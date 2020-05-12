@@ -43,7 +43,7 @@ public:
 
     closed.insert(next_val);
 
-    expansions_in_order->push_back(*next_val);
+    if (expansions_in_order) expansions_in_order->push_back(*next_val);
 
     for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
       Pancake new_action = next_val->apply_action(i);
@@ -71,7 +71,6 @@ public:
 #endif  
           size_t combined = (size_t)(*it_other)->g + new_action.g;
           if (combined < UB) {
-            expansions_cstar = 0;
             UB = combined;
           }
         }
@@ -110,8 +109,13 @@ public:
 
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
+    int lbmin = 0;
     while (open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
-
+      
+      if (lbmin < ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+        expansions_cstar = 0;
+        lbmin = ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0);
+      }
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
       memory = std::max(memory, memCounter.PagefileUsage);
@@ -148,7 +152,6 @@ public:
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
     }
     else {
-      //std::cout << "Expansions cstar: " << expansions_cstar << " / " << expansions << '\n';
       return std::make_tuple((double)UB, expansions, memory);
     }
   }

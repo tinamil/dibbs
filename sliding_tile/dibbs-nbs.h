@@ -13,7 +13,6 @@
 #include <queue>
 #include "StackArray.h"
 
-#define NOMINMAX
 #include <windows.h>
 #include <Psapi.h>
 #include <optional>
@@ -42,9 +41,11 @@ T variadic_max(T val, Ts... other) {
   return std::max(val, other_max);
 }
 
+typedef std::unordered_set<const SlidingTile*, SlidingTileHash, SlidingTileEqual> hash_set;
+
 
 template <typename T, typename THash, typename TEqual>
-class Pairs {
+class triple {
 
 public:
   struct FBarDiff {
@@ -93,13 +94,16 @@ public:
       assert(val == data.top());
       pop();
     }
+    size_t size() {
+      return data.size();
+    }
   };
   typedef std::unordered_set<T, THash, TEqual> hash_set;
   typedef queue_wrapper<FBarDiff> fbar_set;
   fbar_set fbset;
   size_t total_size = 0;
   std::vector<std::vector<std::vector<T>>> data;
-  Pairs() {
+  triple() {
     data.resize(255);
     for (int i = 0; i < data.size(); ++i) {
       data[i].resize(255);
@@ -109,10 +113,10 @@ public:
   T query(T other, uint8_t lbmin) const {
     int max_delta = lbmin - other->f;
     int max_f = lbmin - other->delta;
-    int target_fbar = 2 * lbmin - other->f_bar;
-    int min_fbar = fbset.top()->f_bar;
+    //int target_fbar = 2 * lbmin - other->f_bar;
+    //int min_fbar = fbset.top()->f_bar;
     for (int target_f = lbmin - max_delta; target_f <= max_f; ++target_f) {
-      for (int target_delta = std::max(min_fbar - target_f, 0); target_delta <= max_delta; ++target_delta) {
+      for (int target_delta = 0; target_delta <= max_delta; ++target_delta) {
         auto val = data[target_f][target_delta];
         if (val.size() > 0) {
           return val.back();
@@ -120,6 +124,20 @@ public:
       }
     }
     return nullptr;
+  }
+
+  size_t query_size(int other_f, int other_delta, uint8_t lbmin) const {
+    size_t matches = 0;
+    int max_delta = lbmin - other_f;
+    int max_f = lbmin - other_delta;
+    //int target_fbar = 2 * lbmin - other->f_bar;
+    //int min_fbar = fbset.top()->f_bar;
+    for (int target_f = lbmin - max_delta; target_f <= max_f; ++target_f) {
+      for (int target_delta = 0; target_delta <= max_delta; ++target_delta) {
+        matches += data[target_f][target_delta].size();
+      }
+    }
+    return matches;
   }
 
   size_t size() const {
@@ -141,97 +159,118 @@ public:
     return size() == 0;
   }
 
-  static decltype(auto) query_pair(Pairs& front, Pairs& back, uint32_t lbmin, hash_set& closed_f, hash_set& closed_b)
+  static decltype(auto) query_pair(triple& front, triple& back, uint32_t lbmin, hash_set& closed_f, hash_set& closed_b)
   {
     uint32_t min = lbmin;
     T min_front = nullptr, min_back = nullptr;
     bool done = false;
-    while (!front.fbset.empty() && closed_f.contains(front.fbset.top())) {
-      front.fbset.pop();
-    }
-    while (!back.fbset.empty() && closed_b.contains(back.fbset.top())) {
-      back.fbset.pop();
-    }
 
-    if (back.fbset.top()->f_bar <= front.fbset.top()->f_bar) {
-      min_back = back.fbset.top();
-      min_front = front.query(min_back, lbmin);
-      while (min_front != nullptr && closed_f.contains(min_front)) {
-        front.pop_back(min_front);
-        min_front = front.query(min_back, lbmin);
+    float max_fsize = 0, max_bsize = 0;
+    int front_f = -1, front_delta = -1;
+    int back_f = -1, back_delta = -1;
+    for (int f = 0; f <= lbmin; ++f) {
+      for (int delta = 0; delta <= lbmin - f; ++delta) {
+        if (front.data[f][delta].size() > 0)
+        {
+          float bsize = static_cast<float>(back.query_size(f, delta, lbmin)) / front.data[f][delta].size();
+          if (bsize > max_bsize) {
+            max_bsize = bsize;
+            front_f = f;
+            front_delta = delta;
+          }
+        }
+        if (back.data[f][delta].size() > 0)
+        {
+          auto fsize = static_cast<float>(front.query_size(f, delta, lbmin)) / back.data[f][delta].size();
+
+          if (fsize > max_fsize) {
+            max_fsize = fsize;
+            back_f = f;
+            back_delta = delta;
+          }
+        }
       }
-      if (min_front != nullptr && min_front->f_bar + min_back->f_bar <= 2 * lbmin) {
-        back.fbset.pop();
-        front.pop_back(min_front);
-      }
-      else {
-        min_front = nullptr;
-        min_back = nullptr;
-      }
+    }
+    if (max_fsize >= max_bsize) {
+      return std::make_tuple(back_f, back_delta, false);
     }
     else {
-      min_front = front.fbset.top();
-      min_back = back.query(min_front, lbmin);
-      while (min_back != nullptr && closed_b.contains(min_back)) {
-        back.pop_back(min_back);
-        min_back = back.query(min_front, lbmin);
-      }
-      if (min_back != nullptr && min_front->f_bar + min_back->f_bar <= 2 * lbmin) {
-        front.fbset.pop();
-        back.pop_back(min_back);
-      }
-      else {
-        min_front = nullptr;
-        min_back = nullptr;
-      }
+      return std::make_tuple(front_f, front_delta, true);
     }
-    return std::make_tuple(min_front, min_back, min);
   }
 };
 
 class DibbsNbs {
 
-  typedef Pairs<const SlidingTile*, SlidingTileHash, SlidingTileEqual> TypedPairs;
   typedef std::unordered_set<const SlidingTile*, SlidingTileHash, SlidingTileEqual> hash_set;
+  //typedef std::priority_queue<const SlidingTile*, std::vector<const SlidingTile*>, FSortHighDuplicate> f_set;
+  //typedef std::priority_queue<const SlidingTile*, std::vector<const SlidingTile*>, GSortHighDuplicate> g_set;
 
   StackArray<SlidingTile> storage;
-  TypedPairs open_f_data, open_b_data;
-  //triple open_f_data;
-  //triple open_b_data;
+  triple<const SlidingTile*, SlidingTileHash, SlidingTileEqual> open_f_data;
+  triple<const SlidingTile*, SlidingTileHash, SlidingTileEqual> open_b_data;
   //g_set open_f_gset, open_b_gset;
   //f_set open_f_fset, open_b_fset;
-  //d_set open_f_dset, open_b_dset;
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
   size_t expansions;
   size_t UB;
   size_t lbmin;
   size_t memory;
+  int f = 0, d = 0;
+  bool dir = true;
 
 #ifdef HISTORY
   SlidingTile best_f;
   SlidingTile best_b;
 #endif
 
+  DibbsNbs() : open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
+
   std::optional<std::tuple<const SlidingTile*, const SlidingTile*>> select_pair() {
+
+    if (UB == SIZE_MAX) {
+      if ((open_f_data.fbset.top()->f_bar == open_b_data.fbset.top()->f_bar && open_f_data.fbset.size() < open_b_data.fbset.size()) || open_f_data.fbset.top()->f_bar < open_b_data.fbset.top()->f_bar) {
+        auto p = open_f_data.fbset.top();
+        open_f_data.fbset.pop();
+        return std::make_tuple(p, nullptr);
+      }
+      else {
+        auto p = open_b_data.fbset.top();
+        open_b_data.fbset.pop();
+        return std::make_tuple(nullptr, p);
+      }
+    }
+
     while (true) {
+
+      if (f >= 0 && dir && open_f_data.data[f][d].size() > 0) {
+        auto val = open_f_data.data[f][d].back();
+        open_f_data.data[f][d].pop_back();
+        return std::make_tuple(val, nullptr);
+      }
+      else if (f >= 0 && open_b_data.data[f][d].size() > 0) {
+        auto val = open_b_data.data[f][d].back();
+        open_b_data.data[f][d].pop_back();
+        return std::make_tuple(nullptr, val);
+      }
+
       if (open_f_data.empty()) return std::nullopt;
       else if (open_b_data.empty()) return std::nullopt;
       else {
-        auto [front, back, min] = TypedPairs::query_pair(open_f_data, open_b_data, lbmin, closed_f, closed_b);
-        if (front == nullptr && back == nullptr) {
+        auto [f1, d1, dir1] = triple<const SlidingTile*, SlidingTileHash, SlidingTileEqual>::query_pair(open_f_data, open_b_data, lbmin, closed_f, closed_b);
+        f = f1;
+        d = d1;
+        dir = dir1;
+        if (f == -1 && d == -1) {
           lbmin += 1;
           continue;
         }
-        /*if (min > lbmin) {
-          lbmin = min;
-        }*/
-        return std::make_tuple(front, back);
       }
     }
   }
 
-  bool expand_node(const SlidingTile* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, TypedPairs& data) {
+  bool expand_node(const SlidingTile* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, triple<const SlidingTile*, SlidingTileHash, SlidingTileEqual>& data) {
     if (next_val == nullptr) return true;
     auto removed = hash.erase(next_val);
     if (removed == 0) return true;
@@ -319,10 +358,11 @@ class DibbsNbs {
     lbmin = std::max(1ui8, std::max(start.h, goal.h));
 
     bool finished = false;
+
     std::optional<std::tuple<const SlidingTile*, const SlidingTile*>> pair;
     while ((pair = select_pair()).has_value())
     {
-      if (lbmin > UB) { //>= for first stop
+      if (lbmin >= UB) { //>= for first stop
         finished = true;
         break;
       }
@@ -343,7 +383,7 @@ class DibbsNbs {
       }
       std::cout << "\n";
 #endif 
-      return std::make_tuple(UB, expansions, memory);
+      return std::make_tuple((double)UB, expansions, memory);
     }
     else return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
   }

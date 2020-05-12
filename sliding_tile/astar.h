@@ -5,12 +5,13 @@
 #include <unordered_set>
 #include <tuple>
 #include <string>
-#define NOMINMAX
 #include <windows.h>
 #include <Psapi.h>
 
 class Astar
 {
+
+public:
   std::priority_queue<SlidingTile, std::vector<SlidingTile>, FSort> open;
   std::unordered_set<SlidingTile, SlidingTileHash> closed;
   size_t memory;
@@ -66,8 +67,6 @@ class Astar
     //std::cout << "Size: " << open.size() << '\n';
     return std::make_tuple(UB, expansions, memory);
   }
-
-public:
 
   static std::tuple<double, size_t, size_t> search(SlidingTile start, SlidingTile goal) {
     Astar instance;

@@ -12,21 +12,22 @@ class Astar
 {
 
 public:
-  std::priority_queue<Pancake, std::vector<Pancake>, PancakeFSort> open;
-  std::unordered_set<Pancake, PancakeHash> closed;
+  std::priority_queue<Pancake*, std::vector<Pancake*>, PancakeFSort> open;
+  std::unordered_set<Pancake*, PancakeHash, PancakeEqual> closed;
+  StackArray<Pancake> pancakes;
   size_t memory;
 
   Astar() : open() {}
 
-  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr) {
+  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<Pancake*>* expansions_in_order = nullptr) {
     size_t expansions = 0;
     memory = 0;
-    open.push(start);
+    open.push(pancakes.push_back(start));
 
     PROCESS_MEMORY_COUNTERS memCounter;
     double UB = std::numeric_limits<double>::infinity();
     while (open.size() > 0) {
-      Pancake next_val = open.top();
+      Pancake* next_val = open.top();
       open.pop();
 
       auto it = closed.find(next_val);
@@ -35,25 +36,26 @@ public:
         continue;
       }
       closed.insert(next_val);
-      if (expansions_in_order != nullptr) {
-        expansions_in_order->push_back(next_val);
-      }
 
-      if (next_val == goal) {
-        UB = next_val.g;
+      if (*next_val == goal && std::isinf(UB)) {
+        UB = next_val->g;
 #ifdef HISTORY
-        std::cout << "\nSolution: ";
+        /*std::cout << "\nSolution: ";
         for (int i = 0; i < next_val.actions.size(); ++i) {
           std::cout << std::to_string(next_val.actions[i]) << " ";
         }
-        std::cout << std::endl;
+        std::cout << std::endl;*/
 #endif
-        assert(next_val.h == 0);
+        assert(next_val->h == 0);
         //break;
       }
 
-      if (next_val.f > UB) {
+      if (next_val->f > UB) {
         break;
+      }
+
+      if (expansions_in_order != nullptr) {
+        expansions_in_order->push_back(next_val);
       }
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
@@ -66,10 +68,10 @@ public:
       ++expansions;
 
       for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
-        Pancake new_action = next_val.apply_action(i);
-        it = closed.find(new_action);
+        Pancake new_action = next_val->apply_action(i);
+        it = closed.find(&new_action);
         if (it == closed.end()) {
-          open.push(new_action);
+          open.push(pancakes.push_back(new_action));
         }
       }
     }
@@ -77,7 +79,7 @@ public:
     return std::make_tuple(UB, expansions, memory);
   }
 
-  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr) {
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<Pancake*>* expansions_in_order = nullptr) {
     Astar instance;
     return instance.run_search(start, goal, expansions_in_order);
   }
