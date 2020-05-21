@@ -7,7 +7,7 @@
 #include <stack>
 #include <cmath>
 
-#define NOMINMAX
+
 #include <windows.h>
 #include <Psapi.h>
 

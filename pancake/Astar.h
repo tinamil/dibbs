@@ -7,19 +7,20 @@
 #include <string>
 #include <windows.h>
 #include <Psapi.h>
+#include <StackArray.h>
 
 class Astar
 {
 
 public:
-  std::priority_queue<Pancake*, std::vector<Pancake*>, PancakeFSort> open;
-  std::unordered_set<Pancake*, PancakeHash, PancakeEqual> closed;
+  std::priority_queue<const Pancake*, std::vector<const Pancake*>, PancakeFSort> open;
+  std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> closed;
   StackArray<Pancake> pancakes;
   size_t memory;
 
   Astar() : open() {}
 
-  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<Pancake*>* expansions_in_order = nullptr) {
+  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<const Pancake*>* expansions_in_order = nullptr) {
     size_t expansions = 0;
     memory = 0;
     open.push(pancakes.push_back(start));
@@ -27,7 +28,7 @@ public:
     PROCESS_MEMORY_COUNTERS memCounter;
     double UB = std::numeric_limits<double>::infinity();
     while (open.size() > 0) {
-      Pancake* next_val = open.top();
+      const Pancake* next_val = open.top();
       open.pop();
 
       auto it = closed.find(next_val);
@@ -47,12 +48,12 @@ public:
         std::cout << std::endl;*/
 #endif
         assert(next_val->h == 0);
-        //break;
-      }
-
-      if (next_val->f > UB) {
         break;
       }
+
+      /*if (next_val->f > UB) {
+        break;
+      }*/
 
       if (expansions_in_order != nullptr) {
         expansions_in_order->push_back(next_val);
@@ -79,7 +80,7 @@ public:
     return std::make_tuple(UB, expansions, memory);
   }
 
-  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<Pancake*>* expansions_in_order = nullptr) {
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<const Pancake*>* expansions_in_order = nullptr) {
     Astar instance;
     return instance.run_search(start, goal, expansions_in_order);
   }

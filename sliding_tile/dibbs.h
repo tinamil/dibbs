@@ -8,7 +8,6 @@
 #include <algorithm>
 #include "StackArray.h"
 
-#define NOMINMAX
 #include <windows.h>
 #include <Psapi.h>
 
@@ -102,6 +101,7 @@ class Dibbs
 
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
+    bool forward = true;
     while (open_f.size() > 0 && open_b.size() > 0 && UB >= ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
@@ -113,11 +113,14 @@ class Dibbs
 
       if ((*open_f.begin())->f_bar < (*open_b.begin())->f_bar) {
         expand_node(open_f, open_f_hash, open_b_hash, closed_f);
+        forward = open_f.size() < open_b.size();
       }
       else if ((*open_f.begin())->f_bar > (*open_b.begin())->f_bar) {
         expand_node(open_b, open_b_hash, open_f_hash, closed_b);
+        forward = open_f.size() < open_b.size();
       }
-      else if (open_f.size() <= open_b.size()) {
+      else if (forward) {
+        //else if (open_f.size() <= open_b.size()) {
         expand_node(open_f, open_f_hash, open_b_hash, closed_f);
       }
       else {

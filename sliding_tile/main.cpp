@@ -6,7 +6,7 @@
 #include "id-d.h"
 #include "nbs.h"
 #include "ida.h"
-#include "dibbs-2phase.h"
+#include "dibbs-2phase-queue.h"
 #include <iostream>
 #include <cassert>
 #include <ctime>

@@ -245,6 +245,9 @@
     <ClInclude Include="dibbs-2phase.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dibbs-2phase-queue.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\line.frag">

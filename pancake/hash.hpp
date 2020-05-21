@@ -38,13 +38,20 @@ inline void hash_combine_impl(uint64_t& h, uint64_t k)
 
 uint64_t inline boost_hash(const uint8_t* data, const size_t len) {
   uint64_t hash = 0;
-  for (size_t i = 0; i < len; ++i) {
-    hash_combine_impl(hash, data[i]);
+  if (len >= 0) {
+    for (size_t i = 0; i < len; ++i) {
+      hash_combine_impl(hash, data[i]);
+    }
+  }
+  else {
+    for (long long i = len; i >= 0; --i) {
+      hash_combine_impl(hash, data[i]);
+    }
   }
   return hash;
 }
 
-uint32_t inline SuperFastHash(const unsigned char * data, int len) {
+uint32_t inline SuperFastHash(const unsigned char* data, int len) {
   uint32_t hash = len, tmp;
   int rem;
 

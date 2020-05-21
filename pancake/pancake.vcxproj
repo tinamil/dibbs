@@ -74,8 +74,7 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\16-2\</OutDir>
-    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\41-0AB\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -202,6 +201,7 @@
     <ClInclude Include="..\VulkanStarlight\VulkanTools.h" />
     <ClInclude Include="..\VulkanStarlight\Window.h" />
     <ClInclude Include="asymmetric.h" />
+    <ClInclude Include="dibbs-2phase-queue.hpp" />
     <ClInclude Include="dibbs-2phase.hpp" />
     <ClInclude Include="dibbs-array.hpp" />
     <ClInclude Include="dibbs-global.hpp" />

@@ -45,6 +45,10 @@ public:
         //}
         //std::cout << std::endl;
         assert(next_val.h == 0);
+        //break;
+      }
+
+      if (next_val.f > UB) {
         break;
       }
 

@@ -8,7 +8,7 @@
 #include <iostream>
 #include <algorithm>
 
-#define NOMINMAX
+
 #include <windows.h>
 #include <Psapi.h>
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <StackArray.h>
 #include "Pancake.h"
 #include "problems.h"
 #include "Astar.h"
@@ -20,23 +21,15 @@ inline void init(int _n1, int _n2) {
   last.clear();
   prev.clear();
   head.clear();
-  dist.clear();
-  Q.clear();
+
+  Q.resize(_n1);
+  dist.resize(_n1);
+
   last.resize(_n1);
   std::fill(last.begin(), last.end(), -1);
-  dist.resize(_n1);
-  Q.resize(_n1);
   matching.resize(_n2);
   used.resize(_n1);
   vis.resize(_n1);
-}
-
-inline void shrink(int new_size) {
-  last.resize(new_size);
-  dist.resize(new_size);
-  Q.resize(new_size);
-  used.resize(new_size);
-  vis.resize(new_size);
 }
 
 inline void addEdge(int u, int v) {
@@ -54,7 +47,7 @@ inline void bfs() {
       dist[u] = 0;
     }
   }
-  for (int i = 0; i < sizeQ; i++) {
+  for (int i = 0; i < sizeQ; ++i) {
     int u1 = Q[i];
     for (int e = last[u1]; e >= 0; e = prev[e]) {
       int u2 = matching[head[e]];
@@ -212,7 +205,7 @@ void GeneratePerfectCounts() {
 
       if (cstar_f != cstar) std::cout << "ERROR";
 
-      std::vector<Pancake*> lPancakes, rPancakes;
+      std::vector<const Pancake*> lPancakes, rPancakes;
       for (auto i = 0; i < forwardInstance.pancakes.size(); ++i) {
         auto f = &forwardInstance.pancakes[i];
         if (forwardInstance.closed.contains(f)) lPancakes.push_back(f);
@@ -227,34 +220,24 @@ void GeneratePerfectCounts() {
       int shrink_val = 0;
       int findex = 0;
       for (auto i = 0; i < lPancakes.size(); ++i) {
-        auto f = lPancakes[i];
-
+        const auto f = lPancakes[i];
         int bindex = 0;
-        bool match = false;
         for (auto j = 0; j < rPancakes.size(); ++j) {
-          auto b = rPancakes[j];
+          const auto b = rPancakes[j];
           if constexpr (findAll) {
             if ((f->g + b->g + 1) <= cstar && (f->f_bar + b->f_bar) <= (2 * cstar) && (f->f + b->delta) <= cstar && (b->f + f->delta) <= cstar) {
               addEdge(findex, bindex);
-              match = true;
             }
           }
           else {
             if (f->g + b->g + 1 < cstar && f->f_bar + b->f_bar < 2 * cstar && f->f + b->delta < cstar && b->f + f->delta < cstar) {
               addEdge(findex, bindex);
-              match = true;
             }
           }
           bindex += 1;
         }
-        if (match) {
-          findex += 1;
-        }
-        else {
-          shrink_val += 1;
-        }
+        findex += 1;
       }
-      shrink(shrink_val);
       std::cout << maxMatching() << " ";
     }
   }

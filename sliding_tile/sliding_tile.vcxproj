@@ -70,7 +70,7 @@
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\nophase2\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\nophase2a\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -131,6 +131,7 @@
     <ClCompile Include="sliding_tile.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dibbs-2phase-queue.h" />
     <ClInclude Include="dibbs-2phase.h" />
     <ClInclude Include="dibbs-nbs.h" />
     <ClInclude Include="dibbs.h" />

@@ -8,8 +8,8 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 16;
-constexpr int GAPX = 2;
+constexpr int NUM_PANCAKES = 40;
+constexpr int GAPX = 1;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 
 class Pancake {
@@ -101,7 +101,7 @@ public:
     new_node.threshold = threshold || new_node.h <= new_node.h2;
     new_node.delta = new_node.g - new_node.h2;
     new_node.apply_flip(i);
-    assert(new_node.f >= f); //Consistency check
+    //assert(new_node.f >= f); //Consistency check
     return new_node;
   }
 };
@@ -209,7 +209,7 @@ struct PancakeGSortHigh {
       return false;
     }
     if (lhs->g == rhs->g)
-      return cmp < 0;
+      return cmp > 0;
     else
       return lhs->g > rhs->g;
   }
@@ -229,7 +229,7 @@ struct PancakeFBarSortLowG {
       if (lhs->g == rhs->g)
         return cmp < 0;
       else
-        return lhs->g < rhs->g;
+        return lhs->g > rhs->g;
     }
     else {
       return lhs->f_bar < rhs->f_bar;

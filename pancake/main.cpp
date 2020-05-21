@@ -1,15 +1,41 @@
+
+//#define IDA_STAR
+//#define A_STAR
+//#define REVERSE_ASTAR
+//#define IDD
+#define DIBBS
+//#define GBFHS
+//#define NBS
+//#define DVCBS
+#define DIBBS_NBS
+//#define ASSYMETRIC
+
 #include <StackArray.h>
 #include "Transform.h"
 #include "Pancake.h"
+#ifdef A_STAR
 #include "Astar.h"
+#endif
+#ifdef IDD
 #include "id-d.h"
-#include "IDAstar.h"
+#endif
+//#include "IDAstar.h"
+#ifdef DIBBS
 #include "dibbs.h"
+#endif
+#ifdef GBFHS
 #include "GBFHS.h"
+#endif
+#ifdef NBS
 #include "Nbs.h"
+#endif
+#ifdef DVCBS
 #include "dvcbs.h"
+#endif
 #include "problems.h"
+#ifdef DIBBS_NBS
 #include "dibbs-2phase.hpp"
+#endif
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -17,7 +43,9 @@
 #include <ctime>
 #include <sstream>
 #include <iomanip>
+#ifdef ASSYMETRIC
 #include "asymmetric.h"
+#endif
 
 #include "PerfectSolution.h"
 
@@ -56,18 +84,6 @@
 #include "Model.hpp"
 #include <VulkanLineRenderer.h>
 
-//#define IDA_STAR
-
-//#define A_STAR
-//#define REVERSE_ASTAR
-//#define IDD
-#define DIBBS
-//#define GBFHS
-//#define NBS
-//#define DVCBS
-#define DIBBS_NBS
-//#define ASSYMETRIC
-
 //constexpr int NUM_PROBLEMS = 100;
 
 //TODO: Setup cpu to gpu line buffer for line rendering
@@ -93,7 +109,7 @@ void SolveAStar(uint8_t* problem) {
   Pancake bnode(problem, Direction::backward);
   Pancake goal = Pancake::GetSortedStack(Direction::backward);
 
-  std::vector<Pancake*> expansions;
+  std::vector<const Pancake*> expansions;
   uint32_t cstar;
 
   Astar backwardInstance;
@@ -213,6 +229,8 @@ void output_data(std::ostream& stream) {
   std::stringstream expansion_stream;
   std::stringstream memory_stream;
   std::stringstream time_stream;
+  std::stringstream expansions_after_cstar_stream;
+  std::stringstream expansions_after_ub_stream;
   uint8_t problem[NUM_PANCAKES + 1];
   double answers[NUM_PROBLEMS + 1];
   for (int i = 0; i <= NUM_PROBLEMS; ++i) {
@@ -269,6 +287,8 @@ void output_data(std::ostream& stream) {
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
     stream << memory_stream.rdbuf() << std::endl;
+    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -310,6 +330,8 @@ void output_data(std::ostream& stream) {
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
     stream << memory_stream.rdbuf() << std::endl;
+    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -345,6 +367,8 @@ void output_data(std::ostream& stream) {
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
     stream << memory_stream.rdbuf() << std::endl;
+    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -392,6 +416,8 @@ void output_data(std::ostream& stream) {
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
     stream << memory_stream.rdbuf() << std::endl;
+    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
   {
@@ -424,14 +450,15 @@ void output_data(std::ostream& stream) {
         answers[i] = cstar;
       }
       else if (!std::isinf(cstar) && answers[i] != cstar) {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
-        std::cout << "ERROR Cstar mismatch";
+        std::cout << "ERROR Cstar mismatch: " << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
         return;
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    stream << time_stream.rdbuf() << std::endl;
-    stream << memory_stream.rdbuf() << std::endl;
+    //stream << time_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -471,6 +498,8 @@ void output_data(std::ostream& stream) {
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
     stream << memory_stream.rdbuf() << std::endl;
+    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -510,6 +539,8 @@ void output_data(std::ostream& stream) {
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
     stream << memory_stream.rdbuf() << std::endl;
+    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
 
@@ -548,6 +579,8 @@ void output_data(std::ostream& stream) {
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
     stream << memory_stream.rdbuf() << std::endl;
+    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
   {
@@ -564,7 +597,7 @@ void output_data(std::ostream& stream) {
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions, memory] = DibbsNbs::search(node, goal);
+      auto [cstar, expansions, memory, expansions_after_cstar, expansions_after_UB] = DibbsNbs::search(node, goal);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       if (std::isinf(cstar)) {
@@ -572,6 +605,8 @@ void output_data(std::ostream& stream) {
       }
       else {
         expansion_stream << std::to_string(expansions) << " ";
+        //expansions_after_cstar_stream << std::to_string(expansions_after_cstar) << " ";
+        //expansions_after_ub_stream << std::to_string(expansions_after_UB) << " ";
       }
       memory_stream << std::to_string(memory) << " ";
 
@@ -587,8 +622,10 @@ void output_data(std::ostream& stream) {
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    stream << time_stream.rdbuf() << std::endl;
-    stream << memory_stream.rdbuf() << std::endl;
+    //stream << time_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
   {
@@ -630,6 +667,8 @@ void output_data(std::ostream& stream) {
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
     stream << memory_stream.rdbuf() << std::endl;
+    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    stream << expansions_after_ub_stream.rdbuf() << std::endl;
 #endif
   }
 }
