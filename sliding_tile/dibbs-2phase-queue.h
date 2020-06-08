@@ -18,6 +18,7 @@
 #include <optional>
 
 constexpr long EPSILON = 1;
+constexpr bool doLeveling = true;
 
 template<typename T>
 T variadic_min(T val) {
@@ -208,16 +209,16 @@ public:
     //  return std::make_tuple(-1, -1, direction_forward);
     //}
 
-    //static bool forward_dir = false;
+    static bool forward_dir = false;
     for (int fbar = 0; fbar < lbmin; ++fbar) {
       for (int f = 0; f <= fbar; ++f) {
         int delta = fbar - f;
         if (front.data[f][delta].size() > 0) {
-          //forward_dir = front.size() < back.size();
+          forward_dir = front.size() < back.size();
           return std::make_tuple(f, delta, (int)lbmin, true);
         }
         else if (back.data[f][delta].size() > 0) {
-          //forward_dir = front.size() < back.size();
+          forward_dir = front.size() < back.size();
           return std::make_tuple(f, delta, (int)lbmin, false);
         }
       }
@@ -259,43 +260,43 @@ public:
         int glim = lbmin - 1 - (*front.data[f][delta].rbegin())->g;
         float fratio = static_cast<float>(back.query_size(f, delta, lbmin, glim)) / front.data[f][delta].size();
 
-        if (/*forward_dir && */fratio > max_fsize) {
+        if ((doLeveling == false || forward_dir) && fratio > max_fsize) {
           max_fsize = fratio;
           front_f = f;
           front_delta = delta;
           auto [bf, bd] = back.query(f, delta, lbmin, glim);
           front_g = lbmin - 1 - (*back.data[bf][bd].rbegin())->g;
         }
-        //else if (!forward_dir && fratio > 0 && (1. / fratio) > max_bsize) {
-        //  max_bsize = 1. / fratio;
-        //  auto [bf, bd] = back.query(f, delta, lbmin, glim);
-        //  back_f = bf;
-        //  back_delta = bd;
-        //  back_g = glim;
-        //}
+        else if (doLeveling == true && !forward_dir && fratio > 0 && (1. / fratio) > max_bsize) {
+          max_bsize = 1. / fratio;
+          auto [bf, bd] = back.query(f, delta, lbmin, glim);
+          back_f = bf;
+          back_delta = bd;
+          back_g = glim;
+        }
       }
       if (back.data[f][delta].size() > 0)
       {
         int glim = lbmin - 1 - (*back.data[f][delta].rbegin())->g;
         auto bratio = static_cast<float>(front.query_size(f, delta, lbmin, glim)) / back.data[f][delta].size();
-        if (/*!forward_dir && */bratio > max_bsize) {
+        if ((doLeveling == false || !forward_dir) && bratio > max_bsize) {
           max_bsize = bratio;
           back_f = f;
           back_delta = delta;
           auto [ff, fd] = front.query(f, delta, lbmin, glim);
           back_g = lbmin - 1 - (*front.data[ff][fd].rbegin())->g;
         }
-        /*else if (forward_dir && bratio > 0 && (1. / bratio) > max_fsize) {
+        else if (doLeveling == true && forward_dir && bratio > 0 && (1. / bratio) > max_fsize) {
           max_fsize = 1. / bratio;
           auto [ff, fd] = front.query(f, delta, lbmin, glim);
           front_f = ff;
           front_delta = fd;
           front_g = glim;
-        }*/
+        }
       }
       //}
     }
-    if (max_bsize >= max_fsize/*!forward_dir*/) {
+    if ((doLeveling == false && max_bsize >= max_fsize) || (doLeveling == true && !forward_dir)) {
       return std::make_tuple(back_f, back_delta, back_g, false);
     }
     else {
@@ -456,7 +457,7 @@ class DibbsNbs {
     std::optional<std::tuple<const SlidingTile*, const SlidingTile*>> pair;
     while ((pair = select_pair()).has_value())
     {
-      if (lbmin >= UB) { //>= for first stop
+      if (lbmin >= UB - 1) { //>= for first stop
         finished = true;
         break;
       }

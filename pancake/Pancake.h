@@ -8,10 +8,10 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 40;
-constexpr int GAPX = 1;
+constexpr int NUM_PANCAKES = 30;
+constexpr int GAPX = 2;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
-
+class hash_table;
 class Pancake {
 
 private:     // inverse of sequence of pancakes

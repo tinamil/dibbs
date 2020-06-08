@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 
 #include "Pancake.h"
 #include <queue>
@@ -12,6 +11,7 @@
 #include <set>
 #include <queue>
 #include <StackArray.h>
+#include "hash_table.h"
 
 #include <windows.h>
 #include <Psapi.h>
@@ -43,7 +43,7 @@ T variadic_max(T val, Ts... other) {
 
 typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
 
-bool compare_one_off(const Pancake* lhs, const Pancake* rhs) {
+static bool compare_one_off(const Pancake* lhs, const Pancake* rhs) {
   for (int i = NUM_PANCAKES; i >= 1; --i) {
     if (lhs->source[i] != rhs->source[i]) {
       //Trigger the reverse lookup once we find the first non-match
@@ -57,9 +57,31 @@ bool compare_one_off(const Pancake* lhs, const Pancake* rhs) {
     }
   }
   //This only happens if the pancakes were identical
+  assert(false);
   std::cerr << "Identical pancakes in one-off comparison";
   return true;
 };
+
+inline size_t update_hash_value(const uint8_t seq[], int i, size_t hash_value)
+{
+  unsigned char  p1, pi, pi1;
+
+  assert((1 <= i) && (i <= NUM_PANCAKES));
+  p1 = seq[1];               assert((1 <= p1) && (p1 <= NUM_PANCAKES));
+  pi = seq[i];               assert((1 <= pi) && (pi <= NUM_PANCAKES));
+  if (i < NUM_PANCAKES)
+    pi1 = seq[i + 1];
+  else
+    return(hash_value);     // The hash_value does not change when the entire sequence is flipped.
+
+  if (hash_value > hash_table::hash(pi, pi1))
+    hash_value = hash_value - hash_table::hash(pi, pi1);
+  else
+    hash_value = hash_value - hash_table::hash(pi, pi1) + INT_MAX;
+  hash_value = (hash_value + hash_table::hash(p1, pi1)) % INT_MAX;
+
+  return hash_value;
+}
 
 struct MinH {
   bool operator()(Pancake* lhs, Pancake* rhs) const {
@@ -72,6 +94,7 @@ struct MinH {
   }
 };
 
+std::unordered_map<size_t, std::vector<const Pancake*>> hash_lookup_f, hash_lookup_b;
 template <typename T, typename THash, typename TEqual, typename TLess>
 class triple {
 
@@ -127,7 +150,6 @@ public:
   };
   typedef std::unordered_set<T, THash, TEqual> hash_set;
   typedef queue_wrapper<FBarDiff> fbar_set;
-  //fbar_set fbset;
   size_t total_size = 0;
   std::vector<std::vector<std::set<T, TLess>>> data;
   triple() {
@@ -161,8 +183,8 @@ public:
       for (int target_delta = 0; target_delta <= max_delta; ++target_delta) {
         //if (target_f + target_delta >= lbmin) continue;
         matches += data[target_f][target_delta].size();
-        for (auto x : data[target_f][target_delta]) {
-          if (x->g > glim) matches -= 1;
+        for (auto x = data[target_f][target_delta].begin(), stop = data[target_f][target_delta].end(); x != stop; ++x) {
+          if ((*x)->g > glim) matches -= 1;
           else break;
         }
       }
@@ -192,41 +214,7 @@ public:
   static decltype(auto) query_pair(triple& front, triple& back, uint32_t lbmin, uint32_t UB, hash_set& closed_f, hash_set& closed_b, bool phase2)
   {
     T min_front = nullptr, min_back = nullptr;
-
-    static bool started_phase2 = false;
-    static bool direction_forward = false;
-    //if (!phase2) started_phase2 = false;
-    //else {
-    //  if (!started_phase2) {
-    //    for (int fbar = 0; fbar < lbmin; ++fbar) {
-    //      for (int f = fbar; f >= 0; --f) {
-    //        int delta = fbar - f;
-    //        if (front.data[f][delta].size() > 0) {
-    //          return std::make_tuple(f, delta, true);
-    //        }
-    //        else if (back.data[f][delta].size() > 0) {
-    //          return std::make_tuple(f, delta, false);
-    //        }
-    //      }
-    //    }
-    //    //If we've reached here then both front and back are up to fbar = lbmin - 1
-    //    direction_forward = front.size() < back.size();
-    //  }
-    //  started_phase2 = true;
-    //  for (int f = lbmin; f >= 0; --f) {
-    //    int delta = lbmin - f;
-    //    if (direction_forward && front.data[f][delta].size() > 0) {
-    //      return std::make_tuple(f, delta, true);
-    //    }
-    //    else if (!direction_forward && back.data[f][delta].size() > 0) {
-    //      return std::make_tuple(f, delta, false);
-    //    }
-    //  }
-    //  //If we've reached here then we've cleared the chosen direction
-    //  return std::make_tuple(-1, -1, direction_forward);
-    //}
     const Pancake* ret_val = nullptr;
-
 
     //static bool forward_dir = false;
     for (int fbar = 0; fbar < lbmin; ++fbar) {
@@ -243,97 +231,53 @@ public:
       }
     }
 
-    //for (int fbar = 0; fbar <= lbmin; ++fbar) {
-    int fbar = lbmin;
-    for (int f = fbar; f >= 0; --f) {
-      int delta = fbar - f;
-      for (auto front_val : front.data[f][delta]) {
-        int max_delta = lbmin - f;
-        int max_f = lbmin - delta;
-        for (int target_f = max_f; target_f >= 0; --target_f) {
-          for (int target_delta = 0; target_delta <= max_delta; ++target_delta) {
-            for (auto back_val : back.data[target_f][target_delta]) {
-              if (front_val->g + back_val->g + 1 == lbmin && compare_one_off(front_val, back_val)) {
-                return std::make_tuple(f, delta, (int)front_val->g, true, front_val);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    /*size_t min_fsize = SIZE_MAX, min_bsize = SIZE_MAX;
-    int front_f = -1, front_delta = -1;
-    int back_f = -1, back_delta = -1;
-    for (int f = 0; f <= lbmin; ++f) {
-      int delta = lbmin - f;
-      if (front.data[f][delta].size() > 0 && front.data[f][delta].size() < min_fsize) {
-        front_f = f;
-        front_delta = delta;
-        min_fsize = front.data[f][delta].size();
-      }
-      if (back.data[f][delta].size() > 0 && back.data[f][delta].size() < min_bsize) {
-        back_f = f;
-        back_delta = delta;
-        min_bsize = back.data[f][delta].size();
-      }
-    }
-    if (min_bsize == 0 && min_fsize == 0)
-      return std::make_tuple(-1, -1, direction_forward);
-    else if (min_bsize <= min_fsize)
-      return std::make_tuple(back_f, back_delta, false);
-    else
-      return std::make_tuple(front_f, front_delta, true);*/
-
-      //size_t min_fsize = SIZE_MAX, min_bsize = SIZE_MAX;
-
     size_t min_fsize = 0, min_bsize = 0;
     float max_fsize = 0, max_bsize = 0;
     int front_f = -1, front_delta = -1, front_g = -1;
     int back_f = -1, back_delta = -1, back_g = -1;
     for (int f = lbmin; f >= 0; --f) {
       int delta = lbmin - f;
-      //for (int delta = 0; delta <= lbmin - f; ++delta) {
-      if (front.data[f][delta].size() > 0)
-      {
-        int glim = lbmin - 1 - (*front.data[f][delta].rbegin())->g;
-        float fratio = static_cast<float>(back.query_size(f, delta, lbmin, glim)) / front.data[f][delta].size();
+      for (int delta = 0; delta <= lbmin - f; ++delta) {
+        if (front.data[f][delta].size() > 0)
+        {
+          int glim = lbmin - 1 - (*front.data[f][delta].rbegin())->g;
+          float fratio = static_cast<float>(back.query_size(f, delta, lbmin, glim)) / front.data[f][delta].size();
 
-        if (/*forward_dir && */fratio > max_fsize) {
-          max_fsize = fratio;
-          front_f = f;
-          front_delta = delta;
-          auto [bf, bd] = back.query(f, delta, lbmin, glim);
-          front_g = lbmin - 1 - (*back.data[bf][bd].rbegin())->g;
+          if (/*forward_dir && */fratio > max_fsize) {
+            max_fsize = fratio;
+            front_f = f;
+            front_delta = delta;
+            auto [bf, bd] = back.query(f, delta, lbmin, glim);
+            front_g = lbmin - 1 - (*back.data[bf][bd].rbegin())->g;
+          }
+          //else if (!forward_dir && fratio > 0 && (1. / fratio) > max_bsize) {
+          //  max_bsize = 1. / fratio;
+          //  auto [bf, bd] = back.query(f, delta, lbmin, glim);
+          //  back_f = bf;
+          //  back_delta = bd;
+          //  back_g = glim;
+          //}
         }
-        //else if (!forward_dir && fratio > 0 && (1. / fratio) > max_bsize) {
-        //  max_bsize = 1. / fratio;
-        //  auto [bf, bd] = back.query(f, delta, lbmin, glim);
-        //  back_f = bf;
-        //  back_delta = bd;
-        //  back_g = glim;
-        //}
-      }
-      if (back.data[f][delta].size() > 0)
-      {
-        int glim = lbmin - 1 - (*back.data[f][delta].rbegin())->g;
-        auto bratio = static_cast<float>(front.query_size(f, delta, lbmin, glim)) / back.data[f][delta].size();
-        if (/*!forward_dir && */bratio > max_bsize) {
-          max_bsize = bratio;
-          back_f = f;
-          back_delta = delta;
-          auto [ff, fd] = front.query(f, delta, lbmin, glim);
-          back_g = lbmin - 1 - (*front.data[ff][fd].rbegin())->g;
+        if (back.data[f][delta].size() > 0)
+        {
+          int glim = lbmin - 1 - (*back.data[f][delta].rbegin())->g;
+          auto bratio = static_cast<float>(front.query_size(f, delta, lbmin, glim)) / back.data[f][delta].size();
+          if (/*!forward_dir && */bratio > max_bsize) {
+            max_bsize = bratio;
+            back_f = f;
+            back_delta = delta;
+            auto [ff, fd] = front.query(f, delta, lbmin, glim);
+            back_g = lbmin - 1 - (*front.data[ff][fd].rbegin())->g;
+          }
+          //else if (forward_dir && bratio > 0 && (1. / bratio) > max_fsize) {
+          //  max_fsize = 1. / bratio;
+          //  auto [ff, fd] = front.query(f, delta, lbmin, glim);
+          //  front_f = ff;
+          //  front_delta = fd;
+          //  front_g = glim;
+          //}
         }
-        /*else if (forward_dir && bratio > 0 && (1. / bratio) > max_fsize) {
-          max_fsize = 1. / bratio;
-          auto [ff, fd] = front.query(f, delta, lbmin, glim);
-          front_f = ff;
-          front_delta = fd;
-          front_g = glim;
-        }*/
       }
-      //}
     }
     if (max_bsize >= max_fsize/*!forward_dir*/) {
       return std::make_tuple(back_f, back_delta, back_g, false, ret_val);
@@ -411,7 +355,7 @@ class DibbsNbs {
     }
   }
 
-  bool expand_node(const Pancake* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, pancake_triple& data) {
+  bool expand_node(const Pancake* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, pancake_triple& data, std::unordered_map<size_t, std::vector<const Pancake*>>& hash_lookup, std::unordered_map<size_t, std::vector<const Pancake*>>& other_hash_lookup) {
     if (next_val == nullptr) return true;
     auto removed = hash.erase(next_val);
     if (removed == 0) return true;
@@ -432,6 +376,7 @@ class DibbsNbs {
     ++expansions_at_cstar;
     ++expansions_after_UB;
 
+    size_t starting_hash = hash_table::hash(next_val->source);
     for (int i = 2, j = NUM_PANCAKES; i <= j && UB > lbmin; ++i) {
       Pancake new_action = next_val->apply_action(i);
 
@@ -475,21 +420,34 @@ class DibbsNbs {
       assert(hash_insertion_result.second);
 
 
-      for (auto x : other_hash) {
-        if (ptr->g + x->g + 1 < UB && compare_one_off(ptr, x)) {
-          expand_node(ptr, hash, closed, other_hash, data);
+      size_t new_hash = update_hash_value(next_val->source, i, starting_hash);
+
+      if (other_hash_lookup.count(new_hash) > 0) {
+        for (auto& x : other_hash_lookup[new_hash]) {
+          if (x->g + ptr->g + 1 < UB && compare_one_off(ptr, x)) {
+            expand_node(ptr, hash, closed, other_hash, data, hash_lookup, other_hash_lookup);
+            assert(x->g + ptr->g + 1 == UB);
+          }
         }
+      }
+      for (int k = 1; k < NUM_PANCAKES; ++k) {
+        auto neighbor_hash = update_hash_value(new_action.source, k, new_hash);
+        assert(hash_table::hash(new_action.apply_action(k).source) == neighbor_hash);
+        if (hash_lookup.count(neighbor_hash) == 0) {
+          hash_lookup[neighbor_hash] = std::vector<const Pancake*>();
+        }
+        hash_lookup[neighbor_hash].push_back(ptr);
       }
     }
     return true;
   }
 
   bool expand_node_forward(const Pancake* pancake) {
-    return expand_node(pancake, open_f_hash, closed_f, open_b_hash, open_f_data);
+    return expand_node(pancake, open_f_hash, closed_f, open_b_hash, open_f_data, hash_lookup_f, hash_lookup_b);
   }
 
   bool expand_node_backward(const Pancake* pancake) {
-    return expand_node(pancake, open_b_hash, closed_b, open_f_hash, open_b_data);
+    return expand_node(pancake, open_b_hash, closed_b, open_f_hash, open_b_data, hash_lookup_b, hash_lookup_f);
   }
 
   std::tuple<double, size_t, size_t, size_t, size_t> run_search(Pancake start, Pancake goal)
@@ -501,6 +459,8 @@ class DibbsNbs {
     expansions = 0;
     expansions_at_cstar = 0;
     expansions_after_UB = 0;
+    hash_lookup_f.clear();
+    hash_lookup_b.clear();
     UB = std::numeric_limits<size_t>::max();
     Pancake* ptr;
 

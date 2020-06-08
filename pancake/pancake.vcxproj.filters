@@ -248,6 +248,12 @@
     <ClInclude Include="dibbs-2phase-queue.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="hash_table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ftf-dibbs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\line.frag">

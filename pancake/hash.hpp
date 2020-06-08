@@ -1,4 +1,7 @@
 #pragma once
+#include <array>
+#include <random>
+
 /*
 http://www.azillionmonkeys.com/qed/hash.html
 Licensed under LGPL-2.1

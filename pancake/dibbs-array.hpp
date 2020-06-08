@@ -354,7 +354,7 @@ class DibbsNbs {
       }
       std::cout << "\n";
 #endif 
-      return std::make_tuple((double)UB, expansions_at_cstar, memory);
+      return std::make_tuple((double)UB, expansions, memory);
     }
     else return std::make_tuple(std::numeric_limits<double>::infinity(), expansions_at_cstar, memory);
   }

@@ -7,41 +7,54 @@
 #include <string>
 #include <algorithm>
 #include <StackArray.h>
+#include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
+#include <vector>
+#include "hash_table.h"
 
 #include <windows.h>
 #include <Psapi.h>
 
-class Dibbs
+class FTF_Dibbs
 {
-  struct LocalitySearch {
-    template <size_t s, size_t t>
-    struct Hash {
-      inline size_t operator()(const Pancake* x) const {
-        return boost_hash(x->source + s, t);
+  struct LocalitySearch
+  {
+    template <size_t start, size_t size>
+    struct Hash
+    {
+      inline size_t operator()(const Pancake* x) const
+      {
+        return boost_hash(x->source + start, size);
       }
     };
-    template <size_t s, size_t t>
-    struct Equal {
-      inline bool operator()(const Pancake* x, const Pancake* y) const {
-        if (memcmp(x->source + s, y->source + s, t) == 0) return true;
-        for (int i = s; i < t + s; ++i) {
-          //if(x->source[s] ==
-        }
+    template <size_t start, size_t size>
+    struct Equal
+    {
+      inline bool operator()(const Pancake* x, const Pancake* y) const
+      {
+        return memcmp(x->source + start, y->source + start, size) == 0;
       }
     };
-    tsl::hopscotch_set<const Pancake*, Hash<1, 4>, Equal<1, 4>> set1;
-    tsl::hopscotch_set<const Pancake*, Hash<5, 8>, Equal<5, 8>> set2;
-    tsl::hopscotch_set<const Pancake*, Hash<9, 12>, Equal<9, 12>> set3;
-    tsl::hopscotch_set<const Pancake*, Hash<13, 16>, Equal<13, 16>> set4;
-    tsl::hopscotch_set<const Pancake*, Hash<17, 20>, Equal<17, 20>> set5;
 
-    void Add_Node(const Pancake* p) {
-      set1.insert(p);
-      set2.insert(p);
-      set3.insert(p);
-      set4.insert(p);
-      set5.insert(p);
+    std::vector<tsl::hopscotch_map<size_t, tsl::hopscotch_set<const Pancake*>>> list_of_hash;
+    
+    tsl::hopscotch_map<size_t, std::vector<const Pancake*>> min_hash;
+
+    void Add_Node(const Pancake* p)
+    {
+      for(int i = 0; i < NUM_PANCAKES - 1; ++i)
+      {
+        size_t hash_val = hash_table::hash(p->source, i, i + 1);
+        list_of_hash[i][hash_val].insert(p);
+      }
+    }
+
+    size_t Count(const Pancake* p)
+    {
+      for(int i = 0; i < NUM_PANCAKES - 1; ++i)
+      {
+        size_t hash_val = hash_table::hash(p->source, i, i + 1);
+      }
     }
   };
 public:
@@ -61,10 +74,11 @@ public:
   size_t expansions_cstar = 0;
 
 
-  Dibbs() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0) {}
+  FTF_Dibbs() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0) {}
 
 
-  void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, std::vector<Pancake>* expansions_in_order = nullptr) {
+  void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, std::vector<Pancake>* expansions_in_order = nullptr)
+  {
     const Pancake* next_val = *open.begin();
 
     auto it_hash = open_hash.find(next_val);
@@ -77,44 +91,54 @@ public:
 
     closed.insert(next_val);
 
-    if (expansions_in_order) expansions_in_order->push_back(*next_val);
+    if(expansions_in_order) expansions_in_order->push_back(*next_val);
 
-    for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
+    for(int i = 2, j = NUM_PANCAKES; i <= j; ++i)
+    {
       Pancake new_action = next_val->apply_action(i);
 
-      if (new_action.f > UB) {
+      if(new_action.f > UB)
+      {
         continue;
       }
 
       auto it_closed = closed.find(&new_action);
-      if (it_closed == closed.end()) {
+      if(it_closed == closed.end())
+      {
 
         auto it_other = other_open.find(&new_action);
-        if (it_other != other_open.end()) {
-#ifdef HISTORY
-          if ((*it_other)->g + new_action.g < UB) {
-            if (new_action.dir == Direction::forward) {
+        if(it_other != other_open.end())
+        {
+          #ifdef HISTORY
+          if((*it_other)->g + new_action.g < UB)
+          {
+            if(new_action.dir == Direction::forward)
+            {
               best_f = new_action;
               best_b = **it_other;
             }
-            else {
+            else
+            {
               best_f = **it_other;
               best_b = new_action;
             }
           }
-#endif  
+          #endif  
           size_t combined = (size_t)(*it_other)->g + new_action.g;
-          if (combined < UB) {
+          if(combined < UB)
+          {
             UB = combined;
           }
         }
         auto it_open = open_hash.find(&new_action);
-        if (it_open != open_hash.end())
+        if(it_open != open_hash.end())
         {
-          if ((*it_open)->g <= new_action.g) {
+          if((*it_open)->g <= new_action.g)
+          {
             continue;
           }
-          else {
+          else
+          {
             open.erase(&**it_open);
             open_hash.erase(it_open);
           }
@@ -127,11 +151,12 @@ public:
     }
   }
 
-#ifdef HISTORY
+  #ifdef HISTORY
   Pancake best_f, best_b;
-#endif
+  #endif
 
-  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr) {
+  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr)
+  {
     expansions = 0;
     memory = 0;
     auto ptr = storage.push_back(start);
@@ -145,60 +170,72 @@ public:
     PROCESS_MEMORY_COUNTERS memCounter;
     int lbmin = 0;
     bool forward = false;
-    while (open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+    while(open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0))
+    {
 
-      if (lbmin < ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+      if(lbmin < ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0))
+      {
         expansions_cstar = 0;
         lbmin = ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0);
       }
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
       memory = std::max(memory, memCounter.PagefileUsage);
-      if (memCounter.PagefileUsage > MEM_LIMIT) {
+      if(memCounter.PagefileUsage > MEM_LIMIT)
+      {
         break;
       }
 
-      if ((*open_f.begin())->f_bar < (*open_b.begin())->f_bar) {
+      if((*open_f.begin())->f_bar < (*open_b.begin())->f_bar)
+      {
         expand_node(open_f, open_f_hash, open_b_hash, closed_f);
         forward = open_f.size() < open_b.size();
       }
-      else if ((*open_f.begin())->f_bar > (*open_b.begin())->f_bar) {
+      else if((*open_f.begin())->f_bar > (*open_b.begin())->f_bar)
+      {
         expand_node(open_b, open_b_hash, open_f_hash, closed_b);
         forward = open_f.size() < open_b.size();
       }
-      else if (forward) {
-      //else if (open_f.size() <= open_b.size()) {
+      else if(forward)
+      {
+//else if (open_f.size() <= open_b.size()) {
         expand_node(open_f, open_f_hash, open_b_hash, closed_f);
       }
-      else {
+      else
+      {
         expand_node(open_b, open_b_hash, open_f_hash, closed_b);
       }
 
 
     }
-#ifdef HISTORY
+    #ifdef HISTORY
     std::cout << "Actions: ";
-    for (int i = 0; i < best_f.actions.size(); ++i) {
+    for(int i = 0; i < best_f.actions.size(); ++i)
+    {
       std::cout << std::to_string(best_f.actions[i]) << " ";
     }
     std::cout << "|" << " ";
-    for (int i = best_b.actions.size() - 1; i >= 0; --i) {
+    for(int i = best_b.actions.size() - 1; i >= 0; --i)
+    {
       std::cout << std::to_string(best_b.actions[i]) << " ";
     }
     std::cout << std::endl;
-#endif
-    if (UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+    #endif
+    if(UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0))
+    {
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, expansions_cstar);
     }
-    else {
+    else
+    {
       return std::make_tuple((double)UB, expansions, expansions_cstar);
     }
   }
 
 public:
 
-  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr) {
-    Dibbs instance;
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr)
+  {
+    FTF_Dibbs instance;
     return instance.run_search(start, goal, expansions_in_order);
   }
 };

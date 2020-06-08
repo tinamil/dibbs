@@ -71,10 +71,10 @@
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\40-1-lookahead\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\41-0AB\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\d\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -206,6 +206,8 @@
     <ClInclude Include="dibbs-array.hpp" />
     <ClInclude Include="dibbs-global.hpp" />
     <ClInclude Include="dibbs-nbs.hpp" />
+    <ClInclude Include="ftf-dibbs.h" />
+    <ClInclude Include="hash_table.h" />
     <ClInclude Include="id-d with closed.h" />
     <ClInclude Include="Nbs.h" />
     <ClInclude Include="PerfectSolution.h" />

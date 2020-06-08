@@ -35,14 +35,18 @@ class Dibbs
     open_hash.erase(it_hash);
     open.erase(next_val);
 
+    closed.insert(next_val);
+    if (next_val->f >= UB - 1) {
+      return;
+    }
+
     ++expansions;
 
-    closed.insert(next_val);
 
     for (int i = 1, stop = next_val->num_actions_available(); i <= stop; ++i) {
       SlidingTile new_action = next_val->apply_action(i);
 
-      if (new_action.f > UB) {
+      if (new_action.f >= UB  - 1) {
         continue;
       }
 
@@ -102,7 +106,7 @@ class Dibbs
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
     bool forward = true;
-    while (open_f.size() > 0 && open_b.size() > 0 && UB >= ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+    while (open_f.size() > 0 && open_b.size() > 0 && UB - 1 > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
 
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
@@ -120,7 +124,7 @@ class Dibbs
         forward = open_f.size() < open_b.size();
       }
       else if (forward) {
-        //else if (open_f.size() <= open_b.size()) {
+      //else if (open_f.size() <= open_b.size()) {
         expand_node(open_f, open_f_hash, open_b_hash, closed_f);
       }
       else {
@@ -138,7 +142,7 @@ class Dibbs
     }
     std::cout << std::endl;
 #endif
-    if (UB >= ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
+    if (UB - 1 > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0)) {
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
     }
     else {

@@ -6,7 +6,7 @@
 #include "id-d.h"
 #include "nbs.h"
 #include "ida.h"
-#include "dibbs-2phase-queue.h"
+#include "dibbs-2phase.h"
 #include <iostream>
 #include <cassert>
 #include <ctime>
@@ -601,7 +601,7 @@ void benchmarks(std::ostream& stream)
       SlidingTile starting_state(tile_in_location, Direction::forward);
 
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions, memory] = DibbsNbs::search(starting_state, goal_state);
+      auto [cstar, expansions, memory, after_cstar, after_ub] = DibbsNbs::search(starting_state, goal_state);
       auto end = std::chrono::system_clock::now();
       if (std::isinf(cstar)) {
         expansion_stream << "NAN ";
