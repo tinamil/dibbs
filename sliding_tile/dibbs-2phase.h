@@ -20,7 +20,7 @@ constexpr long EPSILON = 1;
 constexpr bool LATE_CLEANUP = true;
 #define GSORT true
 
-#define DIBBS_NBS "1phase-gsort-late"
+#define DIBBS_NBS "1phase-late"
 
 template <typename T, typename THash, typename TEqual>
 class triple
@@ -117,29 +117,19 @@ public:
     total_size += 1;
   }
 
-  void pop_back(T val)
+  T pop(size_t f, size_t delta, size_t g)
   {
+    T ret_val;
     #if GSORT
-    data[val->f][val->delta][val->g].pop_back();
+    ret_val = data[f][delta][g].back();
+    data[f][delta][g].pop_back();
     #else 
-    data[val->f][val->delta].pop_back();
+    ret_val = data[f][delta].back();
+    data[f][delta].pop_back();
     #endif
     total_size -= 1;
+    return ret_val;
   }
-
-  /*void erase(T val)
-  {
-    std::vector<T>& ref = data[val->f][val->delta];
-    for(auto x = ref.begin(); x != ref.end(); ++x)
-    {
-      if(PancakeEqual{}(*x, val))
-      {
-        ref.erase(x);
-        total_size -= 1;
-        return;
-      }
-    }
-  }*/
 
   bool empty() const
   {
@@ -150,47 +140,11 @@ public:
   static decltype(auto) query_pair(triple& front, triple& back, int lbmin, size_t UB, hash_set& closed_f, hash_set& closed_b)
   {
     T min_front = nullptr, min_back = nullptr;
-
     static bool forward_dir = false;
-    T ret_val = nullptr;
-
-    //Make sure at least one node is expanded in both directions
-    if(front.size() == 1 || back.size() == 1)
-    {
-      for(int fbar = 0; fbar <= lbmin; ++fbar)
-      {
-        for(int f = 0; f <= fbar; ++f)
-        {
-          int delta = fbar - f;
-          #if GSORT
-          for(int g = lbmin; g >= 0; --g)
-          {
-            if(back.size() == 1 && back.data[f][delta][g].size() > 0)
-            {
-              return std::make_tuple(f, delta, g, false, ret_val);
-            }
-            else if(front.size() == 1 && front.data[f][delta][g].size() > 0)
-            {
-              return std::make_tuple(f, delta, g, true, ret_val);
-            }
-          }
-          #else
-          if(back.size() == 1 && back.data[f][delta].size() > 0)
-          {
-            return std::make_tuple(f, delta, 0, false, ret_val);
-          }
-          else if(front.size() == 1 && front.data[f][delta].size() > 0)
-          {
-            return std::make_tuple(f, delta, 0, true, ret_val);
-          }
-          #endif
-        }
-      }
-    }
 
     if constexpr(LATE_CLEANUP)
     {
-      if((size_t)lbmin + 1 >= UB)
+      if((size_t)lbmin + 2 >= UB)
       {
         //Cleanup all nodes with fbar smaller than lbmin
         for(int fbar = 0; fbar < lbmin; ++fbar)
@@ -203,21 +157,21 @@ public:
             {
               if(back.data[f][delta][g].size() > 0)
               {
-                return std::make_tuple(f, delta, g, false, ret_val);
+                return std::make_tuple(f, delta, g, false);
               }
               else if(front.data[f][delta][g].size() > 0)
               {
-                return std::make_tuple(f, delta, g, true, ret_val);
+                return std::make_tuple(f, delta, g, true);
               }
             }
             #else
             if(back.data[f][delta].size() > 0)
             {
-              return std::make_tuple(f, delta, 0, false, ret_val);
+              return std::make_tuple(f, delta, 0, false);
             }
             else if(front.data[f][delta].size() > 0)
             {
-              return std::make_tuple(f, delta, 0, true, ret_val);
+              return std::make_tuple(f, delta, 0, true);
             }
             #endif
           }
@@ -239,7 +193,7 @@ public:
         int back_bsize = 0, back_fsize = 0, back_max_g = -1;
         for(int g = lbmin; g >= 0; --g)
         {
-          if((((size_t)lbmin + 1 < UB) || (!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta][g].size() > 0)
+          if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta][g].size() > 0)
           {
             int glim = lbmin - 1 - g;
             int matching_b = back.query_size(f, delta, lbmin, glim);
@@ -250,7 +204,7 @@ public:
               if(front_max_g == -1) front_max_g = g;
             }
           }
-          if((((size_t)lbmin + 1 < UB) || (!LATE_CLEANUP || front.size() >= back.size())) && back.data[f][delta][g].size() > 0)
+          if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() >= back.size())) && back.data[f][delta][g].size() > 0)
           {
             int glim = lbmin - 1 - g;
             int matching_f = front.query_size(f, delta, lbmin, glim);
@@ -314,12 +268,12 @@ public:
     if(max_bsize >= max_fsize)
     {
       if(back_f == -1) forward_dir = front.size() < back.size();
-      return std::make_tuple(back_f, back_delta, back_g, false, ret_val);
+      return std::make_tuple(back_f, back_delta, back_g, false);
     }
     else
     {
       if(front_f == -1) forward_dir = front.size() < back.size();
-      return std::make_tuple(front_f, front_delta, front_g, true, ret_val);
+      return std::make_tuple(front_f, front_delta, front_g, true);
     }
   }
 };
@@ -359,7 +313,7 @@ class DibbsNbs
       else if(open_b_data.empty()) return std::nullopt;
       else
       {
-        auto [f, d, g, dir, ret_val] = pancake_triple::query_pair(open_f_data, open_b_data, lbmin, UB, closed_f, closed_b);
+        auto [f, d, g, dir] = pancake_triple::query_pair(open_f_data, open_b_data, lbmin, UB, closed_f, closed_b);
 
         if(f == -1 && d == -1)
         {
@@ -370,60 +324,24 @@ class DibbsNbs
         #if GSORT
         if(f >= 0 && dir && open_f_data.data[f][d][g].size() > 0)
         {
-          if(ret_val != nullptr)
-          {
-            open_f_data.pop_back(ret_val);
-            return std::make_tuple(ret_val, nullptr);
-          }
-          else
-          {
-            auto val = open_f_data.data[f][d][g].back();
-            open_f_data.pop_back(val);
-            return std::make_tuple(val, nullptr);
-          }
+          auto val = open_f_data.pop(f, d, g);
+          return std::make_tuple(val, nullptr);
         }
         else if(f >= 0 && open_b_data.data[f][d][g].size() > 0)
         {
-          if(ret_val != nullptr)
-          {
-            open_b_data.pop_back(ret_val);
-            return std::make_tuple(nullptr, ret_val);
-          }
-          else
-          {
-            auto val = open_b_data.data[f][d][g].back();
-            open_b_data.pop_back(val);
-            return std::make_tuple(nullptr, val);
-          }
+          auto val = open_b_data.pop(f, d, g);
+          return std::make_tuple(nullptr, val);
         }
         #else
         if(f >= 0 && dir && open_f_data.data[f][d].size() > 0)
         {
-          if(ret_val != nullptr)
-          {
-            open_f_data.pop_back(ret_val);
-            return std::make_tuple(ret_val, nullptr);
-          }
-          else
-          {
-            auto val = open_f_data.data[f][d].back();
-            open_f_data.pop_back(val);
-            return std::make_tuple(val, nullptr);
-          }
+          auto val = open_f_data.pop(f, d, g);
+          return std::make_tuple(val, nullptr);
         }
         else if(f >= 0 && open_b_data.data[f][d].size() > 0)
         {
-          if(ret_val != nullptr)
-          {
-            open_b_data.pop_back(ret_val);
-            return std::make_tuple(nullptr, ret_val);
-          }
-          else
-          {
-            auto val = open_b_data.data[f][d].back();
-            open_b_data.pop_back(val);
-            return std::make_tuple(nullptr, val);
-          }
+          auto val = open_b_data.pop(f, d, g);
+          return std::make_tuple(nullptr, val);
         }
         #endif
       }
@@ -479,7 +397,7 @@ class DibbsNbs
           }
           #endif
         }
-        }
+      }
       auto it_closed = closed.find(&new_action);
       if(it_closed != closed.end() && (*it_closed)->g <= new_action.g) continue;
       else if(it_closed != closed.end())
@@ -499,9 +417,9 @@ class DibbsNbs
       data.push_back(ptr);
       auto hash_insertion_result = hash.insert(ptr);
       assert(hash_insertion_result.second);
-      }
-    return true;
     }
+    return true;
+  }
 
   bool expand_node_forward(const SlidingTile* pancake)
   {
@@ -583,4 +501,4 @@ public:
     auto result = instance.run_search(start, goal);
     return result;
   }
-  };
+};
