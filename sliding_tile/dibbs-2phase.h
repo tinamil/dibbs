@@ -17,13 +17,12 @@
 #include <optional>
 
 constexpr long EPSILON = 1;
-constexpr bool LATE_CLEANUP = false;
-constexpr bool FORWARD_COMMIT = true;
+constexpr bool LATE_CLEANUP = true;
 #define GSORT true
 
-#define DIBBS_NBS "1phase-forward_commit"
+#define DIBBS_NBS "1phase-gsort-late"
 
-template <typename T, typename THash, typename TEqual, typename TLess>
+template <typename T, typename THash, typename TEqual>
 class triple
 {
 public:
@@ -33,21 +32,27 @@ public:
   size_t total_size = 0;
 
   #if GSORT
-  std::vector<std::vector<std::set<T, TLess>>> data;
+  std::vector<std::vector<std::vector<std::vector<T>>>> data;
   #else
   std::vector<std::vector<std::vector<T>>> data;
   #endif
 
   triple()
   {
-    data.resize(255);
+    data.resize(150);
     for(int i = 0; i < data.size(); ++i)
     {
-      data[i].resize(255);
+      data[i].resize(150);
+      #if GSORT
+      for(int j = 0; j < data[i].size(); ++j)
+      {
+        data[i][j].resize(150);
+      }
+      #endif
     }
   }
 
-  decltype(auto) query(int other_f, int other_delta, uint8_t lbmin, int glim) const
+  /*decltype(auto) query(int other_f, int other_delta, uint8_t lbmin, int glim) const
   {
     size_t matches = 0;
     int max_delta = lbmin - other_f;
@@ -56,21 +61,24 @@ public:
     {
       for(int target_delta = 0; target_delta <= max_delta; ++target_delta)
       {
+        #if GSORT
+        for(int target_g = 0; target_g <= glim; ++target_g)
+        {
+          if(data[target_f][target_delta][target_g].size() > 0)
+          {
+            return std::make_tuple(target_f, target_delta, target_g);
+          }
+        }
+        #else
         if(data[target_f][target_delta].size() > 0)
         {
-          #if GSORT
-          if((*data[target_f][target_delta].rbegin())->g <= glim)
-          {
-            return std::make_tuple(target_f, target_delta);
-          }
-          #else 
-          return std::make_tuple(target_f, target_delta);
-          #endif
+          return std::make_tuple(target_f, target_delta, 0);
         }
+        #endif
       }
     }
-    return std::make_tuple(-1, -1);
-  }
+    return std::make_tuple(-1, -1, -1);
+  }*/
 
   size_t query_size(int other_f, int other_delta, uint8_t lbmin, int glim) const
   {
@@ -81,13 +89,13 @@ public:
     {
       for(int target_delta = 0; target_delta <= max_delta; ++target_delta)
       {
-        matches += data[target_f][target_delta].size();
         #if GSORT
-        for(auto x = data[target_f][target_delta].begin(), stop = data[target_f][target_delta].end(); x != stop; ++x)
+        for(int target_g = 0; target_g <= glim; ++target_g)
         {
-          if((*x)->g > glim) matches -= 1;
-          else break;
+          matches += data[target_f][target_delta][target_g].size();
         }
+        #else
+        matches += data[target_f][target_delta].size();
         #endif
       }
     }
@@ -102,7 +110,7 @@ public:
   void push_back(T val)
   {
     #if GSORT
-    data[val->f][val->delta].insert(val);
+    data[val->f][val->delta][val->g].push_back(val);
     #else
     data[val->f][val->delta].push_back(val);
     #endif
@@ -112,14 +120,14 @@ public:
   void pop_back(T val)
   {
     #if GSORT
-    data[val->f][val->delta].erase(val);
+    data[val->f][val->delta][val->g].pop_back();
     #else 
     data[val->f][val->delta].pop_back();
     #endif
     total_size -= 1;
   }
 
-  void erase(T val)
+  /*void erase(T val)
   {
     std::vector<T>& ref = data[val->f][val->delta];
     for(auto x = ref.begin(); x != ref.end(); ++x)
@@ -131,7 +139,7 @@ public:
         return;
       }
     }
-  }
+  }*/
 
   bool empty() const
   {
@@ -145,38 +153,75 @@ public:
 
     static bool forward_dir = false;
     T ret_val = nullptr;
+
+    //Make sure at least one node is expanded in both directions
+    if(front.size() == 1 || back.size() == 1)
+    {
+      for(int fbar = 0; fbar <= lbmin; ++fbar)
+      {
+        for(int f = 0; f <= fbar; ++f)
+        {
+          int delta = fbar - f;
+          #if GSORT
+          for(int g = lbmin; g >= 0; --g)
+          {
+            if(back.size() == 1 && back.data[f][delta][g].size() > 0)
+            {
+              return std::make_tuple(f, delta, g, false, ret_val);
+            }
+            else if(front.size() == 1 && front.data[f][delta][g].size() > 0)
+            {
+              return std::make_tuple(f, delta, g, true, ret_val);
+            }
+          }
+          #else
+          if(back.size() == 1 && back.data[f][delta].size() > 0)
+          {
+            return std::make_tuple(f, delta, 0, false, ret_val);
+          }
+          else if(front.size() == 1 && front.data[f][delta].size() > 0)
+          {
+            return std::make_tuple(f, delta, 0, true, ret_val);
+          }
+          #endif
+        }
+      }
+    }
+
     if constexpr(LATE_CLEANUP)
     {
-      if((size_t)lbmin + 2 >= UB)
+      if((size_t)lbmin + 1 >= UB)
       {
+        //Cleanup all nodes with fbar smaller than lbmin
         for(int fbar = 0; fbar < lbmin; ++fbar)
         {
           for(int f = 0; f <= fbar; ++f)
           {
             int delta = fbar - f;
+            #if GSORT
+            for(int g = lbmin; g >= 0; --g)
+            {
+              if(back.data[f][delta][g].size() > 0)
+              {
+                return std::make_tuple(f, delta, g, false, ret_val);
+              }
+              else if(front.data[f][delta][g].size() > 0)
+              {
+                return std::make_tuple(f, delta, g, true, ret_val);
+              }
+            }
+            #else
             if(back.data[f][delta].size() > 0)
             {
-              return std::make_tuple(f, delta, lbmin, false, ret_val);
+              return std::make_tuple(f, delta, 0, false, ret_val);
             }
             else if(front.data[f][delta].size() > 0)
             {
-              return std::make_tuple(f, delta, lbmin, true, ret_val);
+              return std::make_tuple(f, delta, 0, true, ret_val);
             }
+            #endif
           }
         }
-        /*for(int f = 0; f <= lbmin; ++f)
-        {
-          int delta = lbmin - f;
-          if(back.size() <= front.size() && back.data[f][delta].size() > 0)
-          {
-            return std::make_tuple(f, delta, lbmin, false, ret_val);
-          }
-          else if(front.size() < back.size() && front.data[f][delta].size() > 0)
-          {
-            return std::make_tuple(f, delta, lbmin, true, ret_val);
-          }
-        }
-        return std::make_tuple(-1, -1, 0, true, ret_val);*/
       }
     }
 
@@ -189,52 +234,84 @@ public:
     {
       for(int delta = 0; delta <= lbmin - f; ++delta)
       {
-        if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta].size() > 0)
+        #if GSORT
+        int front_bsize = 0, front_fsize = 0, front_max_g = -1;
+        int back_bsize = 0, back_fsize = 0, back_max_g = -1;
+        for(int g = lbmin; g >= 0; --g)
         {
-          int glim = lbmin - 1 - (*front.data[f][delta].rbegin())->g;
-          float fratio = static_cast<float>(back.query_size(f, delta, lbmin, glim)) / front.data[f][delta].size();
-
-          if((!FORWARD_COMMIT || forward_dir) && fratio > max_fsize)
+          if((((size_t)lbmin + 1 < UB) || (!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta][g].size() > 0)
+          {
+            int glim = lbmin - 1 - g;
+            int matching_b = back.query_size(f, delta, lbmin, glim);
+            if(matching_b > 0)
+            {
+              front_bsize += matching_b;
+              front_fsize += front.data[f][delta][g].size();
+              if(front_max_g == -1) front_max_g = g;
+            }
+          }
+          if((((size_t)lbmin + 1 < UB) || (!LATE_CLEANUP || front.size() >= back.size())) && back.data[f][delta][g].size() > 0)
+          {
+            int glim = lbmin - 1 - g;
+            int matching_f = front.query_size(f, delta, lbmin, glim);
+            if(matching_f > 0)
+            {
+              back_fsize += matching_f;
+              back_bsize += back.data[f][delta][g].size();
+              if(back_max_g == -1) back_max_g = g;
+            }
+          }
+        }
+        if(front_fsize > 0)
+        {
+          auto fratio = static_cast<float>(front_bsize) / front_fsize;
+          if(fratio > max_fsize)
           {
             max_fsize = fratio;
             front_f = f;
             front_delta = delta;
-            auto [bf, bd] = back.query(f, delta, lbmin, glim);
-            front_g = lbmin - 1 - (*back.data[bf][bd].rbegin())->g;
-          }
-          else if(FORWARD_COMMIT && !forward_dir && fratio > 0 && (1. / fratio) > max_bsize)
-          {
-            max_bsize = 1. / fratio;
-            auto [bf, bd] = back.query(f, delta, lbmin, glim);
-            back_f = bf;
-            back_delta = bd;
-            back_g = glim;
+            front_g = front_max_g;
           }
         }
-        if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() >= back.size())) && back.data[f][delta].size() > 0)
+        if(back_bsize > 0)
         {
-          int glim = lbmin - 1 - (*back.data[f][delta].rbegin())->g;
-          auto bratio = static_cast<float>(front.query_size(f, delta, lbmin, glim)) / back.data[f][delta].size();
-          if((!FORWARD_COMMIT || !forward_dir) && bratio > max_bsize)
+          auto bratio = static_cast<float>(back_fsize) / back_bsize;
+          if(bratio > max_bsize)
           {
             max_bsize = bratio;
             back_f = f;
             back_delta = delta;
-            auto [ff, fd] = front.query(f, delta, lbmin, glim);
-            back_g = lbmin - 1 - (*front.data[ff][fd].rbegin())->g;
-          }
-          else if(FORWARD_COMMIT && forward_dir && bratio > 0 && (1. / bratio) > max_fsize)
-          {
-            max_fsize = 1. / bratio;
-            auto [ff, fd] = front.query(f, delta, lbmin, glim);
-            front_f = ff;
-            front_delta = fd;
-            front_g = glim;
+            back_g = back_max_g;
           }
         }
+        #else
+        if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta].size() > 0)
+        {
+          float fratio = static_cast<float>(back.query_size(f, delta, lbmin, 0)) / front.data[f][delta].size();
+
+          if(fratio > max_fsize)
+          {
+            max_fsize = fratio;
+            front_f = f;
+            front_delta = delta;
+            front_g = 0;
+          }
+        }
+        if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() >= back.size())) && back.data[f][delta].size() > 0)
+        {
+          auto bratio = static_cast<float>(front.query_size(f, delta, lbmin, 0)) / back.data[f][delta].size();
+          if(bratio > max_bsize)
+          {
+            max_bsize = bratio;
+            back_f = f;
+            back_delta = delta;
+            back_g = 0;
+          }
+        }
+        #endif
       }
     }
-    if((FORWARD_COMMIT && !forward_dir) || (!FORWARD_COMMIT && max_bsize >= max_fsize))
+    if(max_bsize >= max_fsize)
     {
       if(back_f == -1) forward_dir = front.size() < back.size();
       return std::make_tuple(back_f, back_delta, back_g, false, ret_val);
@@ -247,11 +324,12 @@ public:
   }
 };
 
+
 class DibbsNbs
 {
 
   typedef std::unordered_set<const SlidingTile*, SlidingTileHash, SlidingTileEqual> hash_set;
-  typedef triple<const SlidingTile*, SlidingTileHash, SlidingTileEqual, GSortHigh> pancake_triple;
+  typedef triple<const SlidingTile*, SlidingTileHash, SlidingTileEqual> pancake_triple;
 
   StackArray<SlidingTile> storage;
   pancake_triple open_f_data;
@@ -289,51 +367,65 @@ class DibbsNbs
           expansions_at_cstar = 0;
           return std::make_tuple(nullptr, nullptr);
         }
-        if(f >= 0 && dir && open_f_data.data[f][d].size() > 0)
+        #if GSORT
+        if(f >= 0 && dir && open_f_data.data[f][d][g].size() > 0)
         {
-          if(ret_val) return std::make_tuple(ret_val, nullptr);
-          #if GSORT
           if(ret_val != nullptr)
           {
             open_f_data.pop_back(ret_val);
             return std::make_tuple(ret_val, nullptr);
           }
-          for(auto val : open_f_data.data[f][d])
+          else
           {
-            if(val->g <= g)
-            {
-              open_f_data.pop_back(val);
-              return std::make_tuple(val, nullptr);
-            }
+            auto val = open_f_data.data[f][d][g].back();
+            open_f_data.pop_back(val);
+            return std::make_tuple(val, nullptr);
           }
-          #else
-          auto val = open_f_data.data[f][d].back();
-          open_f_data.pop_back(val);
-          return std::make_tuple(val, nullptr);
-          #endif
         }
-        else if(f >= 0 && open_b_data.data[f][d].size() > 0)
+        else if(f >= 0 && open_b_data.data[f][d][g].size() > 0)
         {
-          #if GSORT
           if(ret_val != nullptr)
           {
             open_b_data.pop_back(ret_val);
             return std::make_tuple(nullptr, ret_val);
           }
-          for(auto val : open_b_data.data[f][d])
+          else
           {
-            if(val->g <= g)
-            {
-              open_b_data.pop_back(val);
-              return std::make_tuple(nullptr, val);
-            }
+            auto val = open_b_data.data[f][d][g].back();
+            open_b_data.pop_back(val);
+            return std::make_tuple(nullptr, val);
           }
-          #else
-          auto val = open_b_data.data[f][d].back();
-          open_b_data.pop_back(val);
-          return std::make_tuple(nullptr, val);
-          #endif
         }
+        #else
+        if(f >= 0 && dir && open_f_data.data[f][d].size() > 0)
+        {
+          if(ret_val != nullptr)
+          {
+            open_f_data.pop_back(ret_val);
+            return std::make_tuple(ret_val, nullptr);
+          }
+          else
+          {
+            auto val = open_f_data.data[f][d].back();
+            open_f_data.pop_back(val);
+            return std::make_tuple(val, nullptr);
+          }
+        }
+        else if(f >= 0 && open_b_data.data[f][d].size() > 0)
+        {
+          if(ret_val != nullptr)
+          {
+            open_b_data.pop_back(ret_val);
+            return std::make_tuple(nullptr, ret_val);
+          }
+          else
+          {
+            auto val = open_b_data.data[f][d].back();
+            open_b_data.pop_back(val);
+            return std::make_tuple(nullptr, val);
+          }
+        }
+        #endif
       }
     }
   }
@@ -387,7 +479,7 @@ class DibbsNbs
           }
           #endif
         }
-      }
+        }
       auto it_closed = closed.find(&new_action);
       if(it_closed != closed.end() && (*it_closed)->g <= new_action.g) continue;
       else if(it_closed != closed.end())
@@ -407,9 +499,9 @@ class DibbsNbs
       data.push_back(ptr);
       auto hash_insertion_result = hash.insert(ptr);
       assert(hash_insertion_result.second);
-    }
+      }
     return true;
-  }
+    }
 
   bool expand_node_forward(const SlidingTile* pancake)
   {
@@ -491,4 +583,4 @@ public:
     auto result = instance.run_search(start, goal);
     return result;
   }
-};
+  };
