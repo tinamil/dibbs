@@ -17,17 +17,19 @@
 #include <optional>
 
 constexpr long EPSILON = 1;
-constexpr bool LATE_CLEANUP = true;
-constexpr bool FORWARD_COMMIT = false;
+constexpr bool LATE_CLEANUP = false;
+constexpr bool FORWARD_COMMIT = true;
 #define GSORT true
 
-#define DIBBS_NBS "1phase-latecleanup-gsort"
+#define DIBBS_NBS "1phase-forward_commit"
 
 template <typename T, typename THash, typename TEqual, typename TLess>
 class triple
 {
-  typedef std::unordered_set<T, THash, TEqual> hash_set;
 public:
+
+  typedef std::unordered_set<T, THash, TEqual> hash_set;
+
   size_t total_size = 0;
 
   #if GSORT
@@ -142,7 +144,7 @@ public:
     T min_front = nullptr, min_back = nullptr;
 
     static bool forward_dir = false;
-    const SlidingTile* ret_val = nullptr;
+    T ret_val = nullptr;
     if constexpr(LATE_CLEANUP)
     {
       if((size_t)lbmin + 2 >= UB)
@@ -162,32 +164,19 @@ public:
             }
           }
         }
-      }
-    }
-    if constexpr(FORWARD_COMMIT)
-    {
-      if(UB == (size_t)lbmin + 2)
-      {
-        size_t f_count_a = 0, f_count_b = 0, b_count_a = 0, b_count_b = 0;
-        for(int f = 0; f <= UB; ++f)
+        /*for(int f = 0; f <= lbmin; ++f)
         {
-          for(int delta = 0; delta <= UB - f; ++delta)
+          int delta = lbmin - f;
+          if(back.size() <= front.size() && back.data[f][delta].size() > 0)
           {
-            if(front.data[f][delta].size() > 0)
-            {
-              f_count_a += front.data[f][delta].size();
-              f_count_b += back.query_size(f, delta, lbmin);
-            }
-            if(back.data[f][delta].size() > 0)
-            {
-              b_count_a += back.data[f][delta].size();
-              b_count_b += front.query_size(f, delta, lbmin);
-            }
+            return std::make_tuple(f, delta, lbmin, false, ret_val);
+          }
+          else if(front.size() < back.size() && front.data[f][delta].size() > 0)
+          {
+            return std::make_tuple(f, delta, lbmin, true, ret_val);
           }
         }
-        float f_ratio = (float)f_count_b / f_count_a;
-        float b_ratio = (float)b_count_b / b_count_a;
-        forward_dir = f_ratio < b_ratio;
+        return std::make_tuple(-1, -1, 0, true, ret_val);*/
       }
     }
 
@@ -200,7 +189,7 @@ public:
     {
       for(int delta = 0; delta <= lbmin - f; ++delta)
       {
-        if(((LATE_CLEANUP && (size_t)lbmin + 2 < UB) || front.size() < back.size()) && front.data[f][delta].size() > 0)
+        if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta].size() > 0)
         {
           int glim = lbmin - 1 - (*front.data[f][delta].rbegin())->g;
           float fratio = static_cast<float>(back.query_size(f, delta, lbmin, glim)) / front.data[f][delta].size();
@@ -222,7 +211,7 @@ public:
             back_g = glim;
           }
         }
-        if(((LATE_CLEANUP && (size_t)lbmin + 2 < UB) || front.size() >= back.size()) && back.data[f][delta].size() > 0)
+        if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() >= back.size())) && back.data[f][delta].size() > 0)
         {
           int glim = lbmin - 1 - (*back.data[f][delta].rbegin())->g;
           auto bratio = static_cast<float>(front.query_size(f, delta, lbmin, glim)) / back.data[f][delta].size();
@@ -247,12 +236,12 @@ public:
     }
     if((FORWARD_COMMIT && !forward_dir) || (!FORWARD_COMMIT && max_bsize >= max_fsize))
     {
-      //if(back_f == -1) forward_dir = front.size() < back.size();
+      if(back_f == -1) forward_dir = front.size() < back.size();
       return std::make_tuple(back_f, back_delta, back_g, false, ret_val);
     }
     else
     {
-      //if(front_f == -1) forward_dir = front.size() < back.size();
+      if(front_f == -1) forward_dir = front.size() < back.size();
       return std::make_tuple(front_f, front_delta, front_g, true, ret_val);
     }
   }
@@ -489,10 +478,15 @@ class DibbsNbs
   }
 
 
+  static inline bool first_run = true;
 public:
-
   static std::tuple<double, size_t, size_t, size_t, size_t> search(SlidingTile start, SlidingTile goal)
   {
+    if(first_run)
+    {
+      first_run = false;
+      std::cout << DIBBS_NBS << std::endl;
+    }
     DibbsNbs instance;
     auto result = instance.run_search(start, goal);
     return result;

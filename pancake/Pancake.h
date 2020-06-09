@@ -8,8 +8,8 @@
 
 //#define HISTORY
 
-constexpr int NUM_PANCAKES = 30;
-constexpr int GAPX = 2;
+constexpr int NUM_PANCAKES = 20;
+constexpr int GAPX = 3;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 class hash_table;
 class Pancake {
@@ -229,9 +229,36 @@ struct PancakeFBarSortLowG {
       if (lhs->g == rhs->g)
         return cmp < 0;
       else
-        return lhs->g > rhs->g;
+        return lhs->g < rhs->g;
     }
     else {
+      return lhs->f_bar < rhs->f_bar;
+    }
+  }
+};
+
+struct PancakeFBarSortHighG
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
+    if(cmp == 0)
+    {
+      return false;
+    }
+    else if(lhs->f_bar == rhs->f_bar)
+    {
+      if(lhs->g == rhs->g)
+        return cmp < 0;
+      else
+        return lhs->g > rhs->g;
+    }
+    else
+    {
       return lhs->f_bar < rhs->f_bar;
     }
   }

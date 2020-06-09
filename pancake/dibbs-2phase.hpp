@@ -18,40 +18,13 @@
 #include <optional>
 
 constexpr long EPSILON = 1;
-constexpr bool LATE_CLEANUP = true;
-constexpr bool FORWARD_COMMIT = false;
+constexpr bool LATE_CLEANUP = false;
 #define GSORT true
 
-#define DIBBS_NBS "1phase-latecleanup-gsort"
+#define DIBBS_NBS "1phase"
 
-template<typename T>
-T variadic_min(T val)
-{
-  return val;
-}
-
-template<typename T, typename... Ts>
-T variadic_min(T val, Ts... other)
-{
-  T other_min = (T)variadic_min(other...);
-  return std::min(val, other_min);
-}
-
-template<typename T>
-T variadic_max(T val)
-{
-  return val;
-}
-
-template<typename T, typename... Ts>
-T variadic_max(T val, Ts... other)
-{
-  T other_max = (T)variadic_max(other...);
-  return std::max(val, other_max);
-}
-
-typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
-
+//Doesn't work right now, don't enable without fixing
+constexpr bool FORWARD_COMMIT = false;
 
 //static bool compare_one_off(const Pancake* lhs, const Pancake* rhs) {
 //  for (int i = NUM_PANCAKES; i >= 1; --i) {
@@ -93,104 +66,12 @@ typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
 //  return hash_value;
 //}
 
-std::unordered_map<size_t, std::vector<const Pancake*>> hash_lookup_f, hash_lookup_b;
-
 template <typename T, typename THash, typename TEqual, typename TLess>
 class triple
 {
 public:
-  struct FBarDiff
-  {
-    bool operator()(T lhs, T rhs) const
-    {
-      if(lhs->f_bar == rhs->f_bar)
-      {
-        return lhs->g < rhs->g;
-      }
-      else
-      {
-        return lhs->f_bar > rhs->f_bar;
-      }
-    }
-  };
-  struct GDiff
-  {
-    bool operator()(T lhs, T rhs) const
-    {
-      if(lhs->g == rhs->g)
-      {
-        return lhs->hdiff > rhs->hdiff;
-      }
-      else
-      {
-        return lhs->g > rhs->g;
-      }
-    }
-  };
-  struct MinH
-  {
-    bool operator()(T lhs, T rhs) const
-    {
-      if(lhs->h == rhs->h)
-      {
-        return lhs->f_bar > rhs->f_bar;
-      }
-      else
-      {
-        return lhs->h > rhs->h;
-      }
-    }
-  };
-
-  template<typename Sort>
-  struct queue_wrapper
-  {
-    std::priority_queue<T, std::vector<T>, Sort> data;
-
-    void push(T val)
-    {
-      data.push(val);
-    }
-
-    bool empty() const
-    {
-      return data.empty();
-    }
-
-    T top() const
-    {
-      return data.top();
-    }
-
-    void pop()
-    {
-      data.pop();
-    }
-
-    decltype(auto) begin()
-    {
-      throw std::runtime_error("Cannot iterate queue");
-    }
-
-    decltype(auto) end()
-    {
-      throw std::runtime_error("Cannot iterate queue");
-    }
-
-    void erase(T val)
-    {
-      assert(val == data.top());
-      pop();
-    }
-
-    size_t size()
-    {
-      return data.size();
-    }
-  };
-
+  
   typedef std::unordered_set<T, THash, TEqual> hash_set;
-  typedef queue_wrapper<FBarDiff> fbar_set;
 
   size_t total_size = 0;
 
@@ -256,39 +137,6 @@ public:
     return matches;
   }
 
- /* decltype(auto) query(int other_f, int other_delta, uint8_t lbmin) const
-  {
-    size_t matches = 0;
-    int max_delta = lbmin - other_f;
-    int max_f = lbmin - other_delta;
-    for(int target_f = 0; target_f <= max_f; ++target_f)
-    {
-      for(int target_delta = 0; target_delta <= max_delta; ++target_delta)
-      {
-        if(data[target_f][target_delta].size() > 0)
-        {
-          return std::make_tuple(target_f, target_delta);
-        }
-      }
-    }
-    return std::make_tuple(-1, -1);
-  }
-
-  size_t query_size(int other_f, int other_delta, uint8_t lbmin) const
-  {
-    size_t matches = 0;
-    int max_delta = lbmin - other_f;
-    int max_f = lbmin - other_delta;
-    for(int target_f = 0; target_f <= max_f; ++target_f)
-    {
-      for(int target_delta = 0; target_delta <= max_delta; ++target_delta)
-      {
-        matches += data[target_f][target_delta].size();
-      }
-    }
-    return matches;
-  }*/
-
   size_t size() const
   {
     return total_size;
@@ -339,7 +187,7 @@ public:
     T min_front = nullptr, min_back = nullptr;
 
     static bool forward_dir = false;
-    const Pancake* ret_val = nullptr;
+    T ret_val = nullptr;
     if constexpr(LATE_CLEANUP)
     {
       if((size_t)lbmin + 1 >= UB)
@@ -359,19 +207,6 @@ public:
             }
           }
         }
-        /*for(int f = 0; f <= lbmin; ++f)
-        {
-          int delta = lbmin - f;
-          if(back.size() <= front.size() && back.data[f][delta].size() > 0)
-          {
-            return std::make_tuple(f, delta, lbmin, false, ret_val);
-          }
-          else if(front.size() < back.size() && front.data[f][delta].size() > 0)
-          {
-            return std::make_tuple(f, delta, lbmin, true, ret_val);
-          }
-        }
-        return std::make_tuple(-1, -1, 0, true, ret_val);*/
       }
     }
     if constexpr(FORWARD_COMMIT)
@@ -410,7 +245,7 @@ public:
     {
       for(int delta = 0; delta <= lbmin - f; ++delta)
       {
-        if(((LATE_CLEANUP && (size_t)lbmin + 1 < UB) || front.size() < back.size()) && front.data[f][delta].size() > 0)
+        if((((size_t)lbmin + 1 < UB) || (!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta].size() > 0)
         {
           int glim = lbmin - 1 - (*front.data[f][delta].rbegin())->g;
           float fratio = static_cast<float>(back.query_size(f, delta, lbmin, glim)) / front.data[f][delta].size();
@@ -432,7 +267,7 @@ public:
             back_g = glim;
           }
         }
-        if(((LATE_CLEANUP && (size_t)lbmin + 1 < UB) || front.size() >= back.size()) && back.data[f][delta].size() > 0)
+        if((((size_t)lbmin + 1 < UB) || (!LATE_CLEANUP || front.size() >= back.size())) && back.data[f][delta].size() > 0)
         {
           int glim = lbmin - 1 - (*back.data[f][delta].rbegin())->g;
           auto bratio = static_cast<float>(front.query_size(f, delta, lbmin, glim)) / back.data[f][delta].size();
@@ -457,12 +292,12 @@ public:
     }
     if((FORWARD_COMMIT && !forward_dir) || (!FORWARD_COMMIT && max_bsize >= max_fsize))
     {
-      //if(back_f == -1) forward_dir = front.size() < back.size();
+      if(back_f == -1) forward_dir = front.size() < back.size();
       return std::make_tuple(back_f, back_delta, back_g, false, ret_val);
     }
     else
     {
-      //if(front_f == -1) forward_dir = front.size() < back.size();
+      if(front_f == -1) forward_dir = front.size() < back.size();
       return std::make_tuple(front_f, front_delta, front_g, true, ret_val);
     }
   }
@@ -649,8 +484,6 @@ class DibbsNbs
     {
       return std::make_tuple(0, 0, 0, 0, 0);
     }
-    hash_lookup_f.clear();
-    hash_lookup_b.clear();
     memory = 0;
     expansions = 0;
     expansions_at_cstar = 0;
