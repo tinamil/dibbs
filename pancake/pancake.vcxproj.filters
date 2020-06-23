@@ -125,9 +125,6 @@
     <ClInclude Include="dibbs-nbs.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="asymmetric.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PerfectSolution.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -252,6 +249,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ftf-dibbs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="2phase-lookahead.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

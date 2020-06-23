@@ -20,9 +20,9 @@ constexpr long EPSILON = 1;
 constexpr bool LATE_CLEANUP = true;
 #define GSORT true
 
-#define DIBBS_NBS "1phase-late"
+#define DIBBS_NBS "1phase-late-gsort"
 
-template <typename T, typename THash, typename TEqual>
+template <typename T, typename THash, typename TEqual, typename TLess>
 class triple
 {
 public:
@@ -32,7 +32,7 @@ public:
   size_t total_size = 0;
 
   #if GSORT
-  std::vector<std::vector<std::vector<std::vector<T>>>> data;
+  std::vector<std::vector<std::priority_queue<T, std::vector<T>, TLess>>> data;
   #else
   std::vector<std::vector<std::vector<T>>> data;
   #endif
@@ -43,12 +43,12 @@ public:
     for(int i = 0; i < data.size(); ++i)
     {
       data[i].resize(150);
-      #if GSORT
-      for(int j = 0; j < data[i].size(); ++j)
-      {
-        data[i][j].resize(150);
-      }
-      #endif
+      //#if GSORT
+      //for(int j = 0; j < data[i].size(); ++j)
+      //{
+      //  data[i][j].resize(150);
+      //}
+      //#endif
     }
   }
 
@@ -89,14 +89,14 @@ public:
     {
       for(int target_delta = 0; target_delta <= max_delta; ++target_delta)
       {
-        #if GSORT
+        /*#if GSORT
         for(int target_g = 0; target_g <= glim; ++target_g)
         {
           matches += data[target_f][target_delta][target_g].size();
         }
-        #else
+        #else*/
         matches += data[target_f][target_delta].size();
-        #endif
+        //#endif
       }
     }
     return matches;
@@ -109,24 +109,24 @@ public:
 
   void push_back(T val)
   {
-    #if GSORT
-    data[val->f][val->delta][val->g].push_back(val);
-    #else
-    data[val->f][val->delta].push_back(val);
-    #endif
+    //#if GSORT
+    //data[val->f][val->delta][val->g].push_back(val);
+    //#else
+    data[val->f][val->delta].push(val);
+    //#endif
     total_size += 1;
   }
 
   T pop(size_t f, size_t delta, size_t g)
   {
     T ret_val;
-    #if GSORT
-    ret_val = data[f][delta][g].back();
-    data[f][delta][g].pop_back();
-    #else 
-    ret_val = data[f][delta].back();
-    data[f][delta].pop_back();
-    #endif
+    //#if GSORT
+    //ret_val = data[f][delta][g].back();
+    //data[f][delta][g].pop_back();
+    //#else 
+    ret_val = data[f][delta].top();
+    data[f][delta].pop();
+    //#endif
     total_size -= 1;
     return ret_val;
   }
@@ -152,7 +152,7 @@ public:
           for(int f = 0; f <= fbar; ++f)
           {
             int delta = fbar - f;
-            #if GSORT
+            /*#if GSORT
             for(int g = lbmin; g >= 0; --g)
             {
               if(back.data[f][delta][g].size() > 0)
@@ -164,7 +164,7 @@ public:
                 return std::make_tuple(f, delta, g, true);
               }
             }
-            #else
+            #else*/
             if(back.data[f][delta].size() > 0)
             {
               return std::make_tuple(f, delta, 0, false);
@@ -173,7 +173,7 @@ public:
             {
               return std::make_tuple(f, delta, 0, true);
             }
-            #endif
+            //#endif
           }
         }
       }
@@ -188,7 +188,7 @@ public:
     {
       for(int delta = 0; delta <= lbmin - f; ++delta)
       {
-        #if GSORT
+        /*#if GSORT
         int front_bsize = 0, front_fsize = 0, front_max_g = -1;
         int back_bsize = 0, back_fsize = 0, back_max_g = -1;
         for(int g = lbmin; g >= 0; --g)
@@ -238,7 +238,7 @@ public:
             back_g = back_max_g;
           }
         }
-        #else
+        #else*/
         if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta].size() > 0)
         {
           float fratio = static_cast<float>(back.query_size(f, delta, lbmin, 0)) / front.data[f][delta].size();
@@ -262,7 +262,7 @@ public:
             back_g = 0;
           }
         }
-        #endif
+        //#endif
       }
     }
     if(max_bsize >= max_fsize)
@@ -283,7 +283,7 @@ class DibbsNbs
 {
 
   typedef std::unordered_set<const SlidingTile*, SlidingTileHash, SlidingTileEqual> hash_set;
-  typedef triple<const SlidingTile*, SlidingTileHash, SlidingTileEqual> pancake_triple;
+  typedef triple<const SlidingTile*, SlidingTileHash, SlidingTileEqual, GSortLowDuplicate> pancake_triple;
 
   StackArray<SlidingTile> storage;
   pancake_triple open_f_data;
@@ -321,7 +321,7 @@ class DibbsNbs
           expansions_at_cstar = 0;
           return std::make_tuple(nullptr, nullptr);
         }
-        #if GSORT
+        /*#if GSORT
         if(f >= 0 && dir && open_f_data.data[f][d][g].size() > 0)
         {
           auto val = open_f_data.pop(f, d, g);
@@ -332,7 +332,7 @@ class DibbsNbs
           auto val = open_b_data.pop(f, d, g);
           return std::make_tuple(nullptr, val);
         }
-        #else
+        #else*/
         if(f >= 0 && dir && open_f_data.data[f][d].size() > 0)
         {
           auto val = open_f_data.pop(f, d, g);
@@ -343,7 +343,7 @@ class DibbsNbs
           auto val = open_b_data.pop(f, d, g);
           return std::make_tuple(nullptr, val);
         }
-        #endif
+        //#endif
       }
     }
   }
@@ -486,7 +486,6 @@ class DibbsNbs
     }
     else return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory, expansions_at_cstar, expansions_after_UB);
   }
-
 
   static inline bool first_run = true;
 public:

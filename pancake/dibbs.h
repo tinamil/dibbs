@@ -16,7 +16,7 @@ class Dibbs
 {
 public:
 
-  typedef std::set<const Pancake*, PancakeFBarSortHighG> set;
+  typedef std::set<const Pancake*, PancakeFBarSort> set;
   typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
   //typedef std::unordered_set<const Pancake*, PancakeNeighborHash, PancakeNeighborEqual> hash_set;
 

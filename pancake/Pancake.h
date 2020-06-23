@@ -9,20 +9,21 @@
 //#define HISTORY
 
 constexpr int NUM_PANCAKES = 20;
-constexpr int GAPX = 3;
+constexpr int GAPX = 2;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 class hash_table;
-class Pancake {
+class Pancake
+{
 
 private:     // inverse of sequence of pancakes
   static uint8_t*& DUAL_SOURCE() { static uint8_t* I = nullptr; return I; };  // static goal sequence of Pancakes
 
 public:
   Direction dir;
-#ifdef HISTORY
+  #ifdef HISTORY
   std::vector<uint8_t> actions;
   const Pancake* parent = nullptr;
-#endif
+  #endif
   uint8_t source[NUM_PANCAKES + 1];                // source sequence of Pancakes
   uint8_t g;
   uint8_t h;
@@ -52,45 +53,50 @@ public:
 
   Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f),
     f_bar(copy.f_bar), hdiff(copy.hdiff), delta(copy.delta), threshold(copy.threshold)
-#ifdef HISTORY
+    #ifdef HISTORY
     , actions(copy.actions), parent(copy.parent)
-#endif
+    #endif
   {
     memcpy(source, copy.source, NUM_PANCAKES + 1);
   }
 
   //Required to calculate reverse heuristics, not needed for forward only search
-  static void Initialize_Dual(uint8_t src[]) {
-    if (DUAL_SOURCE() == nullptr) DUAL_SOURCE() = new uint8_t[NUM_PANCAKES + 1];
+  static void Initialize_Dual(uint8_t src[])
+  {
+    if(DUAL_SOURCE() == nullptr) DUAL_SOURCE() = new uint8_t[NUM_PANCAKES + 1];
     DUAL_SOURCE()[0] = NUM_PANCAKES;
-    for (int i = 1; i <= NUM_PANCAKES; i++) DUAL_SOURCE()[src[i]] = i;
+    for(int i = 1; i <= NUM_PANCAKES; i++) DUAL_SOURCE()[src[i]] = i;
   }
 
-  inline static Pancake GetSortedStack(Direction dir) {
+  inline static Pancake GetSortedStack(Direction dir)
+  {
     uint8_t pancakes[NUM_PANCAKES + 1];
     pancakes[0] = NUM_PANCAKES;
-    for (int i = 1; i <= NUM_PANCAKES; ++i) { pancakes[i] = i; }
+    for(int i = 1; i <= NUM_PANCAKES; ++i) { pancakes[i] = i; }
 
     return Pancake(pancakes, dir);
   }
 
-  inline bool operator==(const Pancake& right) const {
+  inline bool operator==(const Pancake& right) const
+  {
     return memcmp(source, right.source, NUM_PANCAKES + 1) == 0;
   }
 
   //Reverses the pancakes between 1 and i
-  inline void apply_flip(int i) {
+  inline void apply_flip(int i)
+  {
     assert(i >= 1 && i <= NUM_PANCAKES);
     std::reverse(source + 1, source + i + 1);
   }
 
   //Copies pancake, applies a flip, and updates g/h/f values
-  Pancake apply_action(int i) const {
+  Pancake apply_action(int i) const
+  {
     Pancake new_node(*this);
-#ifdef HISTORY
+    #ifdef HISTORY
     new_node.actions.push_back(i);
     new_node.parent = this;
-#endif
+    #endif
     new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
     new_node.h2 = new_node.update_gap_lb(OppositeDirection(dir), i, new_node.h2);
     new_node.g = g + 1;
@@ -107,47 +113,61 @@ public:
 };
 
 //Returns smallest f value with largest g value
-struct PancakeFSort {
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+struct PancakeFSort
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
 
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
-    if (lhs->f == rhs->f) {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
+    if(lhs->f == rhs->f)
+    {
       return lhs->g < rhs->g;
     }
     return lhs->f > rhs->f;
   }
 };
 
-struct PancakeFSortLowGSetComparer {
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+struct PancakeFSortLowGSetComparer
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
     int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
-    if (cmp == 0) {
+    if(cmp == 0)
+    {
       return false;
     }
-    else if (lhs->f == rhs->f) {
-      if (lhs->g == rhs->g)
+    else if(lhs->f == rhs->f)
+    {
+      if(lhs->g == rhs->g)
         return cmp < 0;
       else
         return lhs->g > rhs->g;
     }
-    else {
+    else
+    {
       return lhs->f < rhs->f;
     }
   }
 };
 
-struct FSortHighDuplicate {
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+struct FSortHighDuplicate
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
 
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
-    if (lhs->f == rhs->f) {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
+    if(lhs->f == rhs->f)
+    {
       return lhs->g > rhs->g;
     }
     return lhs->f > rhs->f;
@@ -155,60 +175,74 @@ struct FSortHighDuplicate {
 };
 
 //Returns smallest f value with smallest g value
-struct PancakeFSortLowG {
+struct PancakeFSortLowG
+{
 
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
 
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
     int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
-    if (cmp == 0) {
+    if(cmp == 0)
+    {
       return false;
     }
-    else if (lhs->f == rhs->f) {
-      if (lhs->g == rhs->g)
+    else if(lhs->f == rhs->f)
+    {
+      if(lhs->g == rhs->g)
         return cmp < 0;
       else
         return lhs->g < rhs->g;
     }
-    else {
+    else
+    {
       return lhs->f < rhs->f;
     }
   }
 };
 
 //Returns smallest g value
-struct PancakeGSortLow {
+struct PancakeGSortLow
+{
 
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
 
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
     int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
-    if (cmp == 0) {
+    if(cmp == 0)
+    {
       return false;
     }
-    if (lhs->g == rhs->g)
+    if(lhs->g == rhs->g)
       return cmp < 0;
     else
       return lhs->g < rhs->g;
   }
 };
 
-struct PancakeGSortHigh {
+struct PancakeGSortHigh
+{
 
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
 
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
     int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
-    if (cmp == 0) {
+    if(cmp == 0)
+    {
       return false;
     }
-    if (lhs->g == rhs->g)
+    if(lhs->g == rhs->g)
       return cmp > 0;
     else
       return lhs->g > rhs->g;
@@ -216,22 +250,28 @@ struct PancakeGSortHigh {
 };
 
 //Returns smallest fbar with smallest g value
-struct PancakeFBarSortLowG {
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+struct PancakeFBarSortLowG
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
     int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
-    if (cmp == 0) {
+    if(cmp == 0)
+    {
       return false;
     }
-    else if (lhs->f_bar == rhs->f_bar) {
-      if (lhs->g == rhs->g)
+    else if(lhs->f_bar == rhs->f_bar)
+    {
+      if(lhs->g == rhs->g)
         return cmp < 0;
       else
         return lhs->g < rhs->g;
     }
-    else {
+    else
+    {
       return lhs->f_bar < rhs->f_bar;
     }
   }
@@ -264,61 +304,116 @@ struct PancakeFBarSortHighG
   }
 };
 
-struct GSortHighDuplicate {
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+struct PancakeFBarSort
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
-    if (lhs->g == rhs->g) {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
+    if(cmp == 0)
+    {
+      return false;
+    }
+    else if(lhs->f_bar == rhs->f_bar)
+    {
+      return cmp < 0;
+    }
+    else
+    {
+      return lhs->f_bar < rhs->f_bar;
+    }
+  }
+};
+
+struct GSortHighDuplicate
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
+    if(lhs->g == rhs->g)
+    {
       return lhs->h < rhs->h;
     }
     return lhs->g > rhs->g;
   }
 };
 
-struct DeltaSortHighDuplicate {
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+struct GSortLowDuplicate
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
+    return !GSortHighDuplicate{}(lhs, rhs);
+  }
+};
+
+struct DeltaSortHighDuplicate
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
     uint8_t ld = lhs->g - lhs->h2;
     uint8_t rd = rhs->g - rhs->h2;
 
-    if (ld == rd) {
+    if(ld == rd)
+    {
       return lhs->g < rhs->g;
     }
     return ld > rd;
   }
 };
 
-struct FBarSortHighDuplicate {
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+struct FBarSortHighDuplicate
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
-    if (lhs->f_bar == rhs->f_bar) {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
+    if(lhs->f_bar == rhs->f_bar)
+    {
       return lhs->g > rhs->g;
     }
-    else {
+    else
+    {
       return lhs->f_bar > rhs->f_bar;
     }
   }
 };
 
-struct HfSortHighDuplicate {
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+struct HfSortHighDuplicate
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
     return lhs->h > rhs->h;
   }
 };
 
-struct HbSortHighDuplicate {
-  bool operator()(const Pancake& lhs, const Pancake& rhs) const {
+struct HbSortHighDuplicate
+{
+  bool operator()(const Pancake& lhs, const Pancake& rhs) const
+  {
     return operator()(&lhs, &rhs);
   }
-  bool operator()(const Pancake* lhs, const Pancake* rhs) const {
+  bool operator()(const Pancake* lhs, const Pancake* rhs) const
+  {
     return lhs->h2 > rhs->h2;
   }
 };

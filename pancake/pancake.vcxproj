@@ -74,7 +74,7 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\40-1-lookahead\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\f\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\1000-20-2a\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -200,7 +200,7 @@
     <ClInclude Include="..\VulkanStarlight\VulkanTexture.hpp" />
     <ClInclude Include="..\VulkanStarlight\VulkanTools.h" />
     <ClInclude Include="..\VulkanStarlight\Window.h" />
-    <ClInclude Include="asymmetric.h" />
+    <ClInclude Include="2phase-lookahead.h" />
     <ClInclude Include="dibbs-2phase-queue.hpp" />
     <ClInclude Include="dibbs-2phase.hpp" />
     <ClInclude Include="dibbs-array.hpp" />

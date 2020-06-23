@@ -8,7 +8,7 @@
 #include <iostream>
 #include <limits>
 
-constexpr auto NUM_PROBLEMS = 100;
+constexpr auto NUM_PROBLEMS = 1000;
 
 
 void generate_random_instance(double& seed, uint8_t problem[]);

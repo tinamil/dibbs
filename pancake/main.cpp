@@ -7,7 +7,8 @@
 //#define GBFHS
 //#define NBS
 //#define DVCBS
-//#define ASSYMETRIC
+//#include "dibbs-2phase.hpp"
+#include "2phase-lookahead.h"
 
 #include "ftf-dibbs.h"
 #include <StackArray.h>
@@ -33,7 +34,6 @@
 #include "dvcbs.h"
 #endif
 #include "problems.h"
-#include "dibbs-2phase.hpp"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -41,9 +41,6 @@
 #include <ctime>
 #include <sstream>
 #include <iomanip>
-#ifdef ASSYMETRIC
-#include "asymmetric.h"
-#endif
 
 #include "PerfectSolution.h"
 
@@ -225,8 +222,8 @@ void output_data(std::ostream& stream)
   #ifdef DIBBS_NBS
   stream << DIBBS_NBS << " ";
   #endif
-  #ifdef ASSYMETRIC
-  stream << "ASSYMETRIC ";
+  #ifdef TWO_PHASE_LOOKAHEAD
+  stream << TWO_PHASE_LOOKAHEAD << " ";
   #endif
   stream << "\n";
 
@@ -298,10 +295,10 @@ void output_data(std::ostream& stream)
       else if(!std::isinf(cstar) && answers[i] != cstar) { std::cout << "ERROR Cstar mismatch"; return; }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    stream << time_stream.rdbuf() << std::endl;
-    stream << memory_stream.rdbuf() << std::endl;
-    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
-    stream << expansions_after_ub_stream.rdbuf() << std::endl;
+    //stream << time_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
 
@@ -346,10 +343,10 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    stream << time_stream.rdbuf() << std::endl;
-    stream << memory_stream.rdbuf() << std::endl;
-    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
-    stream << expansions_after_ub_stream.rdbuf() << std::endl;
+    //stream << time_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
 
@@ -532,10 +529,10 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    stream << time_stream.rdbuf() << std::endl;
-    stream << memory_stream.rdbuf() << std::endl;
-    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
-    stream << expansions_after_ub_stream.rdbuf() << std::endl;
+    //stream << time_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
 
@@ -623,10 +620,10 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    stream << time_stream.rdbuf() << std::endl;
-    stream << memory_stream.rdbuf() << std::endl;
-    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
-    stream << expansions_after_ub_stream.rdbuf() << std::endl;
+    //stream << time_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
   {
@@ -674,26 +671,23 @@ void output_data(std::ostream& stream)
     stream << expansion_stream.rdbuf() << std::endl;
     //stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
-    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
-    stream << expansions_after_ub_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
   {
-    #ifdef ASSYMETRIC
-        //DIBBS_NBS
-    std::cout << "ASSYMETRIC\n";
+    #ifdef TWO_PHASE_LOOKAHEAD
+    std::cout << '\n' << TWO_PHASE_LOOKAHEAD << '\n';
     double seed = 3.1567;
     for(int i = 1; i <= NUM_PROBLEMS; ++i)
     {
       std::cout << i << " ";
       generate_random_instance(seed, problem);
-      //if (i != 19) continue;
-      //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
-      auto [cstar, expansions, memory] = AssymetricSearch::search(node, goal);
+      auto [cstar, expansions, memory, expansions_after_cstar, expansions_after_UB] = TWO_PHASE::TwoPhase::search(node, goal);
       auto end = std::chrono::system_clock::now();
       //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
       if(std::isinf(cstar))
@@ -703,6 +697,8 @@ void output_data(std::ostream& stream)
       else
       {
         expansion_stream << std::to_string(expansions) << " ";
+        expansions_after_cstar_stream << std::to_string(expansions_after_cstar) << " ";
+        expansions_after_ub_stream << std::to_string(expansions_after_UB) << " ";
       }
       memory_stream << std::to_string(memory) << " ";
 
@@ -720,10 +716,10 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    stream << time_stream.rdbuf() << std::endl;
-    stream << memory_stream.rdbuf() << std::endl;
-    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
-    stream << expansions_after_ub_stream.rdbuf() << std::endl;
+    //stream << time_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
 }
@@ -770,8 +766,8 @@ void run_random_test()
   #ifdef DIBBS_NBS
   name += std::string("_") + DIBBS_NBS;
   #endif
-  #ifdef ASSYMETRIC
-  name += "_ASSYM";
+  #ifdef TWO_PHASE_LOOKAHEAD
+  name += std::string("_") + TWO_PHASE_LOOKAHEAD;
   #endif
   name += ".txt";
   file.open(dir + name, std::ios::app);
