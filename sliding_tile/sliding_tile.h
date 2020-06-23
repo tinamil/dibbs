@@ -406,6 +406,22 @@ struct GSortHighDuplicate {
   }
 };
 
+struct GSortLowDuplicate
+{
+  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const
+  {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const
+  {
+    //if(lhs->g == rhs->g)
+    //{
+    //  return lhs->h > rhs->h;
+    //}
+    return lhs->g < rhs->g;
+  }
+};
+
 struct DeltaSortHighDuplicate {
   bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const {
     return operator()(&lhs, &rhs);
