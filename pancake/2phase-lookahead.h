@@ -23,7 +23,7 @@ namespace TWO_PHASE
   constexpr long EPSILON = 1;
   constexpr bool LATE_CLEANUP = false;
   constexpr bool LOOKAHEAD = true;
-  #define GSORT false
+  #define GSORT_LOOK false
 
   #define TWO_PHASE_LOOKAHEAD "1phase-lookahead"
 
@@ -81,7 +81,7 @@ namespace TWO_PHASE
 
     size_t total_size = 0;
 
-    #if GSORT
+    #if GSORT_LOOK
     std::vector<std::vector<std::priority_queue<T, std::vector<T>, TLess>>> data;
     #else
     std::vector<std::vector<std::vector<T>>> data;
@@ -118,7 +118,7 @@ namespace TWO_PHASE
 
     void push_back(T val)
     {
-      #if GSORT
+      #if GSORT_LOOK
       data[val->f][val->delta].push(val);
       #else
       data[val->f][val->delta].push_back(val);
@@ -129,7 +129,7 @@ namespace TWO_PHASE
     T pop(size_t f, size_t delta, size_t g)
     {
       T ret_val;
-      #if GSORT
+      #if GSORT_LOOK
       ret_val = data[f][delta].top();
       data[f][delta].pop();
       #else 
