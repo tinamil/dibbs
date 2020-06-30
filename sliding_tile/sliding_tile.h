@@ -19,12 +19,12 @@ class SlidingTile {
 
 private:
   static uint8_t distances[NUM_TILES][NUM_TILES];            // distances[i][j] = Manhattan distance between location i and location j.
-  static uint8_t moves[NUM_TILES][5];                // moves[i] = list of possible ways to move the empty tile from location i.
   static uint8_t starting[NUM_TILES];
   static uint8_t*& DUAL_SOURCE() { static uint8_t* I = nullptr; return I; };
-  uint8_t empty_location;
 
 public:
+  static uint8_t moves[NUM_TILES][5];                // moves[i] = list of possible ways to move the empty tile from location i.
+  uint8_t empty_location;
   Direction dir;
 #ifdef HISTORY
   std::vector<uint8_t> actions;
@@ -204,6 +204,7 @@ public:
     }
     empty_location = new_empty_location;
   }
+
   size_t num_actions_available() const {
     return moves[empty_location][0];
   }
@@ -343,6 +344,33 @@ struct FBarSortLowG {
   }
 };
 
+//Returns smallest fbar with smallest g value
+struct FBarSortHighG
+{
+  bool operator()(const SlidingTile& lhs, const SlidingTile& rhs) const
+  {
+    return operator()(&lhs, &rhs);
+  }
+  bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const
+  {
+    int cmp = memcmp(lhs->source, rhs->source, NUM_TILES);
+    if(cmp == 0)
+    {
+      return false;
+    }
+    else if(lhs->f_bar == rhs->f_bar)
+    {
+      if(lhs->g == rhs->g)
+        return cmp < 0;
+      else
+        return lhs->g > rhs->g;
+    }
+    else
+    {
+      return lhs->f_bar < rhs->f_bar;
+    }
+  }
+};
 struct SlidingTileHash
 {
   inline std::size_t operator() (const SlidingTile& x) const
@@ -414,10 +442,10 @@ struct GSortLowDuplicate
   }
   bool operator()(const SlidingTile* lhs, const SlidingTile* rhs) const
   {
-    //if(lhs->g == rhs->g)
-    //{
-    //  return lhs->h > rhs->h;
-    //}
+    if(lhs->g == rhs->g)
+    {
+      return lhs->h > rhs->h;
+    }
     return lhs->g < rhs->g;
   }
 };

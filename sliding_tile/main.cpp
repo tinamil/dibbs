@@ -6,7 +6,6 @@
 #include "id-d.h"
 #include "nbs.h"
 #include "ida.h"
-#include "dibbs-2phase.h"
 #include <iostream>
 #include <cassert>
 #include <ctime>
@@ -22,11 +21,11 @@
 //#define REVERSE_ASTAR
 //#define IDA
 //#define IDD
-//#define DIBBS
+#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
-#define DIBBS_NBS
+#include "dibbs-2phase.h"
 
 
 void define_problems15(int i, unsigned char* tile_in_location)
@@ -866,6 +865,7 @@ void GeneratePerfectCounts()
 
 int main(int ac, char** av)
 {
+  hash_table::initialize_hash_values();
   //unsigned char  tile_in_location[16] = {1, 2, 3, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};   // Simple test problem.
   //unsigned char  tile_in_location[16] = {4, 2, 6, 1, 5, 0, 7, 3, 8, 9, 10, 11, 12, 13, 14, 15};   // Simple test problem.
   //unsigned char  tile_in_location[16] = { 14, 13, 15, 7, 11, 12, 9, 5, 6, 0, 2, 1, 4, 8, 10, 3 };   // Problem 1 from Depth-First Iterative-Deepening: An Optimal Admissible Tree Search

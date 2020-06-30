@@ -3,11 +3,11 @@
 //#define A_STAR
 //#define REVERSE_ASTAR
 //#define IDD
-//#define DIBBS
+#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
-//#include "dibbs-2phase.hpp"
+#include "dibbs-2phase.hpp"
 #include "2phase-lookahead.h"
 
 #include "ftf-dibbs.h"

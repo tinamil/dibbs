@@ -298,7 +298,8 @@ namespace TWO_PHASE
       }
     }
 
-    bool expand_node(const Pancake* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, pancake_triple& data, neighbor_map& neighbors, neighbor_map& other_neighbors)
+    bool expand_node(const Pancake* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash, 
+                     pancake_triple& data, neighbor_map& neighbors, neighbor_map& other_neighbors)
     {
       if(next_val == nullptr) return true;
       auto removed = hash.erase(next_val);

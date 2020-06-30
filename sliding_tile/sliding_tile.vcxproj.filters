@@ -62,5 +62,8 @@
     <ClInclude Include="dibbs-2phase-queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="hash_table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

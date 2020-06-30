@@ -74,7 +74,7 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\40-1-lookahead\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\1000-20-2a\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\1000-20-2b\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

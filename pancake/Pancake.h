@@ -9,7 +9,7 @@
 //#define HISTORY
 
 constexpr int NUM_PANCAKES = 20;
-constexpr int GAPX = 2;
+constexpr int GAPX = 3;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 class hash_table;
 class Pancake
