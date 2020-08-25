@@ -21,7 +21,7 @@
 //#define REVERSE_ASTAR
 //#define IDA
 //#define IDD
-#define DIBBS
+//#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS

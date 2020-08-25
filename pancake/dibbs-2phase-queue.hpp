@@ -312,7 +312,7 @@ class DibbsNbs {
   Pancake best_b;
 #endif
 
-  DibbsNbs() : open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
+  DibbsNbs() : open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0), memory(0) {}
 
   std::optional<std::tuple<const Pancake*, const Pancake*>> select_pair() {
     while (true) {

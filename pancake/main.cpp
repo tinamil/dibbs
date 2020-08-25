@@ -2,15 +2,15 @@
 //#define IDA_STAR
 //#define A_STAR
 //#define REVERSE_ASTAR
-//#define IDD
-#define DIBBS
+#define IDD
+//#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
-#include "dibbs-2phase.hpp"
-#include "2phase-lookahead.h"
-
+//#include "dibbs-2phase.hpp"
+//#include "2phase-lookahead.h"
 #include "ftf-dibbs.h"
+
 #include <StackArray.h>
 #include "Transform.h"
 #include "Pancake.h"
@@ -224,6 +224,9 @@ void output_data(std::ostream& stream)
   #endif
   #ifdef TWO_PHASE_LOOKAHEAD
   stream << TWO_PHASE_LOOKAHEAD << " ";
+  #endif
+  #ifdef FTF_PANCAKE
+  stream << FTF_PANCAKE << " ";
   #endif
   stream << "\n";
 
@@ -722,7 +725,51 @@ void output_data(std::ostream& stream)
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
-}
+  {
+    #ifdef FTF_PANCAKE
+    std::cout << '\n' << FTF_PANCAKE << '\n';
+    double seed = 3.1567;
+    for(int i = 1; i <= NUM_PROBLEMS; ++i)
+    {
+      std::cout << i << " ";
+      generate_random_instance(seed, problem);
+      Pancake node(problem, Direction::forward);
+      Pancake goal = Pancake::GetSortedStack(Direction::backward);
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions, memory] = FTF_Dibbs::search(node, goal);
+      auto end = std::chrono::system_clock::now();
+      //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
+      if(std::isinf(cstar))
+      {
+        expansion_stream << "NAN ";
+      }
+      else
+      {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+      memory_stream << std::to_string(memory) << " ";
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if(answers[i] < 0 && !std::isinf(cstar))
+      {
+        answers[i] = cstar;
+      }
+      else if(!std::isinf(cstar) && answers[i] != cstar)
+      {
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
+      }
+    }
+    stream << expansion_stream.rdbuf() << std::endl;
+    //stream << time_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
+    #endif
+    }
+  }
 
 std::string return_formatted_time(std::string format)
 {
@@ -768,6 +815,9 @@ void run_random_test()
   #endif
   #ifdef TWO_PHASE_LOOKAHEAD
   name += std::string("_") + TWO_PHASE_LOOKAHEAD;
+  #endif
+  #ifdef FTF_PANCAKE
+  name += std::string("_") + FTF_PANCAKE;
   #endif
   name += ".txt";
   file.open(dir + name, std::ios::app);

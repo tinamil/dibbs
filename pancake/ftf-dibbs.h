@@ -14,88 +14,106 @@
 
 #include <windows.h>
 #include <Psapi.h>
+#include "ftf-pancake.h"
+
+#define FTF_PANCAKE "FTF_Pancake"
 
 class FTF_Dibbs
 {
-  struct LocalitySearch
+public:
+
+  struct FTFPancakeFSortHighG
   {
-    template <size_t start, size_t size>
-    struct Hash
+    bool operator()(const FTF_Pancake& lhs, const FTF_Pancake& rhs) const
     {
-      inline size_t operator()(const Pancake* x) const
-      {
-        return boost_hash(x->source + start, size);
-      }
-    };
-    template <size_t start, size_t size>
-    struct Equal
-    {
-      inline bool operator()(const Pancake* x, const Pancake* y) const
-      {
-        return memcmp(x->source + start, y->source + start, size) == 0;
-      }
-    };
-
-    std::vector<tsl::hopscotch_map<size_t, tsl::hopscotch_set<const Pancake*>>> list_of_hash;
-    
-    tsl::hopscotch_map<size_t, std::vector<const Pancake*>> min_hash;
-
-    void Add_Node(const Pancake* p)
-    {
-      for(int i = 0; i < NUM_PANCAKES - 1; ++i)
-      {
-        size_t hash_val = hash_table::hash(p->source, i, i + 1);
-        list_of_hash[i][hash_val].insert(p);
-      }
+      return operator()(&lhs, &rhs);
     }
-
-    size_t Count(const Pancake* p)
+    bool operator()(const FTF_Pancake* lhs, const FTF_Pancake* rhs) const
     {
-      for(int i = 0; i < NUM_PANCAKES - 1; ++i)
+      int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
+      if(cmp == 0)
       {
-        size_t hash_val = hash_table::hash(p->source, i, i + 1);
+        return false;
+      }
+      else if(lhs->f == rhs->f)
+      {
+        if(lhs->g == rhs->g)
+          return cmp < 0;
+        else
+          return lhs->g > rhs->g;
+      }
+      else
+      {
+        return lhs->f < rhs->f;
       }
     }
   };
-public:
 
-  typedef std::set<const Pancake*, PancakeFBarSortLowG> set;
-  typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
+  struct FTFPancakeHash
+  {
+    inline std::size_t operator() (const FTF_Pancake& x) const
+    {
+      return operator()(&x);
+    }
+    inline std::size_t operator() (const FTF_Pancake* x) const
+    {
+      return SuperFastHash(x->source + 1, NUM_PANCAKES);
+    }
+  };
+
+  struct FTFPancakeEqual
+  {
+    inline bool operator() (const FTF_Pancake* x, const FTF_Pancake* y) const
+    {
+      return memcmp(x->source, y->source, NUM_PANCAKES + 1) == 0;
+    }
+    inline bool operator() (const FTF_Pancake x, const FTF_Pancake y) const
+    {
+      return x == y;
+    }
+  };
+
+  typedef std::set<const FTF_Pancake*, FTFPancakeFSortHighG> set;
+  typedef std::unordered_set<const FTF_Pancake*, FTFPancakeHash, FTFPancakeEqual> hash_set;
   //typedef std::unordered_set<const Pancake*, PancakeNeighborHash, PancakeNeighborEqual> hash_set;
 
-  StackArray<Pancake> storage;
+  StackArray<FTF_Pancake> storage;
   set open_f, open_b;
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
-  hash_set neighbor_f, neighor_b;
+  ftf_matchstructure forward_index, backward_index;
   size_t expansions;
   size_t UB;
+  size_t lbmin;
   size_t memory;
-  size_t expansions_cstar = 0;
 
 
-  FTF_Dibbs() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0) {}
 
-
-  void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, std::vector<Pancake>* expansions_in_order = nullptr)
+  FTF_Dibbs() : open_f(), open_b(), closed_f(), closed_b(), forward_index(), backward_index(),
+    open_f_hash(), open_b_hash(), expansions(0), UB(0), lbmin(0), memory(0)
   {
-    const Pancake* next_val = *open.begin();
+
+  }
+
+  void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed,
+                   ftf_matchstructure& my_index,
+                   ftf_matchstructure& other_index)
+  {
+    const FTF_Pancake* next_val = *open.begin();
 
     auto it_hash = open_hash.find(next_val);
     assert(it_hash != open_hash.end());
     open_hash.erase(it_hash);
     open.erase(next_val);
+    my_index.erase(next_val);
 
     ++expansions;
-    ++expansions_cstar;
 
     closed.insert(next_val);
 
-    if(expansions_in_order) expansions_in_order->push_back(*next_val);
-
     for(int i = 2, j = NUM_PANCAKES; i <= j; ++i)
     {
-      Pancake new_action = next_val->apply_action(i);
+      FTF_Pancake new_action = next_val->apply_action(i, other_index);
 
       if(new_action.f > UB)
       {
@@ -147,6 +165,7 @@ public:
         auto ptr = storage.push_back(new_action);
         open.insert(ptr);
         open_hash.insert(ptr);
+        my_index.insert(ptr);
       }
     }
   }
@@ -155,29 +174,25 @@ public:
   Pancake best_f, best_b;
   #endif
 
-  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr)
+  std::tuple<double, size_t, size_t> run_search(FTF_Pancake start, FTF_Pancake goal, std::vector<FTF_Pancake>* expansions_in_order = nullptr)
   {
     expansions = 0;
     memory = 0;
     auto ptr = storage.push_back(start);
+    forward_index.insert(ptr);
+    ptr->h = ptr->f = forward_index.match(&goal);
+    goal.h = goal.f = ptr->h;
     open_f.insert(ptr);
     open_f_hash.insert(ptr);
     ptr = storage.push_back(goal);
     open_b.insert(ptr);
     open_b_hash.insert(ptr);
-
+    backward_index.insert(ptr);
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
-    int lbmin = 0;
     bool forward = false;
-    while(open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0))
+    while(open_f.size() > 0 && open_b.size() > 0 && UB > lbmin)
     {
-
-      if(lbmin < ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0))
-      {
-        expansions_cstar = 0;
-        lbmin = ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0);
-      }
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
       memory = std::max(memory, memCounter.PagefileUsage);
@@ -186,27 +201,47 @@ public:
         break;
       }
 
-      if((*open_f.begin())->f_bar < (*open_b.begin())->f_bar)
+      if((*open_f.begin())->f < (*open_b.begin())->f)
       {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f);
+        expand_node(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
         forward = open_f.size() < open_b.size();
+
+
+        //lbmin = SIZE_MAX;
+        //for(auto& pancake : open_f)
+        //{
+        //  auto pair = FTF_Pancake::gap_pair(pancake->hash_values, backward_index);
+        //  size_t tmp = pancake->g + std::get<0>(pair);
+        //  if(tmp < lbmin)
+        //    lbmin = tmp;
+        //}
       }
-      else if((*open_f.begin())->f_bar > (*open_b.begin())->f_bar)
+      else if((*open_f.begin())->f > (*open_b.begin())->f)
       {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b);
+        expand_node(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
         forward = open_f.size() < open_b.size();
+
+
+        //lbmin = SIZE_MAX;
+        //for(auto& pancake : open_f)
+        //{
+        //  auto pair = FTF_Pancake::gap_pair(pancake->hash_values, backward_index);
+        //  size_t tmp = pancake->g + std::get<0>(pair);
+        //  if(tmp < lbmin)
+        //    lbmin = tmp;
+        //}
       }
-      else if(forward)
+      //else if(forward)
+      else if(open_f.size() <= open_b.size())
       {
-//else if (open_f.size() <= open_b.size()) {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f);
+        expand_node(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
       }
       else
       {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b);
+        expand_node(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
       }
 
-
+      lbmin = std::max((*open_f.begin())->f, (*open_b.begin())->f);
     }
     #ifdef HISTORY
     std::cout << "Actions: ";
@@ -221,13 +256,13 @@ public:
     }
     std::cout << std::endl;
     #endif
-    if(UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0))
+    if(UB > (*open_f.begin())->f && UB > (*open_b.begin())->f)
     {
-      return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, expansions_cstar);
+      return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);
     }
     else
     {
-      return std::make_tuple((double)UB, expansions, expansions_cstar);
+      return std::make_tuple((double)UB, expansions, memory);
     }
   }
 
@@ -236,6 +271,6 @@ public:
   static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr)
   {
     FTF_Dibbs instance;
-    return instance.run_search(start, goal, expansions_in_order);
+    return instance.run_search(FTF_Pancake(start.source, start.dir), FTF_Pancake(goal.source, goal.dir));
   }
 };

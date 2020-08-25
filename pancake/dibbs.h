@@ -16,7 +16,8 @@ class Dibbs
 {
 public:
 
-  typedef std::set<const Pancake*, PancakeFBarSort> set;
+  //typedef std::set<const Pancake*, PancakeFBarSort> set;
+  typedef std::set<const Pancake*, PancakeFBarSortHighG> set;
   typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
   //typedef std::unordered_set<const Pancake*, PancakeNeighborHash, PancakeNeighborEqual> hash_set;
 
@@ -31,7 +32,7 @@ public:
   size_t expansions_cstar = 0;
 
 
-  Dibbs() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0) {}
+  Dibbs() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0), memory(0) {}
 
 
   void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, std::vector<Pancake>* expansions_in_order = nullptr)
@@ -153,8 +154,8 @@ public:
         expand_node(open_b, open_b_hash, open_f_hash, closed_b);
         forward = open_f.size() < open_b.size();
       }
-      //else if (forward) {
-      else if(open_f.size() <= open_b.size())
+      else if(forward)
+      //else if(open_f.size() <= open_b.size())
       {
         expand_node(open_f, open_f_hash, open_b_hash, closed_f);
       }

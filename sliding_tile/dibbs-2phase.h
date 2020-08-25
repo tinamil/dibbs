@@ -19,9 +19,9 @@
 #include <optional>
 
 constexpr long EPSILON = 1;
-constexpr bool LATE_CLEANUP = false;
+constexpr bool LATE_CLEANUP = true;
 constexpr bool LOOKAHEAD = true;
-#define GSORT false
+#define GSORT true
 
 #define DIBBS_NBS "1phase-lookahead-gsort"
 
@@ -57,7 +57,7 @@ public:
     int max_f = lbmin - other_delta;
     for(int target_f = 0; target_f <= max_f; ++target_f)
     {
-      for(int target_delta = 0; target_delta <= max_delta; ++target_delta)
+      for(int target_delta = 0; target_delta <= max_delta; target_delta += 2)
       {
         matches += data[target_f][target_delta].size();
       }
@@ -126,10 +126,10 @@ public:
 
     if constexpr(LATE_CLEANUP)
     {
-      if((size_t)lbmin + 1 >= UB)
+      if(true || (size_t)lbmin + 2 >= UB)
       {
         //Cleanup all nodes with fbar smaller than lbmin
-        for(int fbar = 0; fbar < lbmin; ++fbar)
+        for(int fbar = 0; fbar <= lbmin - 2; ++fbar)
         {
           for(int f = 0; f <= fbar; ++f)
           {
@@ -154,9 +154,9 @@ public:
 
     for(int f = 0; f <= lbmin; ++f)
     {
-      for(int delta = 0; delta <= lbmin - f; ++delta)
+      for(int delta = 0; delta <= lbmin - f; delta += 2)
       {
-        if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta].size() > 0)
+        if((/*((size_t)lbmin + 2 < UB) || */(!LATE_CLEANUP || front.size() < back.size())) && front.data[f][delta].size() > 0)
         {
           float fratio = static_cast<float>(back.query_size(f, delta, lbmin, 0)) / front.data[f][delta].size();
 
@@ -168,7 +168,7 @@ public:
             front_g = 0;
           }
         }
-        if((((size_t)lbmin + 2 < UB) || (!LATE_CLEANUP || front.size() >= back.size())) && back.data[f][delta].size() > 0)
+        if((/*((size_t)lbmin + 2 < UB) || */(!LATE_CLEANUP || front.size() >= back.size())) && back.data[f][delta].size() > 0)
         {
           auto bratio = static_cast<float>(front.query_size(f, delta, lbmin, 0)) / back.data[f][delta].size();
           if(bratio > max_bsize)
@@ -255,6 +255,7 @@ class DibbsNbs
   bool expand_node(const SlidingTile* next_val, hash_set& hash, hash_set& closed, const hash_set& other_hash,
                    pancake_triple& data, neighbor_map& neighbors, neighbor_map& other_neighbors)
   {
+
     if(next_val == nullptr) return true;
     auto removed = hash.erase(next_val);
     if(removed == 0) return true;
@@ -280,8 +281,8 @@ class DibbsNbs
     for(int i = 1, stop = next_val->num_actions_available(); i <= stop; ++i)
     {
       SlidingTile new_action = next_val->apply_action(i);
-      //if(new_action.f_bar % 2 == 0)
-      //  std::cout << "Tile " << std::to_string(new_action.g) << " " << std::to_string(new_action.h) << " " << std::to_string(new_action.h2) << " " << std::to_string(new_action.f) << " " << std::to_string(new_action.delta) << " " << std::to_string(new_action.f_bar) << "\n";
+      if(new_action.delta % 2 == 1)
+        std::cout << "Tile " << std::to_string(new_action.g) << " " << std::to_string(new_action.h) << " " << std::to_string(new_action.h2) << " " << std::to_string(new_action.f) << " " << std::to_string(new_action.delta) << " " << std::to_string(new_action.f_bar) << "\n";
 
       auto it_open = other_hash.find(&new_action);
       bool already_matched = false;
@@ -292,7 +293,7 @@ class DibbsNbs
         if(tmp_UB < UB)
         {
           expansions_after_UB = 0;
-          std::cout << "Prev UB: " << UB << " new UB: " << tmp_UB << " LB: " << lbmin << '\n';
+          //std::cout << "Prev UB: " << UB << " new UB: " << tmp_UB << " LB: " << lbmin << '\n';
           UB = tmp_UB;
           if(UB <= lbmin + 1) return true;
           #ifdef HISTORY
@@ -390,7 +391,7 @@ class DibbsNbs
     std::optional<std::tuple<const SlidingTile*, const SlidingTile*>> pair;
     while((pair = select_pair()).has_value())
     {
-      if(lbmin >= UB)
+      if(lbmin + 1 >= UB)
       { //>= for first stop
         finished = true;
         break;

@@ -3,40 +3,70 @@
 #include "Pancake.h"
 #include <random>
 
-class hash_table {
+typedef uint32_t hash_t;
+constexpr size_t HASH_MAX = UINT32_MAX;
+constexpr bool RANDOM = false;
+
+class hash_table
+{
 private:
   // hash_values[i][j] =random hash value associated with pancake i being adjacent to pancake j in seq: U[0,HASH_SIZE).
-  static inline std::array <std::array<uint32_t, NUM_PANCAKES + 1>, NUM_PANCAKES + 1> hash_values;
+  static inline hash_t hash_values[NUM_PANCAKES + 2][NUM_PANCAKES + 2];
 public:
-  static void initialize_hash_values() {
+  static void initialize_hash_values()
+  {
     int seed = 1;
-    std::mt19937 rng(seed);
-    std::uniform_int_distribution<size_t> gen(0, UINT32_MAX);
-    for (int i = 1; i < NUM_PANCAKES; ++i) {
-      for (int j = i + 1; j <= NUM_PANCAKES; ++j) {
-        hash_values[i][j] = gen(rng);
-        hash_values[j][i] = hash_values[i][j];
+    if constexpr(RANDOM)
+    {
+      std::mt19937 rng(seed);
+      std::uniform_int_distribution<uint64_t> gen(0, HASH_MAX);
+      for(int i = 0; i <= NUM_PANCAKES; ++i)
+      {
+        for(int j = i + 1; j <= NUM_PANCAKES + 1; ++j)
+        {
+          hash_values[i][j] = gen(rng);
+          hash_values[j][i] = hash_values[i][j];
+        }
       }
+    }
+    else
+    {
+      int count = 0;
+      for(int i = 0; i <= NUM_PANCAKES; ++i)
+      {
+        for(int j = i + 1; j <= NUM_PANCAKES + 1; ++j)
+        {
+          hash_values[i][j] = count++;
+          hash_values[j][i] = hash_values[i][j];
+        }
+      }
+      assert(count == ((NUM_PANCAKES + 1) * (NUM_PANCAKES + 2) / 2));
     }
   }
 
-  static inline uint32_t hash(const uint8_t data[], int i, int j)
+  static inline hash_t hash(int i, int j)
   {
-    assert(i <= NUM_PANCAKES && j <= NUM_PANCAKES && i >= 0 && j >= 0);
-    if(data[i] < data[j])
-      return hash_values[data[i]][data[j]];
-    else
-      return hash_values[data[j]][data[i]];
-  }
-
-  static inline uint32_t hash(int i, int j) {
-    assert(i <= NUM_PANCAKES && j <= NUM_PANCAKES && i >= 0 && j >= 0);
+    assert(i <= NUM_PANCAKES && j <= NUM_PANCAKES + 1 && i >= 0 && j >= 0);
     return hash_values[i][j];
   }
 
-  static inline uint32_t hash(const uint8_t data[]) {
-    uint32_t hash_val = 0;
-    for (int i = 1; i < NUM_PANCAKES; ++i) {
+  static inline uint64_t compress(hash_t hash_values[NUM_PANCAKES + 1])
+  {
+    uint64_t compressed(0);
+
+    for(int i = 1; i <= NUM_PANCAKES; ++i)
+    {
+      compressed |= 1ui64 << ((hash_values[i] - 1) % 64);
+    }
+
+    return compressed;
+  }
+
+  static inline hash_t hash(const uint8_t data[])
+  {
+    hash_t hash_val = 0;
+    for(int i = 1; i <= NUM_PANCAKES; ++i)
+    {
       hash_val += hash_values[data[i]][data[i + 1]];
     }
     return hash_val;

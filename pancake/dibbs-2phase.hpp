@@ -18,11 +18,11 @@
 #include <optional>
 
 constexpr long EPSILON = 1;
-constexpr bool LATE_CLEANUP = true;
-#define GSORT true
+constexpr bool LATE_CLEANUP = false;
+#define GSORT false
 
-#define DIBBS_NBS "1phase-late-maxg-nogfilter"
-//#define DIBBS_NBS "1phase"
+//#define DIBBS_NBS "1phase-late-maxg-nogfilter"
+#define DIBBS_NBS "1phase"
 
 //static bool compare_one_off(const Pancake* lhs, const Pancake* rhs) {
 //  for (int i = NUM_PANCAKES; i >= 1; --i) {
@@ -256,7 +256,7 @@ class DibbsNbs
   Pancake best_b;
   #endif
 
-  DibbsNbs() : open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
+  DibbsNbs() : open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0), memory(0) {}
 
   std::optional<std::tuple<const Pancake*, const Pancake*>> select_pair()
   {

@@ -81,6 +81,9 @@
     <ClCompile Include="..\VulkanStarlight\VulkanLineRenderer.cpp">
       <Filter>Source Files\Vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="ftf-pancake.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="problems.h">
@@ -252,6 +255,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="2phase-lookahead.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ftf-pancake.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -6,19 +6,17 @@
 #include "Direction.h"
 #include "hash.hpp"
 
-//#define HISTORY
+//#define HISTORY 
 
-constexpr int NUM_PANCAKES = 20;
-constexpr int GAPX = 3;
+constexpr int NUM_PANCAKES = 14;
+constexpr int GAPX = 0;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 class hash_table;
 class Pancake
 {
-
-private:     // inverse of sequence of pancakes
-  static uint8_t*& DUAL_SOURCE() { static uint8_t* I = nullptr; return I; };  // static goal sequence of Pancakes
-
 public:
+  // inverse of sequence of pancakes
+  static uint8_t*& DUAL_SOURCE() { static uint8_t* I = nullptr; return I; };  // static goal sequence of Pancakes
   Direction dir;
   #ifdef HISTORY
   std::vector<uint8_t> actions;

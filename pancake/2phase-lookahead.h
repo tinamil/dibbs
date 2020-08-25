@@ -23,9 +23,9 @@ namespace TWO_PHASE
   constexpr long EPSILON = 1;
   constexpr bool LATE_CLEANUP = false;
   constexpr bool LOOKAHEAD = true;
-  #define GSORT_LOOK false
+  #define GSORT_LOOK true
 
-  #define TWO_PHASE_LOOKAHEAD "1phase-lookahead"
+  #define TWO_PHASE_LOOKAHEAD "1phase-lookahead-gsort"
 
   static bool compare_one_off(const Pancake* lhs, const Pancake* rhs)
   {
@@ -266,7 +266,7 @@ namespace TWO_PHASE
     Pancake best_b;
     #endif
 
-    TwoPhase() : open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0) {}
+    TwoPhase() : open_f_hash(), open_b_hash(), closed_f(), closed_b(), expansions(0), UB(0), lbmin(0), memory(0) {}
 
     std::optional<std::tuple<const Pancake*, const Pancake*>> select_pair()
     {
