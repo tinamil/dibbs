@@ -48,6 +48,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.0.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -114,48 +115,34 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;VK_USE_PLATFORM_WIN32_KHR;GLM_FORCE_CXX2A;GLM_FORCE_RADIANS;GLM_FORCE_DEPTH_ZERO_TO_ONE;GLM_ENABLE_EXPERIMENTAL;GLM_FORCE_LEFT_HANDED;GLM_FORCE_SWIZZLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\John\git\dibbs\VulkanStarlight;C:\Users\John\git\dibbs\VulkanMemoryAllocator;C:\Users\John\git\dibbs\tsl;C:\Users\John\git\dibbs\stb-master;C:\Users\John\git\dibbs\tinyobjloader-master;C:\Users\John\git\dibbs\glm;C:\VulkanSDK\1.2.131.2\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\John\git\dibbs\tsl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
     </ClCompile>
     <Link>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.131.2\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\John\git\dibbs\VulkanStarlight;C:\VulkanSDK\1.2.131.2\Include;C:\Users\John\git\dibbs\VulkanMemoryAllocator;C:\Users\John\git\dibbs\stb-master;C:\Users\John\git\dibbs\tsl;C:\Users\John\git\dibbs\glm;C:\Users\John\git\dibbs\tinyobjloader-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\John\git\dibbs\tsl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;VK_USE_PLATFORM_WIN32_KHR;GLM_FORCE_CXX2A;GLM_FORCE_RADIANS;GLM_FORCE_DEPTH_ZERO_TO_ONE;GLM_ENABLE_EXPERIMENTAL;GLM_FORCE_LEFT_HANDED;GLM_FORCE_SWIZZLE;VMA_DEBUG_MARGIN=16;VMA_DEBUG_DETECT_CORRUPTION=1;VMA_DEBUG_INITIALIZE_ALLOCATIONS=1;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.131.2\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\VulkanStarlight\Archetype.cpp" />
-    <ClCompile Include="..\VulkanStarlight\compile_headers.cpp" />
-    <ClCompile Include="..\VulkanStarlight\FontComponents.cpp" />
-    <ClCompile Include="..\VulkanStarlight\Input.cpp" />
-    <ClCompile Include="..\VulkanStarlight\Renderer.cpp" />
-    <ClCompile Include="..\VulkanStarlight\UISystem.cpp" />
-    <ClCompile Include="..\VulkanStarlight\VulkanBackgroundRenderer.cpp" />
-    <ClCompile Include="..\VulkanStarlight\VulkanDebug.cpp" />
-    <ClCompile Include="..\VulkanStarlight\VulkanFontRenderer.cpp" />
-    <ClCompile Include="..\VulkanStarlight\VulkanLineRenderer.cpp" />
-    <ClCompile Include="..\VulkanStarlight\VulkanModelRenderer.cpp" />
-    <ClCompile Include="..\VulkanStarlight\VulkanOutlineRenderer.cpp" />
-    <ClCompile Include="..\VulkanStarlight\VulkanSpriteRenderer.cpp" />
-    <ClCompile Include="..\VulkanStarlight\VulkanTools.cpp" />
-    <ClCompile Include="..\VulkanStarlight\Window.cpp" />
+    <ClCompile Include="mycuda.cpp" />
     <ClCompile Include="ftf-pancake.cpp" />
     <ClCompile Include="GBFHS.h" />
     <ClCompile Include="IDAstar.cpp" />
@@ -164,44 +151,8 @@
     <ClCompile Include="problems.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\VulkanStarlight\Archetype.h" />
-    <ClInclude Include="..\VulkanStarlight\camera.hpp" />
-    <ClInclude Include="..\VulkanStarlight\defines.h" />
-    <ClInclude Include="..\VulkanStarlight\ECSManager.h" />
-    <ClInclude Include="..\VulkanStarlight\Entity.h" />
-    <ClInclude Include="..\VulkanStarlight\Events.h" />
-    <ClInclude Include="..\VulkanStarlight\FontComponents.h" />
-    <ClInclude Include="..\VulkanStarlight\frustum.hpp" />
-    <ClInclude Include="..\VulkanStarlight\Input.h" />
-    <ClInclude Include="..\VulkanStarlight\keycodes.hpp" />
-    <ClInclude Include="..\VulkanStarlight\Model.hpp" />
-    <ClInclude Include="..\VulkanStarlight\Renderer.h" />
-    <ClInclude Include="..\VulkanStarlight\Screen.h" />
-    <ClInclude Include="..\VulkanStarlight\ScreenElementProcessor.hpp" />
-    <ClInclude Include="..\VulkanStarlight\Serialization.h" />
-    <ClInclude Include="..\VulkanStarlight\sprite.h" />
-    <ClInclude Include="..\VulkanStarlight\StackArray.h" />
-    <ClInclude Include="..\VulkanStarlight\static_helpers.h" />
-    <ClInclude Include="..\VulkanStarlight\threadpool.hpp" />
-    <ClInclude Include="..\VulkanStarlight\Timer.hpp" />
-    <ClInclude Include="..\VulkanStarlight\Transform.h" />
-    <ClInclude Include="..\VulkanStarlight\TransientComponents.h" />
-    <ClInclude Include="..\VulkanStarlight\UISystem.h" />
-    <ClInclude Include="..\VulkanStarlight\VulkanBackgroundRenderer.h" />
-    <ClInclude Include="..\VulkanStarlight\VulkanBaseRenderer.h" />
-    <ClInclude Include="..\VulkanStarlight\VulkanDebug.h" />
-    <ClInclude Include="..\VulkanStarlight\VulkanDevice.hpp" />
-    <ClInclude Include="..\VulkanStarlight\VulkanFontRenderer.h" />
-    <ClInclude Include="..\VulkanStarlight\VulkanLineRenderer.h" />
-    <ClInclude Include="..\VulkanStarlight\VulkanModel.hpp" />
-    <ClInclude Include="..\VulkanStarlight\VulkanModelRenderer.h" />
-    <ClInclude Include="..\VulkanStarlight\VulkanOutlineRenderer.h" />
-    <ClInclude Include="..\VulkanStarlight\VulkanSpriteRenderer.h" />
-    <ClInclude Include="..\VulkanStarlight\VulkanSwapChain.hpp" />
-    <ClInclude Include="..\VulkanStarlight\VulkanTexture.hpp" />
-    <ClInclude Include="..\VulkanStarlight\VulkanTools.h" />
-    <ClInclude Include="..\VulkanStarlight\Window.h" />
     <ClInclude Include="2phase-lookahead.h" />
+    <ClInclude Include="mycuda.h" />
     <ClInclude Include="dibbs-2phase-queue.hpp" />
     <ClInclude Include="dibbs-2phase.hpp" />
     <ClInclude Include="dibbs-array.hpp" />
@@ -223,19 +174,8 @@
     <ClInclude Include="Pancake.h" />
     <ClInclude Include="problems.h" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="shaders\line.frag" />
-    <None Include="shaders\line.vert" />
-    <None Include="shaders\outline.frag" />
-    <None Include="shaders\phong.frag" />
-    <None Include="shaders\phong.vert" />
-    <None Include="shaders\sdf.frag" />
-    <None Include="shaders\sdfsprite.vert" />
-    <None Include="shaders\sprite.frag" />
-    <None Include="shaders\starsphere.frag" />
-    <None Include="shaders\starsphere.vert" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.0.targets" />
   </ImportGroup>
 </Project>

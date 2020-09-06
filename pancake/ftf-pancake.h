@@ -6,9 +6,10 @@
 #include <unordered_map>
 #include <set>
 #include <tsl\hopscotch_map.h>
+#include "mycuda.h"
 
 class ftf_matchstructure;
-
+class ftf_cudastructure;
 
 class FTF_Pancake
 {
@@ -36,6 +37,7 @@ public:
       hash_values[i] = hash_table::hash(source[i], source[i + 1]);
     }
     hash_values[NUM_PANCAKES] = hash_table::hash(source[NUM_PANCAKES], NUM_PANCAKES + 1);
+    std::sort(std::begin(hash_values) + 1, std::end(hash_values));
     hash_64 = hash_table::compress(hash_values);
   }
 
@@ -58,13 +60,13 @@ public:
   {
     assert(i >= 1 && i <= NUM_PANCAKES);
     std::reverse(source + 1, source + i + 1);
-    std::reverse(hash_values + 1, hash_values + i);
+    //std::reverse(hash_values + 1, hash_values + i);
   }
 
   uint8_t gap_lb(Direction dir) const;
   uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
   //Copies pancake, applies a flip, and updates g/h/f values
-  FTF_Pancake apply_action(const int i, ftf_matchstructure& structure) const;
+  FTF_Pancake apply_action(const int i, ftf_cudastructure& structure, ftf_matchstructure& structure2) const;
 };
 
 
@@ -73,19 +75,79 @@ struct FTF_Less
   bool operator()(const FTF_Pancake* lhs, const FTF_Pancake* rhs) const;
 };
 
+class ftf_cudastructure
+{
+  constexpr inline static uint32_t MAX_VAL = NUM_PANCAKES * (NUM_PANCAKES + 1) / 2;
+  struct hash_array
+  {
+    float hash[ftf_cudastructure::MAX_VAL];
+  };
+
+  mycuda cuda;
+  std::vector<hash_array> opposite_hash_values;
+  std::vector<float> g_values;
+  std::unordered_map<const FTF_Pancake*, size_t> index_map;
+  bool valid_device_cache = false;
+
+  inline void to_hash_array(const FTF_Pancake* val, float* hash_array)
+  {
+    memset(hash_array, 0, MAX_VAL * sizeof(float));
+    for(size_t i = 1; i <= NUM_PANCAKES; ++i)
+    {
+      hash_array[val->hash_values[i]] = 1;
+    }
+  }
+
+public:
+  void insert(const FTF_Pancake* val)
+  {
+    index_map[val] = opposite_hash_values.size();
+    assert(opposite_hash_values.size() == g_values.size());
+    g_values.push_back(val->g);
+    opposite_hash_values.resize(opposite_hash_values.size() + 1);
+    to_hash_array(val, opposite_hash_values.back().hash);
+    valid_device_cache = false;
+  }
+
+  void erase(const FTF_Pancake* val)
+  {
+    size_t index = index_map[val];
+
+    g_values[index] = g_values.back();
+    g_values.resize(g_values.size() - 1);
+
+    memcpy(opposite_hash_values[index].hash, opposite_hash_values.back().hash, sizeof(float) * MAX_VAL);
+    opposite_hash_values.resize(opposite_hash_values.size() - 1);
+    valid_device_cache = false;
+  }
+
+  uint32_t match(const FTF_Pancake* val);
+};
+
 class ftf_matchstructure
 {
-  constexpr inline static uint32_t MAX_VAL = (NUM_PANCAKES + 1) * (NUM_PANCAKES + 2) / 2;
+  constexpr inline static uint32_t MAX_VAL = NUM_PANCAKES * (NUM_PANCAKES + 1) / 2;
+  #define SORTED_DATASET true
 
-  //std::array<std::set<const FTF_Pancake*, FTF_Less>, MAX_VAL> dataset;
-  std::array<std::vector<const FTF_Pancake*>, MAX_VAL> dataset;
+  #if SORTED_DATASET
+  typedef std::set<const FTF_Pancake*, FTF_Less> dataset_t;
+  #else
+  typedef std::vector<const FTF_Pancake*> dataset_t;
+  std::array<std::unordered_map<const FTF_Pancake*, size_t>, MAX_VAL> index_maps;
+  #endif
+
+  std::array<dataset_t, MAX_VAL> dataset;
 public:
   void insert(const FTF_Pancake* val)
   {
     for(int i = 1; i <= NUM_PANCAKES; ++i)
     {
-      //dataset[val->hash_values[i]].insert(val);
+      #if SORTED_DATASET
+      dataset[val->hash_values[i]].insert(val);
+      #else
+      index_maps[val->hash_values[i]][val] = dataset[val->hash_values[i]].size();
       dataset[val->hash_values[i]].push_back(val);
+      #endif
     }
   }
 
@@ -93,19 +155,20 @@ public:
   {
     for(int i = 1; i <= NUM_PANCAKES; ++i)
     {
-      //dataset[val->hash_values[i]].erase(val);
+      #if SORTED_DATASET
+      dataset[val->hash_values[i]].erase(val);
+      #else
       hash_t hash = val->hash_values[i];
-      for(int j = 0; j < dataset[hash].size(); ++j)
-      {
-        if(memcmp(dataset[hash][j]->source, val->source, NUM_PANCAKES) == 0)
-        {
-          dataset[hash][j] = dataset[hash].back();
-          dataset[hash].resize(dataset[hash].size() - 1);
-        }
-      }
+      size_t index = index_maps[hash][val];
+      assert(memcmp(dataset[hash][index]->source, val->source, NUM_PANCAKES) == 0);
+      dataset[hash][index] = dataset[hash].back();
+      dataset[hash].resize(dataset[hash].size() - 1);
+      index_maps[hash].erase(val);
+      #endif
     }
   }
 
   uint32_t match(const FTF_Pancake* val);
+  uint32_t match_cuda(const FTF_Pancake* val);
 };
 

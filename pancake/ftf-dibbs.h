@@ -6,7 +6,7 @@
 #include <tuple>
 #include <string>
 #include <algorithm>
-#include <StackArray.h>
+#include "StackArray.h"
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
 #include <vector>
@@ -81,7 +81,8 @@ public:
   set open_f, open_b;
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
-  ftf_matchstructure forward_index, backward_index;
+  ftf_cudastructure forward_index, backward_index;
+  ftf_matchstructure forward_index2, backward_index2;
   size_t expansions;
   size_t UB;
   size_t lbmin;
@@ -96,8 +97,10 @@ public:
   }
 
   void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed,
-                   ftf_matchstructure& my_index,
-                   ftf_matchstructure& other_index)
+                   ftf_cudastructure& my_index,
+                   ftf_cudastructure& other_index,
+                   ftf_matchstructure& my_index2,
+                   ftf_matchstructure& other_index2)
   {
     const FTF_Pancake* next_val = *open.begin();
 
@@ -106,6 +109,7 @@ public:
     open_hash.erase(it_hash);
     open.erase(next_val);
     my_index.erase(next_val);
+    my_index2.erase(next_val);
 
     ++expansions;
 
@@ -113,7 +117,7 @@ public:
 
     for(int i = 2, j = NUM_PANCAKES; i <= j; ++i)
     {
-      FTF_Pancake new_action = next_val->apply_action(i, other_index);
+      FTF_Pancake new_action = next_val->apply_action(i, other_index, other_index2);
 
       if(new_action.f > UB)
       {
@@ -166,6 +170,7 @@ public:
         open.insert(ptr);
         open_hash.insert(ptr);
         my_index.insert(ptr);
+        my_index2.insert(ptr);
       }
     }
   }
@@ -180,6 +185,7 @@ public:
     memory = 0;
     auto ptr = storage.push_back(start);
     forward_index.insert(ptr);
+    forward_index2.insert(ptr);
     ptr->h = ptr->f = forward_index.match(&goal);
     goal.h = goal.f = ptr->h;
     open_f.insert(ptr);
@@ -188,6 +194,7 @@ public:
     open_b.insert(ptr);
     open_b_hash.insert(ptr);
     backward_index.insert(ptr);
+    backward_index2.insert(ptr);
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
     bool forward = false;
@@ -203,9 +210,8 @@ public:
 
       if((*open_f.begin())->f < (*open_b.begin())->f)
       {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
+        expand_node(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index, forward_index2, backward_index2);
         forward = open_f.size() < open_b.size();
-
 
         //lbmin = SIZE_MAX;
         //for(auto& pancake : open_f)
@@ -218,7 +224,7 @@ public:
       }
       else if((*open_f.begin())->f > (*open_b.begin())->f)
       {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
+        expand_node(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index, backward_index2, forward_index2);
         forward = open_f.size() < open_b.size();
 
 
@@ -231,14 +237,14 @@ public:
         //    lbmin = tmp;
         //}
       }
-      //else if(forward)
-      else if(open_f.size() <= open_b.size())
+      else if(forward)
+      //else if(open_f.size() <= open_b.size())
       {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
+        expand_node(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index, forward_index2, backward_index2);
       }
       else
       {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
+        expand_node(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index, backward_index2, forward_index2);
       }
 
       lbmin = std::max((*open_f.begin())->f, (*open_b.begin())->f);

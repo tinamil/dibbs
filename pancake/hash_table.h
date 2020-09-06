@@ -32,7 +32,7 @@ public:
     else
     {
       int count = 0;
-      for(int i = 0; i <= NUM_PANCAKES; ++i)
+      for(int i = 1; i <= NUM_PANCAKES; ++i)
       {
         for(int j = i + 1; j <= NUM_PANCAKES + 1; ++j)
         {
@@ -40,7 +40,7 @@ public:
           hash_values[j][i] = hash_values[i][j];
         }
       }
-      assert(count == ((NUM_PANCAKES + 1) * (NUM_PANCAKES + 2) / 2));
+      assert(count == ((NUM_PANCAKES) * (NUM_PANCAKES + 1) / 2));
     }
   }
 
@@ -56,7 +56,12 @@ public:
 
     for(int i = 1; i <= NUM_PANCAKES; ++i)
     {
-      compressed |= 1ui64 << ((hash_values[i] - 1) % 64);
+      uint8_t offset = 0;
+      while(compressed & (1ui64 << (hash_values[i] % 64) + offset))
+      {
+        offset += 1;
+      }
+      compressed |= 1ui64 << ((hash_values[i] % 64) + offset);
     }
 
     return compressed;

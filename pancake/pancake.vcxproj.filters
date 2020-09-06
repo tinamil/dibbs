@@ -27,61 +27,19 @@
     <ClCompile Include="Pancake.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="IDAstar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GBFHS.h">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\Archetype.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\compile_headers.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\FontComponents.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\Input.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\Renderer.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\UISystem.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\VulkanBackgroundRenderer.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\VulkanDebug.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\VulkanFontRenderer.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\VulkanModelRenderer.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\VulkanOutlineRenderer.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\VulkanSpriteRenderer.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\VulkanTools.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\Window.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VulkanStarlight\VulkanLineRenderer.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
     <ClCompile Include="ftf-pancake.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mycuda.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -131,117 +89,6 @@
     <ClInclude Include="PerfectSolution.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Archetype.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\camera.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\defines.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\ECSManager.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Entity.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Events.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\FontComponents.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\frustum.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Input.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\keycodes.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Model.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Renderer.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Screen.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\ScreenElementProcessor.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Serialization.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\sprite.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\StackArray.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\static_helpers.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\threadpool.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Timer.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Transform.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\TransientComponents.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\UISystem.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanBackgroundRenderer.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanBaseRenderer.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanDebug.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanDevice.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanFontRenderer.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanLineRenderer.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanModel.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanModelRenderer.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanOutlineRenderer.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanSpriteRenderer.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanSwapChain.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanTexture.hpp">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\VulkanTools.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VulkanStarlight\Window.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
     <ClInclude Include="dibbs-2phase.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -260,37 +107,8 @@
     <ClInclude Include="ftf-pancake.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="shaders\line.frag">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\line.vert">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\outline.frag">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\phong.frag">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\phong.vert">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\sdf.frag">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\sdfsprite.vert">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\sprite.frag">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\starsphere.frag">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\starsphere.vert">
-      <Filter>Resource Files</Filter>
-    </None>
+    <ClInclude Include="mycuda.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

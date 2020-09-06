@@ -7,7 +7,7 @@
 #include <string>
 #include <windows.h>
 #include <Psapi.h>
-#include <StackArray.h>
+#include "StackArray.h"
 
 class Astar
 {

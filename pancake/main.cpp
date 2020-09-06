@@ -2,7 +2,7 @@
 //#define IDA_STAR
 //#define A_STAR
 //#define REVERSE_ASTAR
-#define IDD
+//#define IDD
 //#define DIBBS
 //#define GBFHS
 //#define NBS
@@ -11,8 +11,6 @@
 //#include "2phase-lookahead.h"
 #include "ftf-dibbs.h"
 
-#include <StackArray.h>
-#include "Transform.h"
 #include "Pancake.h"
 #ifdef A_STAR
 #include "Astar.h"
@@ -62,27 +60,9 @@
 #include <fcntl.h>
 #include <io.h>
 #include <ShellScalingAPI.h>
-
-#include "Renderer.h"
-#include "Timer.hpp"
-#include "Archetype.h"
-#include "ECSManager.h"
-#include "Transform.h"
-#include "static_helpers.h"
-#include "Input.h"
-#include "ScreenElementProcessor.hpp"
-#include "Screen.h"
-#include "Serialization.h"
-#include "UISystem.h"
-
-#include "sprite.h"
-#include "FontComponents.h"
-#include "Model.hpp"
-#include <VulkanLineRenderer.h>
+#include <thread>
 
 //constexpr int NUM_PROBLEMS = 100;
-
-//TODO: Setup cpu to gpu line buffer for line rendering
 
 float small_rand()
 {
@@ -94,100 +74,6 @@ void generate_random_instance(double& seed, uint8_t problem[])
   problem[0] = NUM_PANCAKES;
   for(int i = 1; i <= NUM_PANCAKES; i++) problem[i] = i;
   random_permutation2(NUM_PANCAKES, problem, seed);
-}
-
-
-void SolveAStar(uint8_t* problem)
-{
-  glm::vec3 nodeScale = { .03f, .03f, .03f };
-
-  Pancake fnode(problem, Direction::forward);
-
-
-  Pancake::Initialize_Dual(problem);
-  Pancake bnode(problem, Direction::backward);
-  Pancake goal = Pancake::GetSortedStack(Direction::backward);
-
-  std::vector<const Pancake*> expansions;
-  uint32_t cstar;
-
-  Astar backwardInstance;
-  auto [cstar_b, expansions_b, memory_b] = backwardInstance.run_search(goal, bnode, &expansions);
-  cstar = cstar_b;
-
-  auto s = globalECS.create_entity(0, Mesh{ 0, 0 }, dWorldPosition{ { 0, 0, 0 } }, Scale{ nodeScale });
-  auto t = globalECS.create_entity(0, Mesh{ 0, 0 }, dWorldPosition{ { 0, 0, cstar } }, Scale{ nodeScale });
-
-  assert(*expansions[0] == goal);
-
-  std::queue<Pancake> queue;
-  queue.push(fnode);
-  std::unordered_set<Pancake, PancakeHash> closed;
-
-  while(queue.empty() == false && closed.size() < 1000)
-  {
-    Pancake parent = queue.front();
-    queue.pop();
-    for(int j = 2; j <= NUM_PANCAKES; ++j)
-    {
-      Pancake node = parent.apply_action(j);
-      if(!closed.contains(node))
-      {
-        queue.push(node);
-        closed.insert(node);
-        auto next_entity = globalECS.create_entity(0, Mesh{ 0, 0 },
-          dWorldPosition{ { small_rand(), small_rand(), small_rand() + node.g } },
-          Scale{ nodeScale }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
-        //globalECS.create_entity(1, SpringForce{ s, next_entity, 1.f });
-        //globalECS.create_entity(1, Line{ s, next_entity });
-      }
-    }
-  }
-  //goal = Pancake::GetSortedStack(Direction::forward);
-  //{
-  //  Astar forwardInstance;
-  //  auto [cstar_f, expansions_f, memory_f] = forwardInstance.run_search(fnode, goal);
-  //  closed_f = forwardInstance.closed;
-
-  //  if (cstar_f != cstar) std::cout << "ERROR";
-  //}
-
-
-  //std::vector<Pancake> pancake_expansions;
-  //auto [cstar_dibbs, expansions, memory] = Dibbs::search(fnode, goal, &pancake_expansions);
-
-  //tsl::hopscotch_map<int, float> offsets;
-  //for (const auto& x : pancake_expansions) {
-  //  auto b = closed_b.find(x);
-  //  auto f = closed_f.find(x);
-  //  if (b == closed_b.end() && f == closed_f.end()) {
-  //    std::cout << "ERROR in finding both";
-  //  }
-  //  if (x.dir == Direction::forward) {
-  //    if (offsets.count(x.g) == 0) offsets[x.g] = 0;
-  //    globalECS.create_entity(0, Mesh{ 1, 0 }, dWorldPosition{ { 0., offsets[x.g], x.g } }, Scale{ { .01f, .01f, .01f }, RepulsiveForce{1.f} });
-  //  }
-  //}
-
-
- /* for (int i = 2, j = NUM_PANCAKES; i <= j; ++i) {
-    Pancake new_action = fnode.apply_action(i);
-    auto next_entity = globalECS.create_entity(0, Mesh{ 0, 0 },
-      dWorldPosition{ { small_rand(), small_rand(), small_rand() } },
-      Scale{ nodeScale }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
-    globalECS.create_entity(1, SpringForce{ s, next_entity, 1.f });
-    globalECS.create_entity(1, Line{ s, next_entity });
-
-    for (int k = 2, l = NUM_PANCAKES; k <= l; ++k) {
-      Pancake new_action2 = new_action.apply_action(k);
-      auto next_entity2 = globalECS.create_entity(1, Mesh{ 0, 0 },
-        dWorldPosition{ { small_rand(), small_rand(), small_rand() } },
-        Scale{ nodeScale }, RepulsiveForce{}, Velocity{}, Acceleration{}, Drag{ 0.1 });
-      globalECS.create_entity(2, SpringForce{ next_entity, next_entity2, 1.f });
-      globalECS.create_entity(2, Line{ next_entity, next_entity2 });
-    }
-  }*/
-
 }
 
 void output_data(std::ostream& stream)
@@ -298,7 +184,7 @@ void output_data(std::ostream& stream)
       else if(!std::isinf(cstar) && answers[i] != cstar) { std::cout << "ERROR Cstar mismatch"; return; }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    //stream << time_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
     //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
@@ -346,7 +232,7 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    //stream << time_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
     //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
@@ -440,7 +326,7 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    //stream << time_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
     //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
@@ -486,7 +372,7 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    //stream << time_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
     //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
@@ -532,7 +418,7 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    //stream << time_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
     //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
@@ -623,7 +509,7 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    //stream << time_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
     //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
@@ -672,7 +558,7 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    //stream << time_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
     //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
@@ -719,7 +605,7 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    //stream << time_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
     //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
@@ -763,13 +649,13 @@ void output_data(std::ostream& stream)
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
-    //stream << time_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
     //stream << memory_stream.rdbuf() << std::endl;
     //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
-    }
   }
+}
 
 std::string return_formatted_time(std::string format)
 {
@@ -831,176 +717,12 @@ void run_random_test()
   output_data(file);
 }
 
-class InputHelper
-{
-public:
-  static void clear()
-  {
-    Input::clear();
-  }
-};
-
-class Engine
-{
-public:
-  std::unique_ptr<Serialization> serializer;
-  std::unique_ptr<vks::Renderer> renderer;
-  std::unique_ptr<Camera> camera;
-
-  inline static bool ProcessWin32()
-  {
-    static MSG msg;
-    while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) == TRUE)
-    {
-      if(msg.message == WM_QUIT)
-      {
-        return false;
-      }
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
-    }
-    return true;
-  }
-
-  void MainLoop()
-  {
-    while(true)
-    {
-      Timer::Run();
-      globalECS.ClearDeleteQueue();
-      InputHelper::clear();
-      if(!ProcessWin32()) break;
-      serializer->Run();
-      ScreenElementProcessor::Run();
-
-      UISystem::Run();
-
-      for(auto x : globalECS.Query<Acceleration>())
-      {
-        x.get<Acceleration>()->value = glm::dvec3(0);
-      }
-
-      for(auto x : globalECS.Query<RepulsiveForce, dWorldPosition, Acceleration>())
-      {
-        auto x_pos = x.get<dWorldPosition>();
-        auto x_accel = x.get<Acceleration>();
-        for(auto y : globalECS.Query<RepulsiveForce, dWorldPosition, Acceleration>())
-        {
-          if(x == y) continue;
-          auto y_accel = y.get<Acceleration>();
-          auto y_pos = y.get<dWorldPosition>();
-          auto q = x_pos->value - y_pos->value + glm::dvec3(0, 0.001, 0);
-          auto inv_dist = glm::normalize(q) / std::max(0.01, q.x * q.x + q.y * q.y + q.z * q.z);
-          if(x_accel != nullptr)
-            x_accel->value += inv_dist;
-          if(y_accel != nullptr)
-            y_accel->value -= inv_dist;
-        }
-      }
-
-      for(auto x : globalECS.Query<SpringForce>())
-      {
-        auto e1 = globalECS.get<dWorldPosition>(x.get<SpringForce>()->obj1);
-        auto e2 = globalECS.get<dWorldPosition>(x.get<SpringForce>()->obj2);
-        auto e1a = globalECS.get<Acceleration>(x.get<SpringForce>()->obj1);
-        auto e2a = globalECS.get<Acceleration>(x.get<SpringForce>()->obj2);
-        auto q = e1->value - e2->value + glm::dvec3(0, 0.001, 0);;
-        auto dist = sqrt(q.x * q.x + q.y * q.y + q.z * q.z);
-        if(e1a != nullptr)
-          e1a->value -= glm::normalize(q) * dist;
-        if(e2a != nullptr)
-          e2a->value += glm::normalize(q) * dist;
-      }
-
-      for(auto x : globalECS.Query<Drag, Velocity>())
-      {
-        x.get<Velocity>()->value *= glm::clamp(1 - x.get<Drag>()->strength, 0., 1.);
-      }
-
-      for(auto x : globalECS.Query<dWorldPosition, Velocity>())
-      {
-        x.get<dWorldPosition>()->value += x.get<Velocity>()->value * Timer::deltaTime;
-        if(std::isnan(x.get<dWorldPosition>()->value.x))
-        {
-          x.get<dWorldPosition>()->value = glm::vec3(0);
-        }
-      }
-
-      for(auto x : globalECS.Query<Acceleration, Velocity>())
-      {
-        x.get<Velocity>()->value += x.get<Acceleration>()->value * Timer::deltaTime;
-        if(std::isnan(x.get<Velocity>()->value.x))
-        {
-          x.get<Velocity>()->value = glm::vec3(0);
-        }
-      }
-
-      for(auto x : globalECS.Query<Line>())
-      {
-        auto line = x.get<Line>();
-        line->positions.clear();
-        line->positions.push_back({ globalECS.get<dWorldPosition>(line->a)->value, glm::dvec4(1) });
-        line->positions.push_back({ globalECS.get<dWorldPosition>(line->b)->value, glm::dvec4(1) });
-      }
-
-      camera->Run();
-      renderer->Run();
-    }
-  }
-
-  void Initialize(HINSTANCE hInstance)
-  {
-    Timer::Init();
-    serializer = std::make_unique<Serialization>();
-    renderer = std::make_unique<vks::Renderer>("Pancake", hInstance);
-    camera = std::make_unique<Camera>();
-    camera->Initialize();
-    UISystem::Init();
-  }
-};
-
-int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
+int main()
 {
   hash_table::initialize_hash_values();
-  Window window("pancake", hInstance, true);
-  std::thread t(run_random_test);
-  //std::thread t(GeneratePerfectCounts);
-  std::thread t2([]() {
-    using namespace std::chrono_literals;
-    while(true)
-    {
-      Engine::ProcessWin32();
-      std::this_thread::sleep_for(10ms);
-    }
-  });
+  run_random_test();
 
-  t.join();
   std::cout << "\nDone\n";
   while(true);
   return EXIT_SUCCESS;
-
-  //try {
-  //  Engine e;
-  //  e.Initialize(hInstance);
-  //  //Mesh mesh{ 0, 0 };
-  //  //dWorldPosition dpos{ { 0., 0., 0. } };
-  //  //Orientation o{ glm::rotate(glm::identity<glm::quat>(), glm::radians(90.f), glm::vec3(1, 0, 0)) };
-  //  //globalECS.create_entity(0, mesh, dpos, o);
-
-  //  //run_random_test();
-  //  //GeneratePerfectCounts();
-  //  double seed = 3.1567;
-  //  uint8_t problem[NUM_PANCAKES + 1];
-  //  generate_random_instance(seed, problem);
-  //  SolveAStar(problem);
-
-  //  e.MainLoop();
-  //}
-  //catch (const std::exception& e) {
-  //  vks::tools::exitFatal(std::string("Fatal exception thrown: ") + e.what(), 0);
-  //  return EXIT_FAILURE;
-  //}
-  //return EXIT_SUCCESS;
 }
-
-
