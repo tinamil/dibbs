@@ -87,6 +87,7 @@ class ftf_cudastructure
   std::vector<hash_array> opposite_hash_values;
   std::vector<float> g_values;
   std::unordered_map<const FTF_Pancake*, size_t> index_map;
+  std::unordered_map<size_t, const FTF_Pancake*> reverse_map;
   bool valid_device_cache = false;
 
   inline void to_hash_array(const FTF_Pancake* val, float* hash_array)
@@ -102,6 +103,7 @@ public:
   void insert(const FTF_Pancake* val)
   {
     index_map[val] = opposite_hash_values.size();
+    reverse_map[opposite_hash_values.size()] = val;
     assert(opposite_hash_values.size() == g_values.size());
     g_values.push_back(val->g);
     opposite_hash_values.resize(opposite_hash_values.size() + 1);
@@ -112,6 +114,12 @@ public:
   void erase(const FTF_Pancake* val)
   {
     size_t index = index_map[val];
+    index_map.erase(val);
+
+    const FTF_Pancake* back_ptr = reverse_map[g_values.size() - 1];
+    reverse_map[index] = back_ptr;
+    reverse_map.erase(g_values.size() - 1);
+    index_map[back_ptr] = index;
 
     g_values[index] = g_values.back();
     g_values.resize(g_values.size() - 1);
@@ -169,6 +177,5 @@ public:
   }
 
   uint32_t match(const FTF_Pancake* val);
-  uint32_t match_cuda(const FTF_Pancake* val);
 };
 

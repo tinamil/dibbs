@@ -108,7 +108,7 @@ class mycuda
   int* d_idx;
   float* one, *neg_one, *zero;
   std::vector<float> filler;
-
+  cudaStream_t stream1;
 public:
   mycuda();
   ~mycuda();
