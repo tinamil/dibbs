@@ -358,9 +358,9 @@ class DibbsNbs
       data.push_back(ptr);
       auto hash_insertion_result = hash.insert(ptr);
       assert(hash_insertion_result.second);
-      }
-    return true;
     }
+    return true;
+  }
 
   bool expand_node_forward(const Pancake* pancake)
   {
@@ -436,5 +436,5 @@ public:
     DibbsNbs instance;
     auto result = instance.run_search(start, goal);
     return result;
-    }
-  };
+  }
+};

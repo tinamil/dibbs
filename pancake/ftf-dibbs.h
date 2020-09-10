@@ -96,11 +96,91 @@ public:
 
   }
 
-  void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed,
-                   ftf_cudastructure& my_index,
-                   ftf_cudastructure& other_index,
-                   ftf_matchstructure& my_index2,
-                   ftf_matchstructure& other_index2)
+  template<typename T>
+  void expand_all_nodes(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, T& my_index, T& other_index)
+  {
+    auto f_val = (*open.begin())->f;
+    auto g_val = (*open.begin())->g;
+
+    int count = 0; 
+    std::vector<FTF_Pancake*> new_pancakes;
+    while(!open.empty() && (*open.begin())->f == f_val && (*open.begin())->g == g_val && ++count <= mycuda::MAX_BATCH / NUM_PANCAKES)
+    {
+      const FTF_Pancake* next_val = *open.begin();
+
+      auto it_hash = open_hash.find(next_val);
+      assert(it_hash != open_hash.end());
+      open_hash.erase(it_hash);
+      open.erase(next_val);
+      my_index.erase(next_val);
+
+      ++expansions;
+
+      closed.insert(next_val);
+
+      for(int i = 2, j = NUM_PANCAKES; i <= j; ++i)
+      {
+        FTF_Pancake new_action = next_val->apply_action(i, false, other_index);
+
+        auto it_closed = closed.find(&new_action);
+        if(it_closed == closed.end())
+        {
+
+          auto it_other = other_open.find(&new_action);
+          if(it_other != other_open.end())
+          {
+            #ifdef HISTORY
+            if((*it_other)->g + new_action.g < UB)
+            {
+              if(new_action.dir == Direction::forward)
+              {
+                best_f = new_action;
+                best_b = **it_other;
+              }
+              else
+              {
+                best_f = **it_other;
+                best_b = new_action;
+              }
+            }
+            #endif  
+            size_t combined = (size_t)(*it_other)->g + new_action.g;
+            if(combined < UB)
+            {
+              UB = combined;
+            }
+          }
+          auto it_open = open_hash.find(&new_action);
+          if(it_open != open_hash.end())
+          {
+            if((*it_open)->g <= new_action.g)
+            {
+              continue;
+            }
+            else
+            {
+              open.erase(&**it_open);
+              open_hash.erase(it_open);
+            }
+          }
+
+          auto ptr = storage.push_back(new_action);
+          new_pancakes.push_back(ptr);
+        }
+      }
+    }
+    other_index.match(new_pancakes);
+
+    for(const FTF_Pancake* ptr : new_pancakes)
+    {
+      open.insert(ptr);
+      open_hash.insert(ptr);
+      my_index.insert(ptr);
+    }
+  }
+
+  template<typename T>
+  void expand_node(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, T& my_index, T& other_index)
   {
     const FTF_Pancake* next_val = *open.begin();
 
@@ -109,7 +189,6 @@ public:
     open_hash.erase(it_hash);
     open.erase(next_val);
     my_index.erase(next_val);
-    my_index2.erase(next_val);
 
     ++expansions;
 
@@ -117,7 +196,7 @@ public:
 
     for(int i = 2, j = NUM_PANCAKES; i <= j; ++i)
     {
-      FTF_Pancake new_action = next_val->apply_action(i, other_index, other_index2);
+      FTF_Pancake new_action = next_val->apply_action(i, true, other_index);
 
       if(new_action.f > UB)
       {
@@ -170,7 +249,6 @@ public:
         open.insert(ptr);
         open_hash.insert(ptr);
         my_index.insert(ptr);
-        my_index2.insert(ptr);
       }
     }
   }
@@ -210,7 +288,7 @@ public:
 
       if((*open_f.begin())->f < (*open_b.begin())->f)
       {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index, forward_index2, backward_index2);
+        expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
         forward = open_f.size() < open_b.size();
 
         //lbmin = SIZE_MAX;
@@ -224,7 +302,7 @@ public:
       }
       else if((*open_f.begin())->f > (*open_b.begin())->f)
       {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index, backward_index2, forward_index2);
+        expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
         forward = open_f.size() < open_b.size();
 
 
@@ -240,11 +318,11 @@ public:
       else if(forward)
       //else if(open_f.size() <= open_b.size())
       {
-        expand_node(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index, forward_index2, backward_index2);
+        expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
       }
       else
       {
-        expand_node(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index, backward_index2, forward_index2);
+        expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
       }
 
       lbmin = std::max((*open_f.begin())->f, (*open_b.begin())->f);

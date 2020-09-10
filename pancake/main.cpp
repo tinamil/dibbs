@@ -3,7 +3,7 @@
 //#define A_STAR
 //#define REVERSE_ASTAR
 //#define IDD
-#define DIBBS
+//#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS

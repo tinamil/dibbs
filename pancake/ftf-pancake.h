@@ -66,8 +66,42 @@ public:
   uint8_t gap_lb(Direction dir) const;
   uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
   //Copies pancake, applies a flip, and updates g/h/f values
-  FTF_Pancake apply_action(const int i, ftf_cudastructure& structure, ftf_matchstructure& structure2) const;
+  template<typename T>
+  FTF_Pancake apply_action(const int i, bool match, T& structure) const;
 };
+
+  //Copies pancake, applies a flip, and updates g/h/f values
+template<typename T>
+__declspec(noinline) FTF_Pancake FTF_Pancake::apply_action(const int i, bool match, T& structure) const
+{
+  FTF_Pancake new_node(*this);
+  #ifdef HISTORY
+  new_node.actions.push_back(i);
+  new_node.parent = this;
+  #endif
+  assert(i > 1 && i <= NUM_PANCAKES);
+  new_node.apply_flip(i);
+  //new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
+  /*if(i < NUM_PANCAKES)
+    new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
+  else
+    new_node.hash_values[i] = hash_table::hash(new_node.source[i], NUM_PANCAKES + 1);*/
+  for(int i = 1; i < NUM_PANCAKES; ++i)
+  {
+    new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
+  }
+  new_node.hash_values[NUM_PANCAKES] = hash_table::hash(new_node.source[NUM_PANCAKES], NUM_PANCAKES + 1);
+  std::sort(std::begin(new_node.hash_values) + 1, std::end(new_node.hash_values));
+  new_node.hash_64 = hash_table::compress(new_node.hash_values);
+  new_node.g = g + 1;
+  if(match)
+  {
+    new_node.h = structure.match(&new_node);
+    new_node.f = new_node.g + new_node.h;
+    //assert(new_node.f >= f); //Consistency check
+  }
+  return new_node;
+}
 
 
 struct FTF_Less
@@ -83,6 +117,8 @@ class ftf_cudastructure
     float hash[ftf_cudastructure::MAX_VAL];
   };
 
+  float* hash_vals = nullptr;
+  float* batch_hash_vals = nullptr;
   mycuda cuda;
   std::vector<hash_array> opposite_hash_values;
   std::vector<float> g_values;
@@ -100,6 +136,11 @@ class ftf_cudastructure
   }
 
 public:
+  ftf_cudastructure() {}
+  ~ftf_cudastructure()
+  {
+    if(batch_hash_vals) cudaFreeHost(batch_hash_vals);
+  }
   void insert(const FTF_Pancake* val)
   {
     index_map[val] = opposite_hash_values.size();
@@ -129,7 +170,8 @@ public:
     valid_device_cache = false;
   }
 
-  uint32_t match(const FTF_Pancake* val);
+  uint32_t match(const FTF_Pancake* val); 
+  void match(std::vector<FTF_Pancake*>& val);
 };
 
 class ftf_matchstructure
@@ -177,5 +219,6 @@ public:
   }
 
   uint32_t match(const FTF_Pancake* val);
+  void match(std::vector<FTF_Pancake*> values);
 };
 

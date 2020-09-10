@@ -53,37 +53,6 @@
   //  return match;
   //}
 
-  //Copies pancake, applies a flip, and updates g/h/f values
-__declspec(noinline) FTF_Pancake FTF_Pancake::apply_action(const int i, ftf_cudastructure& structure, ftf_matchstructure& structure2) const
-{
-  FTF_Pancake new_node(*this);
-  #ifdef HISTORY
-  new_node.actions.push_back(i);
-  new_node.parent = this;
-  #endif
-  assert(i > 1 && i <= NUM_PANCAKES);
-  new_node.apply_flip(i);
-  //new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
-  /*if(i < NUM_PANCAKES)
-    new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
-  else
-    new_node.hash_values[i] = hash_table::hash(new_node.source[i], NUM_PANCAKES + 1);*/
-  for(int i = 1; i < NUM_PANCAKES; ++i)
-  {
-    new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
-  }
-  new_node.hash_values[NUM_PANCAKES] = hash_table::hash(new_node.source[NUM_PANCAKES], NUM_PANCAKES + 1);
-  std::sort(std::begin(new_node.hash_values) + 1, std::end(new_node.hash_values));
-  new_node.hash_64 = hash_table::compress(new_node.hash_values);
-  auto h2 = structure2.match(&new_node);
-  new_node.h = structure.match(&new_node);
-  new_node.h = structure.match(&new_node);
-  new_node.g = g + 1;
-  new_node.f = new_node.g + new_node.h;
-  //assert(new_node.f >= f); //Consistency check
-  return new_node;
-}
-
 uint8_t FTF_Pancake::gap_lb(Direction dir) const
 {
   unsigned char  LB;
@@ -182,12 +151,52 @@ __declspec(noinline) uint32_t ftf_cudastructure::match(const FTF_Pancake* val)
     cuda.set_matrix(opposite_hash_values.size(), MAX_VAL, (float*)opposite_hash_values.data(), g_values.data());
     valid_device_cache = true;
   }
-  float hash_vals[MAX_VAL];
+  if(hash_vals == nullptr)
+  {
+    cudaError_t result = cudaHostAlloc(&hash_vals, MAX_VAL * sizeof(float), cudaHostAllocWriteCombined);
+  }
   to_hash_array(val, hash_vals);
   return round(cuda.min_vector_matrix(
     opposite_hash_values.size(),
     MAX_VAL,
     hash_vals));
+}
+
+__declspec(noinline) void ftf_cudastructure::match(std::vector<FTF_Pancake*>& val)
+{
+  //size_t m_rows, size_t n_cols, float alpha, float* A, float* x, float beta, float* y
+  if(!valid_device_cache)
+  {
+    cuda.set_matrix(opposite_hash_values.size(), MAX_VAL, (float*)opposite_hash_values.data(), g_values.data());
+    valid_device_cache = true;
+  }
+  if(batch_hash_vals == nullptr)
+  {
+    cudaError_t result = cudaHostAlloc(&batch_hash_vals, mycuda::MAX_BATCH * MAX_VAL * sizeof(float), cudaHostAllocWriteCombined);
+  }
+  for(size_t batch = 0, end = val.size() / mycuda::MAX_BATCH; batch <= end; ++batch)
+  {
+    size_t num_vals = std::min(val.size() - batch * mycuda::MAX_BATCH, mycuda::MAX_BATCH);
+    for(size_t i = 0; i < num_vals; ++i)
+    {
+      to_hash_array(val[i + batch * mycuda::MAX_BATCH], batch_hash_vals + i * MAX_VAL);
+    }
+    float* answers = cuda.batch_vector_matrix(opposite_hash_values.size(), MAX_VAL, num_vals, batch_hash_vals);
+    for(int i = 0; i < num_vals; ++i)
+    {
+      val[i]->h = round(answers[i]);
+      val[i]->f = val[i]->g + val[i]->h;
+    }
+  }
+}
+
+void ftf_matchstructure::match(std::vector<FTF_Pancake*> values)
+{
+  for(auto ptr : values)
+  {
+    ptr->h = match(ptr);
+    ptr->f = ptr->g + ptr->h;
+  }
 }
 
 uint32_t ftf_matchstructure::match(const FTF_Pancake* val)

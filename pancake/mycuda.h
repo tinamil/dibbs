@@ -6,6 +6,8 @@
 #include <iostream>
 #include <cassert>
 #include <vector>
+#include "custom_kernels.cuh"
+#include "Pancake.h"
 
 static inline std::string errorString(cublasStatus_t errorCode)
 {
@@ -104,15 +106,18 @@ static inline std::string errorString(cudaError_t errorCode)
 class mycuda
 {
   cublasHandle_t  handle;
-  float* d_a, * d_hash_vals, *d_mult_results, *d_g_vals, *num_pancakes_constant;
-  int* d_idx;
-  float* one, *neg_one, *zero;
-  std::vector<float> filler;
-  cudaStream_t stream1;
+  float* d_a, * d_hash_vals, * d_batch_hash_vals, * d_mult_results, * d_g_vals, * num_pancakes_constant, * d_batch_answers;
+  int* d_idx, * min_idx;
+  float* one, * neg_one, * zero;
+  float* compare_answer;
+  float* batch_answers;
 public:
+  static constexpr size_t MAX_BATCH = (NUM_PANCAKES - 1) * 64;
   mycuda();
   ~mycuda();
   void set_matrix(size_t m_rows, size_t n_cols, const float* A, const float* g_vals);
   float min_vector_matrix(size_t a_rows, size_t a_cols, const float* hash_vals);
+  float* batch_vector_matrix(size_t num_pancakes, size_t num_hash, size_t num_vals, const float* hash_vals);
+  float matrix_matrix(size_t num_pancakes_A, size_t num_pancakes_B, size_t num_hash, const float* A, const float* B);
 };
 

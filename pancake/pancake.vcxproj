@@ -72,10 +72,10 @@
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\40-1-lookahead\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\ftf2\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -125,7 +125,7 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cublas.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -142,6 +142,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="custom_kernels.cpp" />
     <ClCompile Include="mycuda.cpp" />
     <ClCompile Include="ftf-pancake.cpp" />
     <ClCompile Include="GBFHS.h" />
@@ -152,6 +153,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="2phase-lookahead.h" />
+    <CudaCompile Include="custom_kernels.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="custom_kernels.cuh" />
     <ClInclude Include="mycuda.h" />
     <ClInclude Include="dibbs-2phase-queue.hpp" />
     <ClInclude Include="dibbs-2phase.hpp" />
