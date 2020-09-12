@@ -79,10 +79,10 @@ static inline std::string errorString(cudaError_t errorCode)
       return "UNKNOWN_ERROR";
   }
 }
-#ifdef NDEBUG
-#define CUDA_CHECK_RESULT(f) (f)
-#define CUBLAS_CHECK_RESULT(f) (f)
-#else
+//#ifdef NDEBUG
+//#define CUDA_CHECK_RESULT(f) (f)
+//#define CUBLAS_CHECK_RESULT(f) (f)
+//#else
 #define CUDA_CHECK_RESULT(f)																				\
 {																										\
 	cudaError_t res = (f);																					\
@@ -101,23 +101,54 @@ static inline std::string errorString(cudaError_t errorCode)
 		assert(res == CUBLAS_STATUS_SUCCESS);																		\
 	}																									\
 }
-#endif
+//#endif
 
 class mycuda
 {
-  cublasHandle_t  handle;
-  float* d_a, * d_hash_vals, * d_batch_hash_vals, * d_mult_results, * d_g_vals, * num_pancakes_constant, * d_batch_answers;
-  int* d_idx, * min_idx;
-  float* one, * neg_one, * zero;
-  float* compare_answer;
-  float* batch_answers;
+  static inline cublasHandle_t  handle = nullptr;
+  static inline float* d_a = nullptr;
+  static inline float* d_batch_hash_vals = nullptr;
+  static inline float* d_mult_results = nullptr;
+  static inline float* d_g_vals = nullptr;
+  static inline float* d_batch_answers = nullptr;
+  static inline float* one = nullptr;
+  static inline float* neg_one = nullptr;
+  static inline float* zero = nullptr;
+  static inline float* compare_answer = nullptr;
+  static inline float* batch_answers = nullptr;
 public:
-  static constexpr size_t MAX_BATCH = (NUM_PANCAKES - 1) * 64;
-  mycuda();
-  ~mycuda();
-  void set_matrix(size_t m_rows, size_t n_cols, const float* A, const float* g_vals);
-  float min_vector_matrix(size_t a_rows, size_t a_cols, const float* hash_vals);
-  float* batch_vector_matrix(size_t num_pancakes, size_t num_hash, size_t num_vals, const float* hash_vals);
-  float matrix_matrix(size_t num_pancakes_A, size_t num_pancakes_B, size_t num_hash, const float* A, const float* B);
+  static constexpr size_t MAX_BATCH = 512;
+  static void initialize()
+  {
+    if(!handle)
+    {
+      CUBLAS_CHECK_RESULT(cublasCreate(&handle));
+      CUBLAS_CHECK_RESULT(cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE));
+      //CUBLAS_CHECK_RESULT(cublasSetStream(handle, cudaStreamPerThread));
+    }
+    static constexpr float a = 1, b = -1, c = 0;
+    if(!one)
+    {
+      CUDA_CHECK_RESULT(cudaMalloc((void**)&one, sizeof(float)));
+      CUDA_CHECK_RESULT(cudaMemcpyAsync(one, &a, sizeof(float), cudaMemcpyHostToDevice));
+    }
+    if(!neg_one)
+    {
+      CUDA_CHECK_RESULT(cudaMalloc((void**)&neg_one, sizeof(float)));
+      CUDA_CHECK_RESULT(cudaMemcpyAsync(neg_one, &b, sizeof(float), cudaMemcpyHostToDevice));
+    }
+    if(!zero)
+    {
+      CUDA_CHECK_RESULT(cudaMalloc((void**)&zero, sizeof(float)));
+      CUDA_CHECK_RESULT(cudaMemcpyAsync(zero, &c, sizeof(float), cudaMemcpyHostToDevice));
+    }
+    if(!compare_answer) CUDA_CHECK_RESULT(cudaHostAlloc(&compare_answer, sizeof(float), cudaHostAllocDefault));
+    if(!batch_answers) CUDA_CHECK_RESULT(cudaHostAlloc(&batch_answers, sizeof(float) * MAX_BATCH, cudaHostAllocDefault));
+
+    if(!d_batch_hash_vals) CUDA_CHECK_RESULT(cudaMalloc((void**)&d_batch_hash_vals, MAX_BATCH * MAX_PANCAKES * sizeof(float)));
+    if(!d_batch_answers) CUDA_CHECK_RESULT(cudaMalloc((void**)&d_batch_answers, MAX_BATCH * sizeof(float)));
+  }
+  static void set_matrix(size_t m_rows, const float* A, const float* g_vals);
+  static float* batch_vector_matrix(size_t num_pancakes, size_t num_vals, float* hash_vals);
 };
 

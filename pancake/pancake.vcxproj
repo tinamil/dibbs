@@ -142,12 +142,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="custom_kernels.cpp" />
-    <ClCompile Include="mycuda.cpp" />
     <ClCompile Include="ftf-pancake.cpp" />
     <ClCompile Include="GBFHS.h" />
     <ClCompile Include="IDAstar.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="mycuda.cpp" />
     <ClCompile Include="Pancake.cpp" />
     <ClCompile Include="problems.cpp" />
   </ItemGroup>
@@ -157,6 +156,7 @@
       <FileType>Document</FileType>
     </CudaCompile>
     <CudaCompile Include="custom_kernels.cuh" />
+    <ClInclude Include="ftf_cudastructure.h" />
     <ClInclude Include="mycuda.h" />
     <ClInclude Include="dibbs-2phase-queue.hpp" />
     <ClInclude Include="dibbs-2phase.hpp" />

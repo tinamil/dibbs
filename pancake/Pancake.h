@@ -8,7 +8,8 @@
 
 //#define HISTORY 
 
-constexpr int NUM_PANCAKES = 30;
+constexpr int NUM_PANCAKES = 20;
+constexpr uint32_t MAX_PANCAKES = NUM_PANCAKES * (NUM_PANCAKES + 1) / 2;
 constexpr int GAPX = 0;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 class hash_table;
@@ -36,7 +37,7 @@ public:
   uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
   int check_inputs() const;
 
-  Pancake() {}
+  Pancake() : dir(Direction::forward), g(0), h(0), h2(0), f(0), f_bar(0), hdiff(0), delta(0), threshold(false) {}
   Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), f(0), f_bar(0)
   {
     assert(NUM_PANCAKES > 0);

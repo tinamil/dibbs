@@ -42,9 +42,6 @@
     <ClCompile Include="mycuda.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="custom_kernels.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="problems.h">
@@ -111,6 +108,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="mycuda.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ftf_cudastructure.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

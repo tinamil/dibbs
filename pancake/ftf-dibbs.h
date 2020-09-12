@@ -15,6 +15,7 @@
 #include <windows.h>
 #include <Psapi.h>
 #include "ftf-pancake.h"
+#include "ftf_cudastructure.h"
 
 #define FTF_PANCAKE "FTF_Pancake"
 
@@ -73,6 +74,7 @@ public:
     }
   };
 
+  
   typedef std::set<const FTF_Pancake*, FTFPancakeFSortHighG> set;
   typedef std::unordered_set<const FTF_Pancake*, FTFPancakeHash, FTFPancakeEqual> hash_set;
   //typedef std::unordered_set<const Pancake*, PancakeNeighborHash, PancakeNeighborEqual> hash_set;
@@ -82,7 +84,7 @@ public:
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
   ftf_cudastructure forward_index, backward_index;
-  ftf_matchstructure forward_index2, backward_index2;
+  //ftf_matchstructure forward_index, backward_index;
   size_t expansions;
   size_t UB;
   size_t lbmin;
@@ -90,8 +92,7 @@ public:
 
 
 
-  FTF_Dibbs() : open_f(), open_b(), closed_f(), closed_b(), forward_index(), backward_index(),
-    open_f_hash(), open_b_hash(), expansions(0), UB(0), lbmin(0), memory(0)
+  FTF_Dibbs() : expansions(0), UB(0), lbmin(0), memory(0)
   {
 
   }
@@ -257,13 +258,13 @@ public:
   Pancake best_f, best_b;
   #endif
 
-  std::tuple<double, size_t, size_t> run_search(FTF_Pancake start, FTF_Pancake goal, std::vector<FTF_Pancake>* expansions_in_order = nullptr)
+  __declspec(noinline) std::tuple<double, size_t, size_t> run_search(FTF_Pancake start, FTF_Pancake goal, std::vector<FTF_Pancake>* expansions_in_order = nullptr)
   {
     expansions = 0;
     memory = 0;
     auto ptr = storage.push_back(start);
     forward_index.insert(ptr);
-    forward_index2.insert(ptr);
+    //forward_index2.insert(ptr);
     ptr->h = ptr->f = forward_index.match(&goal);
     goal.h = goal.f = ptr->h;
     open_f.insert(ptr);
@@ -272,7 +273,7 @@ public:
     open_b.insert(ptr);
     open_b_hash.insert(ptr);
     backward_index.insert(ptr);
-    backward_index2.insert(ptr);
+    //backward_index2.insert(ptr);
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
     bool forward = false;

@@ -3,7 +3,7 @@
 //#define A_STAR
 //#define REVERSE_ASTAR
 //#define IDD
-//#define DIBBS
+#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
@@ -61,7 +61,7 @@
 #include <io.h>
 #include <ShellScalingAPI.h>
 #include <thread>
-
+#include "mycuda.h"
 //constexpr int NUM_PROBLEMS = 100;
 
 float small_rand()
@@ -76,7 +76,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
   random_permutation2(NUM_PANCAKES, problem, seed);
 }
 
-void output_data(std::ostream& stream)
+__declspec(noinline) void output_data(std::ostream& stream)
 {
   std::cout << "Pancakes = " << NUM_PANCAKES << " gap-x = " << GAPX << '\n';
   stream << "Pancakes = " << NUM_PANCAKES << " gap-x = " << GAPX << '\n';
@@ -720,6 +720,7 @@ void run_random_test()
 int main()
 {
   hash_table::initialize_hash_values();
+  mycuda::initialize();
   run_random_test();
 
   std::cout << "\nDone\n";

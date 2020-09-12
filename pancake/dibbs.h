@@ -108,7 +108,7 @@ public:
       }
     }
   }
-
+   
   #ifdef HISTORY
   Pancake best_f, best_b;
   #endif
@@ -154,8 +154,8 @@ public:
         expand_node(open_b, open_b_hash, open_f_hash, closed_b);
         forward = open_f.size() < open_b.size();
       }
-      else if(forward)
-      //else if(open_f.size() <= open_b.size())
+      //else if(forward)
+      else if(open_f.size() <= open_b.size())
       {
         expand_node(open_f, open_f_hash, open_b_hash, closed_f);
       }
