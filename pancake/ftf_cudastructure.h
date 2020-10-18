@@ -1,5 +1,6 @@
 #pragma once
 #include "ftf-pancake.h"
+#include "cuda_vector.h"
 
 struct FTF_Less
 {
@@ -13,13 +14,17 @@ struct hash_array
 
 class ftf_cudastructure
 {
+  //TODO: TO convert to storing hash values on GPU only.  Keep track of hash values size, moves opposite_hash_values and g_values to GPU
   static inline float* batch_hash_vals = nullptr;
   mycuda cuda;
-  std::vector<hash_array> opposite_hash_values;
-  std::vector<float> g_values;
+  cuda_vector<hash_array> opposite_hash_values;
+  cuda_vector<float> g_values;
+  //std::vector<hash_array> opposite_hash_values;
+  //std::vector<float> g_values;
   std::unordered_map<const FTF_Pancake*, size_t> index_map;
   std::unordered_map<size_t, const FTF_Pancake*> reverse_map;
   bool valid_device_cache = false;
+
 
   inline void to_hash_array(const FTF_Pancake* val, float* hash_array)
   {
@@ -39,9 +44,16 @@ public:
     index_map[val] = opposite_hash_values.size();
     reverse_map[opposite_hash_values.size()] = val;
     assert(opposite_hash_values.size() == g_values.size());
+
     g_values.push_back(val->g);
-    opposite_hash_values.resize(opposite_hash_values.size() + 1);
-    to_hash_array(val, opposite_hash_values.back().hash);
+
+    //opposite_hash_values.resize(opposite_hash_values.size() + 1);
+    //to_hash_array(val, opposite_hash_values.back().hash);
+
+    hash_array tmp;
+    to_hash_array(val, tmp.hash);
+    opposite_hash_values.push_back(tmp);
+
     valid_device_cache = false;
   }
 
@@ -55,12 +67,15 @@ public:
     reverse_map.erase(g_values.size() - 1);
     index_map[back_ptr] = index;
 
-    g_values[index] = g_values.back();
-    g_values.resize(g_values.size() - 1);
+    //g_values[index] = g_values.back();
+    //g_values.resize(g_values.size() - 1);
 
-    memcpy(opposite_hash_values[index].hash, opposite_hash_values.back().hash, sizeof(float) * MAX_PANCAKES);
-    opposite_hash_values.resize(opposite_hash_values.size() - 1);
+    //memcpy(opposite_hash_values[index].hash, opposite_hash_values.back().hash, sizeof(float) * MAX_PANCAKES);
+    //opposite_hash_values.resize(opposite_hash_values.size() - 1);
     valid_device_cache = false;
+
+    g_values.erase(index);
+    opposite_hash_values.erase(index);
   }
 
   uint32_t match(const FTF_Pancake* val);
@@ -89,7 +104,8 @@ uint32_t ftf_cudastructure::match(const FTF_Pancake* val)
   //size_t m_rows, size_t n_cols, float alpha, float* A, float* x, float beta, float* y
   if(!valid_device_cache)
   {
-    cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
+    //cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
+    cuda.set_ptrs(opposite_hash_values.size(), (float*)opposite_hash_values.data(), (float*)g_values.data());
     valid_device_cache = true;
   }
   if(batch_hash_vals == nullptr)
@@ -105,7 +121,8 @@ void ftf_cudastructure::match(std::vector<FTF_Pancake*>& val)
   //size_t m_rows, size_t n_cols, float alpha, float* A, float* x, float beta, float* y
   if(!valid_device_cache)
   {
-    cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
+    //cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
+    cuda.set_ptrs(opposite_hash_values.size(), (float*)opposite_hash_values.data(), (float*)g_values.data());
     valid_device_cache = true;
   }
   if(batch_hash_vals == nullptr)

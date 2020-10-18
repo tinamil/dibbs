@@ -4,7 +4,7 @@
 
 template <typename T>
 class StackArray {
-  const static size_t SIZE = 1000000;
+  constexpr static inline size_t SIZE = 65536;
   std::vector<T*> storage;
   std::vector<size_t> sizes;
 

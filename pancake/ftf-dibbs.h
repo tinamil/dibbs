@@ -316,8 +316,8 @@ public:
         //    lbmin = tmp;
         //}
       }
-      else if(forward)
-      //else if(open_f.size() <= open_b.size())
+      //else if(forward)
+      else if(open_f.size() <= open_b.size())
       {
         expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
       }
