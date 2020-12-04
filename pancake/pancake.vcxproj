@@ -129,9 +129,11 @@
     </Link>
     <CudaCompile />
     <CudaCompile>
-      <CodeGeneration>compute_80,sm_80</CodeGeneration>
       <FastMath>true</FastMath>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <Optimization>O2</Optimization>
+      <CudaRuntime>Static</CudaRuntime>
+      <CodeGeneration>compute_86,sm_86</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -148,8 +150,8 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_80,sm_80</CodeGeneration>
       <FastMath>true</FastMath>
+      <CodeGeneration>compute_86,sm_86</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

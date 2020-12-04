@@ -6,8 +6,11 @@ void mycuda::set_ptrs(size_t num_pancakes, float* A, float* g_vals)
   d_a = A;
   d_g_vals = g_vals;
   
-  if(d_mult_results) CUDA_CHECK_RESULT(cudaFree(d_mult_results));
-  CUDA_CHECK_RESULT(cudaMalloc((void**)&d_mult_results, MAX_BATCH * num_pancakes * sizeof(float)));
+  if (num_pancakes > d_mult_results_size) {
+    d_mult_results_size = num_pancakes;
+    if (d_mult_results) CUDA_CHECK_RESULT(cudaFree(d_mult_results));
+    CUDA_CHECK_RESULT(cudaMalloc((void**)&d_mult_results, MAX_BATCH * num_pancakes * sizeof(float)));
+  }
 }
 
 void mycuda::set_matrix(size_t num_pancakes, const float* A, const float* g_vals)

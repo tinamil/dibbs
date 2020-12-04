@@ -723,7 +723,7 @@ int main()
   mycuda::initialize();
   run_random_test();
 
-  std::cout << "\nDone\n";
-  while(true);
+  //std::cout << "\nDone\n";
+  //while(true);
   return EXIT_SUCCESS;
 }

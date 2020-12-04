@@ -176,8 +176,9 @@ public:
     {
       open.insert(ptr);
       open_hash.insert(ptr);
-      my_index.insert(ptr);
+      //my_index.insert(ptr);
     }
+    my_index.insert(new_pancakes);
   }
 
   template<typename T>
@@ -265,8 +266,8 @@ public:
     auto ptr = storage.push_back(start);
     forward_index.insert(ptr);
     //forward_index2.insert(ptr);
-    ptr->h = ptr->f = forward_index.match(&goal);
-    goal.h = goal.f = ptr->h;
+    ptr->ftf_h = ptr->f = forward_index.match(&goal);
+    goal.ftf_h = goal.f = ptr->ftf_h;
     open_f.insert(ptr);
     open_f_hash.insert(ptr);
     ptr = storage.push_back(goal);

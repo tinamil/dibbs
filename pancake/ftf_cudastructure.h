@@ -14,13 +14,16 @@ struct hash_array
 
 class ftf_cudastructure
 {
-  //TODO: TO convert to storing hash values on GPU only.  Keep track of hash values size, moves opposite_hash_values and g_values to GPU
   static inline float* batch_hash_vals = nullptr;
   mycuda cuda;
+#define CUDA_VECTOR
+#ifdef CUDA_VECTOR
   cuda_vector<hash_array> opposite_hash_values;
   cuda_vector<float> g_values;
-  //std::vector<hash_array> opposite_hash_values;
-  //std::vector<float> g_values;
+#else
+  std::vector<hash_array> opposite_hash_values;
+  std::vector<float> g_values;
+#endif
   std::unordered_map<const FTF_Pancake*, size_t> index_map;
   std::unordered_map<size_t, const FTF_Pancake*> reverse_map;
   bool valid_device_cache = false;
@@ -29,11 +32,16 @@ class ftf_cudastructure
   inline void to_hash_array(const FTF_Pancake* val, float* hash_array)
   {
     memset(hash_array, 0, MAX_PANCAKES * sizeof(float));
-    for(size_t i = 1; i < NUM_PANCAKES; ++i)
+    for (size_t i = 1; i < NUM_PANCAKES; ++i)
     {
       hash_array[hash_table::hash(val->source[i], val->source[i + 1])] = 1;
     }
     hash_array[hash_table::hash(val->source[NUM_PANCAKES], NUM_PANCAKES + 1)] = 1;
+  }
+
+  inline void to_hash_array(const FTF_Pancake* val, hash_array* hash_array)
+  {
+    to_hash_array(val, hash_array->hash);
   }
 
 public:
@@ -47,12 +55,33 @@ public:
 
     g_values.push_back(val->g);
 
-    //opposite_hash_values.resize(opposite_hash_values.size() + 1);
-    //to_hash_array(val, opposite_hash_values.back().hash);
-
+#ifndef CUDA_VECTOR
+    opposite_hash_values.resize(opposite_hash_values.size() + 1);
+    to_hash_array(val, opposite_hash_values.back().hash);
+#else
     hash_array tmp;
     to_hash_array(val, tmp.hash);
     opposite_hash_values.push_back(tmp);
+#endif
+
+    valid_device_cache = false;
+  }
+
+  void insert(const std::vector<FTF_Pancake*>& vector)
+  {
+    std::vector<float> tmp_g_vals;
+    std::vector<hash_array> tmp_hash_arrays;
+    tmp_hash_arrays.resize(vector.size());
+    tmp_g_vals.reserve(vector.size());
+    for (int i = 0; i < vector.size(); ++i) {
+      index_map[vector[i]] = opposite_hash_values.size() + i;
+      reverse_map[opposite_hash_values.size() + i] = vector[i];
+      tmp_g_vals.push_back(vector[i]->g);
+      to_hash_array(vector[i], &tmp_hash_arrays[i]);
+    }
+
+    g_values.insert(g_values.end(), tmp_g_vals.begin(), tmp_g_vals.end());
+    opposite_hash_values.insert(opposite_hash_values.end(), tmp_hash_arrays.begin(), tmp_hash_arrays.end());
 
     valid_device_cache = false;
   }
@@ -65,17 +94,21 @@ public:
     const FTF_Pancake* back_ptr = reverse_map[g_values.size() - 1];
     reverse_map[index] = back_ptr;
     reverse_map.erase(g_values.size() - 1);
-    index_map[back_ptr] = index;
-
-    //g_values[index] = g_values.back();
-    //g_values.resize(g_values.size() - 1);
-
-    //memcpy(opposite_hash_values[index].hash, opposite_hash_values.back().hash, sizeof(float) * MAX_PANCAKES);
-    //opposite_hash_values.resize(opposite_hash_values.size() - 1);
-    valid_device_cache = false;
-
+    if (back_ptr != val)
+    {
+      index_map[back_ptr] = index;
+    }
+#ifndef CUDA_VECTOR
+    g_values[index] = g_values.back();
+    g_values.resize(g_values.size() - 1);
+    memcpy(opposite_hash_values[index].hash, opposite_hash_values.back().hash, sizeof(float) * MAX_PANCAKES);
+    opposite_hash_values.resize(opposite_hash_values.size() - 1);
+#else
     g_values.erase(index);
     opposite_hash_values.erase(index);
+#endif
+
+    valid_device_cache = false;
   }
 
   uint32_t match(const FTF_Pancake* val);
@@ -85,11 +118,11 @@ public:
 bool FTF_Less::operator()(const FTF_Pancake* lhs, const FTF_Pancake* rhs) const
 {
   int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
-  if(cmp == 0)
+  if (cmp == 0)
   {
     return false;
   }
-  else if(lhs->g == rhs->g)
+  else if (lhs->g == rhs->g)
   {
     return cmp < 0;
   }
@@ -102,13 +135,16 @@ bool FTF_Less::operator()(const FTF_Pancake* lhs, const FTF_Pancake* rhs) const
 uint32_t ftf_cudastructure::match(const FTF_Pancake* val)
 {
   //size_t m_rows, size_t n_cols, float alpha, float* A, float* x, float beta, float* y
-  if(!valid_device_cache)
+  if (!valid_device_cache)
   {
-    //cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
-    cuda.set_ptrs(opposite_hash_values.size(), (float*)opposite_hash_values.data(), (float*)g_values.data());
+#ifndef CUDA_VECTOR
+    cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
+#else
+    cuda.set_ptrs(opposite_hash_values.size(), reinterpret_cast<float*>(opposite_hash_values.data()), g_values.data());
+#endif
     valid_device_cache = true;
   }
-  if(batch_hash_vals == nullptr)
+  if (batch_hash_vals == nullptr)
   {
     cudaError_t result = cudaHostAlloc(&batch_hash_vals, mycuda::MAX_BATCH * MAX_PANCAKES * sizeof(float), cudaHostAllocWriteCombined);
   }
@@ -119,27 +155,30 @@ uint32_t ftf_cudastructure::match(const FTF_Pancake* val)
 void ftf_cudastructure::match(std::vector<FTF_Pancake*>& val)
 {
   //size_t m_rows, size_t n_cols, float alpha, float* A, float* x, float beta, float* y
-  if(!valid_device_cache)
+  if (!valid_device_cache)
   {
-    //cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
-    cuda.set_ptrs(opposite_hash_values.size(), (float*)opposite_hash_values.data(), (float*)g_values.data());
+#ifndef CUDA_VECTOR
+    cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
+#else
+    cuda.set_ptrs(opposite_hash_values.size(), reinterpret_cast<float*>(opposite_hash_values.data()), g_values.data());
+#endif
     valid_device_cache = true;
   }
-  if(batch_hash_vals == nullptr)
+  if (batch_hash_vals == nullptr)
   {
     cudaError_t result = cudaHostAlloc(&batch_hash_vals, mycuda::MAX_BATCH * MAX_PANCAKES * sizeof(float), cudaHostAllocWriteCombined);
   }
   assert(val.size() <= mycuda::MAX_BATCH);
   //size_t num_vals = std::min(val.size() - batch * mycuda::MAX_BATCH, mycuda::MAX_BATCH);
-  for(size_t i = 0; i < val.size(); ++i)
+  for (size_t i = 0; i < val.size(); ++i)
   {
     to_hash_array(val[i], batch_hash_vals + i * MAX_PANCAKES);
   }
   float* answers = cuda.batch_vector_matrix(opposite_hash_values.size(), val.size(), batch_hash_vals);
-  for(int i = 0; i < val.size(); ++i)
+  for (int i = 0; i < val.size(); ++i)
   {
-    val[i]->h = round(answers[i]);
-    val[i]->f = val[i]->g + val[i]->h;
+    val[i]->ftf_h = round(answers[i]);
+    val[i]->f = val[i]->g + val[i]->ftf_h;
   }
 }
 
