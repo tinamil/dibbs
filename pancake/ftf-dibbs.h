@@ -102,10 +102,9 @@ public:
   {
     auto f_val = (*open.begin())->f;
     auto g_val = (*open.begin())->g;
-
     int count = 0; 
     std::vector<FTF_Pancake*> new_pancakes;
-    while(!open.empty() && (*open.begin())->f == f_val && (*open.begin())->g == g_val && ++count <= mycuda::MAX_BATCH / NUM_PANCAKES)
+    while(!open.empty() && (*open.begin())->f == f_val &&/* (*open.begin())->g == g_val &&*/ ++count <= mycuda::MAX_BATCH / NUM_PANCAKES)
     {
       const FTF_Pancake* next_val = *open.begin();
 
@@ -113,6 +112,7 @@ public:
       assert(it_hash != open_hash.end());
       open_hash.erase(it_hash);
       open.erase(next_val);
+      assert(open_hash.size() == open.size());
       my_index.erase(next_val);
 
       ++expansions;
@@ -122,6 +122,10 @@ public:
       for(int i = 2, j = NUM_PANCAKES; i <= j; ++i)
       {
         FTF_Pancake new_action = next_val->apply_action(i, false, other_index);
+
+        if ((size_t)new_action.g + new_action.h >= UB) {
+          continue;
+        }
 
         auto it_closed = closed.find(&new_action);
         if(it_closed == closed.end())
@@ -151,34 +155,41 @@ public:
               UB = combined;
             }
           }
-          auto it_open = open_hash.find(&new_action);
-          if(it_open != open_hash.end())
-          {
-            if((*it_open)->g <= new_action.g)
-            {
-              continue;
-            }
-            else
-            {
-              open.erase(&**it_open);
-              open_hash.erase(it_open);
-            }
-          }
 
           auto ptr = storage.push_back(new_action);
           new_pancakes.push_back(ptr);
         }
       }
     }
-    other_index.match(new_pancakes);
+    if (new_pancakes.size() > 0) {
+      other_index.match(new_pancakes);
 
-    for(const FTF_Pancake* ptr : new_pancakes)
-    {
-      open.insert(ptr);
-      open_hash.insert(ptr);
-      //my_index.insert(ptr);
+      for (const FTF_Pancake* ptr : new_pancakes)
+      {
+        assert(open_hash.size() == open.size());
+        auto it_open = open_hash.find(ptr);
+        if (it_open != open_hash.end())
+        {
+          if ((*it_open)->g <= ptr->g)
+          {
+            continue;
+          }
+          else
+          {
+            open.erase(&**it_open);
+            open_hash.erase(it_open);
+            assert(open_hash.size() == open.size());
+          }
+        }
+        auto [it, success] = open.insert(ptr);
+        assert(success);
+        auto [it2, success2] = open_hash.insert(ptr);
+        assert(success2);
+        assert(open_hash.size() == open.size());
+        //my_index.insert(ptr);
+      }
+      my_index.insert(new_pancakes);
     }
-    my_index.insert(new_pancakes);
   }
 
   template<typename T>
@@ -259,7 +270,7 @@ public:
   Pancake best_f, best_b;
   #endif
 
-  __declspec(noinline) std::tuple<double, size_t, size_t> run_search(FTF_Pancake start, FTF_Pancake goal, std::vector<FTF_Pancake>* expansions_in_order = nullptr)
+  std::tuple<double, size_t, size_t> run_search(FTF_Pancake start, FTF_Pancake goal, std::vector<FTF_Pancake>* expansions_in_order = nullptr)
   {
     expansions = 0;
     memory = 0;

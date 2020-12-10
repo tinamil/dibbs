@@ -24,7 +24,7 @@ class mycuda
   static inline float* zero = nullptr;
   static inline float* compare_answer = nullptr;
   static inline float* batch_answers = nullptr;
-  static inline cudaStream_t stream = nullptr;
+  static inline cudaStream_t cublas_stream = nullptr;
 
 public:
   static constexpr size_t MAX_BATCH = 256;
@@ -34,8 +34,8 @@ public:
     {
       CUBLAS_CHECK_RESULT(cublasCreate(&handle));
       CUBLAS_CHECK_RESULT(cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE));
-      CUDA_CHECK_RESULT(cudaStreamCreate(&stream));
-      CUBLAS_CHECK_RESULT(cublasSetStream(handle, stream));
+      CUDA_CHECK_RESULT(cudaStreamCreate(&cublas_stream));
+      CUBLAS_CHECK_RESULT(cublasSetStream(handle, cublas_stream));
       CUBLAS_CHECK_RESULT(cublasSetAtomicsMode(handle, CUBLAS_ATOMICS_ALLOWED));
       CUBLAS_CHECK_RESULT(cublasSetMathMode(handle, CUBLAS_TF32_TENSOR_OP_MATH));
     }

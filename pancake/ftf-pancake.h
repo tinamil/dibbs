@@ -39,7 +39,7 @@ public:
     hash_64 = hash_table::compress(hash_values);*/
   }
 
-  FTF_Pancake(const FTF_Pancake& copy) : dir(copy.dir), g(copy.g), ftf_h(copy.ftf_h), f(copy.f) /*,hash_64(copy.hash_64)*/
+  FTF_Pancake(const FTF_Pancake& copy) : dir(copy.dir), g(copy.g), ftf_h(copy.ftf_h), h(copy.h), f(copy.f) /*,hash_64(copy.hash_64)*/
     #ifdef HISTORY
     , actions(copy.actions), parent(copy.parent)
     #endif
@@ -47,6 +47,7 @@ public:
     memcpy(source, copy.source, NUM_PANCAKES + 1);
     //memcpy(hash_values, copy.hash_values, (NUM_PANCAKES + 1) * sizeof(hash_t));
   }
+
 
   inline bool operator==(const FTF_Pancake& right) const
   {
@@ -78,8 +79,9 @@ FTF_Pancake FTF_Pancake::apply_action(const int i, bool match, T& structure) con
   new_node.parent = this;
   #endif
   assert(i > 1 && i <= NUM_PANCAKES);
-  new_node.apply_flip(i);
   new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
+  new_node.apply_flip(i);
+  assert(new_node.h == new_node.gap_lb(dir));
   /*if(i < NUM_PANCAKES)
     new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
   else

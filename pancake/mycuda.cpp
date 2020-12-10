@@ -31,7 +31,7 @@ float* mycuda::batch_vector_matrix(size_t num_pancakes, size_t num_vals, float* 
 {
   assert(num_vals <= MAX_BATCH);
 
-  CUDA_CHECK_RESULT(cudaMemcpyAsync(d_batch_hash_vals, hash_vals, sizeof(float) * num_vals * MAX_PANCAKES, cudaMemcpyHostToDevice));
+  CUDA_CHECK_RESULT(cudaMemcpy(d_batch_hash_vals, hash_vals, sizeof(float) * num_vals * MAX_PANCAKES, cudaMemcpyHostToDevice));
   cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, num_pancakes, num_vals, MAX_PANCAKES, one, d_a, MAX_PANCAKES, d_batch_hash_vals, MAX_PANCAKES, zero, d_mult_results, num_pancakes);
   vector_add(num_vals, num_pancakes, d_g_vals, d_mult_results);
   reduce_min(num_vals, num_pancakes, d_mult_results, d_batch_answers);

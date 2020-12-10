@@ -76,7 +76,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
   random_permutation2(NUM_PANCAKES, problem, seed);
 }
 
-__declspec(noinline) void output_data(std::ostream& stream)
+ void output_data(std::ostream& stream)
 {
   std::cout << "Pancakes = " << NUM_PANCAKES << " gap-x = " << GAPX << '\n';
   stream << "Pancakes = " << NUM_PANCAKES << " gap-x = " << GAPX << '\n';
@@ -619,6 +619,7 @@ __declspec(noinline) void output_data(std::ostream& stream)
     {
       std::cout << i << " ";
       generate_random_instance(seed, problem);
+      Pancake::Initialize_Dual(problem);
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
