@@ -22,6 +22,7 @@ public:
   }
   T* push_back(const T& data);
   void insert(const T* _, typename std::vector<T>::iterator begin, typename std::vector<T>::iterator end);
+  void insert(const T* _, const T* begin, const T* end);
   void erase(size_t index);
 
   inline void clear()
@@ -78,6 +79,12 @@ T* cuda_vector<T>::push_back(const T& data)
 template <typename T>
 void cuda_vector<T>::insert(const T* _, typename std::vector<T>::iterator begin, typename std::vector<T>::iterator end)
 {
+  insert(_, (T*)begin, (T*)end);
+} 
+
+template <typename T>
+void cuda_vector<T>::insert(const T* _, const T* begin, const T* end)
+{
   int size_diff = end - begin;
   while (d_ptr == nullptr || size_val + size_diff >= capacity)
   {
@@ -85,7 +92,8 @@ void cuda_vector<T>::insert(const T* _, typename std::vector<T>::iterator begin,
   }
   CUDA_CHECK_RESULT(cudaMemcpy(d_ptr + size_val, &*begin, sizeof(T) * size_diff, cudaMemcpyHostToDevice));
   size_val += size_diff;
-} 
+}
+
 
 template <typename T>
 void cuda_vector<T>::erase(size_t index)

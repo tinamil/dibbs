@@ -69,19 +69,27 @@ public:
 
   void insert(const std::vector<FTF_Pancake*>& vector)
   {
-    std::vector<float> tmp_g_vals;
-    std::vector<hash_array> tmp_hash_arrays;
-    tmp_hash_arrays.resize(vector.size());
-    tmp_g_vals.reserve(vector.size());
+    float* tmp_g_vals;
+    hash_array *tmp_hash_arrays;
+    CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(float) * vector.size(), cudaHostAllocDefault));
+    CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_hash_arrays, sizeof(hash_array) * vector.size(), cudaHostAllocDefault));
+    //std::vector<float> tmp_g_vals;
+    //std::vector<hash_array> tmp_hash_arrays;
+    //tmp_hash_arrays.resize(vector.size());
+    //tmp_g_vals.reserve(vector.size());
     for (int i = 0; i < vector.size(); ++i) {
       index_map[vector[i]] = opposite_hash_values.size() + i;
       reverse_map[opposite_hash_values.size() + i] = vector[i];
-      tmp_g_vals.push_back(vector[i]->g);
+      tmp_g_vals[i] = vector[i]->g;
+      //tmp_g_vals.push_back(vector[i]->g);
       to_hash_array(vector[i], &tmp_hash_arrays[i]);
     }
 
-    g_values.insert(g_values.end(), tmp_g_vals.begin(), tmp_g_vals.end());
-    opposite_hash_values.insert(opposite_hash_values.end(), tmp_hash_arrays.begin(), tmp_hash_arrays.end());
+    g_values.insert(g_values.end(), tmp_g_vals, tmp_g_vals + vector.size());
+    opposite_hash_values.insert(opposite_hash_values.end(), tmp_hash_arrays, tmp_hash_arrays + vector.size());
+
+    CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
+    CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
 
     valid_device_cache = false;
   }
