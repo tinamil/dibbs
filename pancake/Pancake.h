@@ -8,7 +8,7 @@
 
 //#define HISTORY 
 
-constexpr int NUM_PANCAKES = 20;
+constexpr int NUM_PANCAKES = 40;
 constexpr uint32_t MAX_PANCAKES = NUM_PANCAKES * (NUM_PANCAKES + 1) / 2;
 constexpr int GAPX = 0;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB

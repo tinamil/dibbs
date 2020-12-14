@@ -2,6 +2,7 @@
 #include <cuda.h>
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
+#include <string>
 
 static inline std::string errorString(cublasStatus_t errorCode)
 {

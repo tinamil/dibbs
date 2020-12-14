@@ -6,7 +6,6 @@
 #include <unordered_map>
 #include <set>
 #include <tsl\hopscotch_map.h>
-#include "mycuda.h"
 
 class FTF_Pancake
 {
@@ -96,10 +95,18 @@ FTF_Pancake FTF_Pancake::apply_action(const int i, bool match, T& structure) con
   new_node.g = g + 1;
   if(match)
   {
-    new_node.ftf_h = structure.match(&new_node);
+    new_node.ftf_h = structure.match_one(&new_node);
     new_node.f = new_node.g + new_node.ftf_h;
     //assert(new_node.f >= f); //Consistency check
   }
   return new_node;
 }
 
+struct callback_type {
+public:
+  callback_type(std::vector<FTF_Pancake*>& _val) : val(_val) {
+
+  }
+  std::vector<FTF_Pancake*>& val;
+  float* answers;
+};

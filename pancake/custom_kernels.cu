@@ -90,13 +90,17 @@ void cuda_min_kernel(int num_batch, int num_frontier, const T* __restrict__ mult
 }
 
 
-void vector_add(int num_batch, int num_frontier, const float* __restrict__ g_vals, float* __restrict__ mult_results)
+void vector_add(cudaStream_t stream, int num_batch, int num_frontier, const float* __restrict__ g_vals, float* __restrict__ mult_results)
 {
-  cuda_vector_add_matrix_kernel <<<1024, 64>>> (num_batch, num_frontier, g_vals, mult_results);
+  constexpr int threadsPerBlock = 96;
+  int blocksPerGrid = (num_batch * num_frontier + threadsPerBlock - 1) / threadsPerBlock;
+  cuda_vector_add_matrix_kernel <<<blocksPerGrid, threadsPerBlock, 0, stream >>> (num_batch, num_frontier, g_vals, mult_results);
 }
 
-void reduce_min(int num_batch, int num_frontier, const float* __restrict__ mult_results, float* __restrict__ d_batch_answers)
+void reduce_min(cudaStream_t stream, int num_batch, int num_frontier, const float* __restrict__ mult_results, float* __restrict__ d_batch_answers)
 {
-  reduceMin <<<1024, 64>>> (num_batch, num_frontier, mult_results, d_batch_answers);
+  constexpr int threadsPerBlock = 96;
+  int blocksPerGrid = (num_batch * num_frontier + threadsPerBlock - 1) / threadsPerBlock;
+  reduceMin <<<blocksPerGrid, threadsPerBlock, 0, stream>>> (num_batch, num_frontier, mult_results, d_batch_answers);
 }
 

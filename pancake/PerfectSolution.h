@@ -208,11 +208,11 @@ void GeneratePerfectCounts() {
       std::vector<const Pancake*> lPancakes, rPancakes;
       for (auto i = 0; i < forwardInstance.pancakes.size(); ++i) {
         auto f = &forwardInstance.pancakes[i];
-        if (forwardInstance.closed.contains(f)) lPancakes.push_back(f);
+        if (forwardInstance.closed.count(f) == 1) lPancakes.push_back(f);
       }
       for (auto i = 0; i < backwardInstance.pancakes.size(); ++i) {
         auto b = &backwardInstance.pancakes[i];
-        if (backwardInstance.closed.contains(b)) rPancakes.push_back(b);
+        if (backwardInstance.closed.count(b) == 1) rPancakes.push_back(b);
       }
 
       init(lPancakes.size(), rPancakes.size());

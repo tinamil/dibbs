@@ -3,7 +3,7 @@
 //#define A_STAR
 //#define REVERSE_ASTAR
 //#define IDD
-//s#define DIBBS
+//#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
@@ -720,6 +720,14 @@ void run_random_test()
 
 int main()
 {
+  int deviceCount;
+  cudaGetDeviceCount(&deviceCount);
+  int device;
+  for (device = 0; device < deviceCount; ++device) {
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, device);
+    std::cout << "Device " << device << " has compute capability " << deviceProp.major << "." << deviceProp.minor << "\n";
+  }
   hash_table::initialize_hash_values();
   mycuda::initialize();
   run_random_test();
