@@ -119,6 +119,9 @@
     <ClInclude Include="cuda_vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dibbs-ftf-hybrid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="custom_kernels.cuh">

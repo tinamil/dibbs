@@ -22,6 +22,7 @@
 class FTF_Dibbs
 {
 public:
+  static constexpr size_t BATCH_SIZE = 512;
 
   struct FTFPancakeFSortHighG
   {
@@ -83,13 +84,13 @@ public:
   set open_f, open_b;
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
-  ftf_cudastructure forward_index, backward_index;
+  ftf_cudastructure<FTF_Pancake> forward_index, backward_index;
   //ftf_matchstructure forward_index, backward_index;
   size_t expansions;
   size_t UB;
   size_t lbmin;
   size_t memory;
-  static constexpr size_t num_cuda = 2;
+  static constexpr size_t num_cuda = 1;
   static inline std::vector<mycuda> cuda_vector = std::vector<mycuda>(num_cuda);
   static inline std::vector<std::vector<FTF_Pancake *>> new_pancakes_vector = std::vector<std::vector<FTF_Pancake *>>(num_cuda);
 
@@ -106,7 +107,7 @@ public:
     int count = 0;
     for(int cuda_count = 0; cuda_count < num_cuda; ++cuda_count) {
       new_pancakes_vector[cuda_count].clear();
-      while(!open.empty() && (*open.begin())->f == f_val && ++count <= mycuda::MAX_BATCH / NUM_PANCAKES)
+      while(!open.empty() && (*open.begin())->f == f_val && ++count <= BATCH_SIZE / NUM_PANCAKES)
       {
         const FTF_Pancake *next_val = *open.begin();
 

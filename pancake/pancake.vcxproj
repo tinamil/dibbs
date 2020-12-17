@@ -48,7 +48,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.1.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.2.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -170,6 +170,7 @@
     <CudaCompile Include="custom_kernels.cuh" />
     <ClInclude Include="cuda_helper.h" />
     <ClInclude Include="cuda_vector.h" />
+    <ClInclude Include="dibbs-ftf-hybrid.h" />
     <ClInclude Include="ftf_cudastructure.h" />
     <ClInclude Include="mycuda.h" />
     <ClInclude Include="dibbs-2phase-queue.hpp" />
@@ -195,6 +196,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.1.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.2.targets" />
   </ImportGroup>
 </Project>

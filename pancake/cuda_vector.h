@@ -8,7 +8,7 @@
 template<typename T>
 class cuda_vector
 {
-  static constexpr double GROWTH_FACTOR = 2.0;
+  static constexpr double GROWTH_FACTOR = 2;
   T* d_ptr = nullptr;
   size_t size_val = 0;
   size_t capacity = 0;
@@ -61,7 +61,7 @@ void cuda_vector<T>::resize(size_t new_capacity)
   }
 
   T* tmp_ptr;
-  CUDA_CHECK_RESULT(cudaMalloc((void**)&tmp_ptr, new_capacity * sizeof(T)));
+  CUDA_CHECK_RESULT(cudaMalloc(&tmp_ptr, new_capacity * sizeof(T)));
 
   if(d_ptr)
   {
@@ -96,11 +96,12 @@ template <typename T>
 void cuda_vector<T>::insert(const T* begin, const T* end)
 {
   int size_diff = end - begin;
-  while(d_ptr == nullptr || size_val + size_diff >= capacity)
+  if(size_diff == 0) return;
+  if(d_ptr == nullptr || size_val + size_diff >= capacity)
   {
-    resize(std::max(64ui64, static_cast<uint64_t>(GROWTH_FACTOR * capacity)));
+    resize(std::max(size_val + size_diff, static_cast<uint64_t>(GROWTH_FACTOR * capacity)));
   }
-  CUDA_CHECK_RESULT(cudaMemcpyAsync(d_ptr + size_val, &*begin, sizeof(T) * size_diff, cudaMemcpyHostToDevice, stream));
+  CUDA_CHECK_RESULT(cudaMemcpyAsync(d_ptr + size_val, begin, sizeof(T) * size_diff, cudaMemcpyHostToDevice, stream));
   size_val += size_diff;
 }
 
@@ -109,7 +110,7 @@ template <typename T>
 void cuda_vector<T>::erase(size_t index)
 {
   #ifndef NDEBUG
-  if(index >= size_val)
+  if(index >= size_val || size_val == 0)
   {
     throw std::exception("Invalid ptr to erase");
   }

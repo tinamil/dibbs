@@ -8,7 +8,7 @@
 
 //#define HISTORY 
 
-constexpr int NUM_PANCAKES = 40;
+constexpr int NUM_PANCAKES = 30;
 constexpr uint32_t MAX_PANCAKES = NUM_PANCAKES * (NUM_PANCAKES + 1) / 2;
 constexpr int GAPX = 0;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
@@ -27,6 +27,8 @@ public:
   uint8_t g;
   uint8_t h;
   uint8_t h2;
+  uint8_t ftf_h;
+  uint8_t ftf_f;
   uint8_t f;
   uint8_t f_bar;
   int32_t hdiff;
@@ -37,8 +39,8 @@ public:
   uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
   int check_inputs() const;
 
-  Pancake() : dir(Direction::forward), g(0), h(0), h2(0), f(0), f_bar(0), hdiff(0), delta(0), threshold(false) {}
-  Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), f(0), f_bar(0)
+  Pancake() : dir(Direction::forward), g(0), h(0), h2(0), ftf_h(0), ftf_f(0), f(0), f_bar(0), hdiff(0), delta(0), threshold(false) {}
+  Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), ftf_h(0), ftf_f(0), f(0), f_bar(0)
   {
     assert(NUM_PANCAKES > 0);
     memcpy(source, data, NUM_PANCAKES + 1);
@@ -50,7 +52,7 @@ public:
     threshold = h == 0;
   }
 
-  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), f(copy.f),
+  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), ftf_h(copy.ftf_h), ftf_f(copy.ftf_f), f(copy.f),
     f_bar(copy.f_bar), hdiff(copy.hdiff), delta(copy.delta), threshold(copy.threshold)
     #ifdef HISTORY
     , actions(copy.actions), parent(copy.parent)

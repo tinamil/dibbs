@@ -10,6 +10,7 @@
 //#include "dibbs-2phase.hpp"
 //#include "2phase-lookahead.h"
 #include "ftf-dibbs.h"
+#include "dibbs-ftf-hybrid.h"
 
 #include "Pancake.h"
 #ifdef A_STAR
@@ -113,6 +114,9 @@ void generate_random_instance(double& seed, uint8_t problem[])
   #endif
   #ifdef FTF_PANCAKE
   stream << FTF_PANCAKE << " ";
+  #endif
+  #ifdef FTF_PANCAKE_HYBRID
+  stream << FTF_PANCAKE_HYBRID << " ";
   #endif
   stream << "\n";
 
@@ -656,6 +660,51 @@ void generate_random_instance(double& seed, uint8_t problem[])
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
+  {
+    #ifdef FTF_PANCAKE_HYBRID
+    std::cout << '\n' << FTF_PANCAKE_HYBRID << '\n';
+    double seed = 3.1567;
+    for(int i = 1; i <= NUM_PROBLEMS; ++i)
+    {
+      std::cout << i << " ";
+      generate_random_instance(seed, problem);
+      Pancake::Initialize_Dual(problem);
+      Pancake node(problem, Direction::forward);
+      Pancake goal = Pancake::GetSortedStack(Direction::backward);
+      auto start = std::chrono::system_clock::now();
+      auto [cstar, expansions, memory] = dibbs_ftf_hybrid::search(node, goal);
+      auto end = std::chrono::system_clock::now();
+      //stream << std::to_string((int)cstar) << " , " << std::to_string(expansions) << "\n";
+      if(std::isinf(cstar))
+      {
+        expansion_stream << "NAN ";
+      }
+      else
+      {
+        expansion_stream << std::to_string(expansions) << " ";
+      }
+      memory_stream << std::to_string(memory) << " ";
+
+      time_stream << std::to_string(std::chrono::duration_cast<precision>(end - start).count()) << " ";
+
+      if(answers[i] < 0 && !std::isinf(cstar))
+      {
+        answers[i] = cstar;
+      }
+      else if(!std::isinf(cstar) && answers[i] != cstar)
+      {
+        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch";
+        return;
+      }
+    }
+    stream << expansion_stream.rdbuf() << std::endl;
+    stream << time_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
+    #endif
+  }
 }
 
 std::string return_formatted_time(std::string format)
@@ -705,6 +754,9 @@ void run_random_test()
   #endif
   #ifdef FTF_PANCAKE
   name += std::string("_") + FTF_PANCAKE;
+  #endif
+  #ifdef FTF_PANCAKE_HYBRID
+  name += std::string("_") + FTF_PANCAKE_HYBRID;
   #endif
   name += ".txt";
   file.open(dir + name, std::ios::app);
