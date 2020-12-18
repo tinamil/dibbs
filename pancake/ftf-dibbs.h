@@ -22,7 +22,7 @@
 class FTF_Dibbs
 {
 public:
-  static constexpr size_t BATCH_SIZE = 512;
+  static constexpr size_t BATCH_SIZE = 128;
 
   struct FTFPancakeFSortHighG
   {
@@ -85,7 +85,7 @@ public:
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
   ftf_cudastructure<FTF_Pancake> forward_index, backward_index;
-  //ftf_matchstructure forward_index, backward_index;
+  //ftf_matchstructure f_match, b_match;
   size_t expansions;
   size_t UB;
   size_t lbmin;
@@ -103,11 +103,20 @@ public:
   void expand_all_nodes(set &open, hash_set &open_hash, const hash_set &other_open, hash_set &closed, T &my_index, T &other_index)
   {
     auto f_val = (*open.begin())->f;
-    //auto g_val = (*open.begin())->g;
+    auto g_val = (*open.begin())->g;
+    /*ftf_matchstructure* my_match, *other_match;
+    if((*open.begin())->dir == Direction::forward) {
+      my_match = &f_match;
+      other_match = &b_match;
+    }
+    else {
+      my_match = &b_match;
+      other_match = &f_match;
+    }*/
     int count = 0;
     for(int cuda_count = 0; cuda_count < num_cuda; ++cuda_count) {
       new_pancakes_vector[cuda_count].clear();
-      while(!open.empty() && (*open.begin())->f == f_val && ++count <= BATCH_SIZE / NUM_PANCAKES)
+      while(!open.empty() && (*open.begin())->f == f_val && /*(*open.begin())->g == g_val &&*/ ++count <= BATCH_SIZE / NUM_PANCAKES)
       {
         const FTF_Pancake *next_val = *open.begin();
 
@@ -117,7 +126,7 @@ public:
         open.erase(next_val);
         assert(open_hash.size() == open.size());
         my_index.erase(next_val);
-
+        //my_match->erase(next_val);
         ++expansions;
 
         closed.insert(next_val);
@@ -166,6 +175,7 @@ public:
       }
       if(new_pancakes_vector[cuda_count].size() > 0) {
         other_index.match(cuda_vector[cuda_count], new_pancakes_vector[cuda_count]);
+        //other_match->match(new_pancakes_vector[cuda_count]);
       }
     }
 
@@ -174,8 +184,9 @@ public:
       std::vector<FTF_Pancake *> &pancakes = new_pancakes_vector[cuda_count];
       for(int i = 0; i < pancakes.size(); ++i)
       {
+        //assert(pancakes[i]->ftf_h == round(answers[i]));
         pancakes[i]->ftf_h = round(answers[i]);
-        pancakes[i]->f = pancakes[i]->g + pancakes[i]->ftf_h;
+        pancakes[i]->f = pancakes[i]->g + pancakes[i]->h;
       }
       for(const FTF_Pancake *ptr : pancakes)
       {
@@ -190,6 +201,7 @@ public:
           else
           {
             open.erase(&**it_open);
+            //my_match->erase(&**it_open);
             open_hash.erase(it_open);
             assert(open_hash.size() == open.size());
           }
@@ -199,6 +211,7 @@ public:
         auto [it2, success2] = open_hash.insert(ptr);
         assert(success2);
         assert(open_hash.size() == open.size());
+        //my_match->insert(ptr);
       }
       my_index.insert(pancakes);
     }
@@ -288,7 +301,7 @@ public:
     memory = 0;
     auto ptr = storage.push_back(start);
     forward_index.insert(ptr);
-    //forward_index2.insert(ptr);
+    //f_match.insert(ptr);
     ptr->ftf_h = ptr->f = forward_index.match_one(&goal);
     goal.ftf_h = goal.f = ptr->ftf_h;
     open_f.insert(ptr);
@@ -297,7 +310,7 @@ public:
     open_b.insert(ptr);
     open_b_hash.insert(ptr);
     backward_index.insert(ptr);
-    //backward_index2.insert(ptr);
+    //b_match.insert(ptr);
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
     bool forward = false;
@@ -340,8 +353,8 @@ public:
         //    lbmin = tmp;
         //}
       }
-      //else if(forward)
-      else if(open_f.size() <= open_b.size())
+      else if(forward)
+      //else if(open_f.size() <= open_b.size())
       {
         expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
       }

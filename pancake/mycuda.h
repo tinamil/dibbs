@@ -30,7 +30,7 @@ class mycuda
 
   size_t my_num_pancakes = 0;
   size_t max_other_pancakes = 0;
-  size_t max_my_pancakes = 0;
+  size_t d_mult_results_size = 0;
   float* d_hash_vals = nullptr;
   float* d_mult_results = nullptr;
   float* d_answers = nullptr;

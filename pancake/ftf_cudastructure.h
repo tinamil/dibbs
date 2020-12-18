@@ -18,7 +18,7 @@ template <typename PancakeType>
 class ftf_cudastructure
 {
 public:
-  //std::vector<PancakeType*> pancakes;
+  std::vector<PancakeType*> pancakes;
   #define CUDA_VECTOR
   #ifdef CUDA_VECTOR
   cuda_vector<hash_array> device_hash_values;
@@ -27,8 +27,8 @@ public:
   std::vector<hash_array> opposite_hash_values;
   std::vector<float> g_values;
   #endif
-  std::unordered_map<const PancakeType*, size_t> index_map;
-  std::unordered_map<size_t, const PancakeType*> reverse_map;
+  //std::unordered_map<const PancakeType*, size_t> index_map;
+  //std::unordered_map<size_t, const PancakeType*> reverse_map;
   bool valid_device_cache = false;
 
 
@@ -53,78 +53,78 @@ public:
   void load_device()
   {
     if(valid_device_cache) return;
-    //float* tmp_g_vals;
-    //hash_array* tmp_hash_arrays;
-    //CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(float) * pancakes.size(), cudaHostAllocDefault));
-    //CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_hash_arrays, sizeof(hash_array) * pancakes.size(), cudaHostAllocDefault));
+    float* tmp_g_vals;
+    hash_array* tmp_hash_arrays;
+    CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(float) * pancakes.size(), cudaHostAllocDefault));
+    CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_hash_arrays, sizeof(hash_array) * pancakes.size(), cudaHostAllocDefault));
 
-    //for(int i = 0; i < pancakes.size(); ++i) {
-    //  tmp_g_vals[i] = pancakes[i]->g;
-    //  to_hash_array(pancakes[i], &tmp_hash_arrays[i]);
-    //}
+    for(int i = 0; i < pancakes.size(); ++i) {
+      tmp_g_vals[i] = pancakes[i]->g;
+      to_hash_array(pancakes[i], &tmp_hash_arrays[i]);
+    }
 
-    //device_g_values.clear();
-    //device_g_values.insert(tmp_g_vals, tmp_g_vals + pancakes.size());
-    //device_hash_values.clear();
-    //device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + pancakes.size());
-    //
-    //cudaStreamSynchronize(device_g_values.stream);
-    //CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
-    //cudaStreamSynchronize(device_hash_values.stream);
-    //CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
+    device_g_values.clear();
+    device_g_values.insert(tmp_g_vals, tmp_g_vals + pancakes.size());
+    device_hash_values.clear();
+    device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + pancakes.size());
+    
+    cudaStreamSynchronize(device_g_values.stream);
+    CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
+    cudaStreamSynchronize(device_hash_values.stream);
+    CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
 
     valid_device_cache = true;
   }
 
   void insert(PancakeType* val)
   {
-    index_map[val] = device_hash_values.size();
-    reverse_map[device_hash_values.size()] = val;
-    assert(device_hash_values.size() == device_g_values.size());
+    //index_map[val] = device_hash_values.size();
+    //reverse_map[device_hash_values.size()] = val;
+    //assert(device_hash_values.size() == device_g_values.size());
 
-    device_g_values.push_back(val->g);
+    //device_g_values.push_back(val->g);
 
-    #ifndef CUDA_VECTOR
-    opposite_hash_values.resize(opposite_hash_values.size() + 1);
-    to_hash_array(val, opposite_hash_values.back().hash);
-    #else
-    hash_array tmp;
-    to_hash_array(val, tmp.hash);
-    device_hash_values.push_back(tmp);
-    //pancakes.push_back(val);
-    #endif
+    //#ifndef CUDA_VECTOR
+    //opposite_hash_values.resize(opposite_hash_values.size() + 1);
+    //to_hash_array(val, opposite_hash_values.back().hash);
+    //#else
+    //hash_array tmp;
+    //to_hash_array(val, tmp.hash);
+    //device_hash_values.push_back(tmp);
+    //#endif
 
+    pancakes.push_back(val);
     valid_device_cache = false;
   }
 
   void insert(const std::vector<PancakeType*>& vector)
   {
     if(vector.size() == 0) return;
-    float* tmp_g_vals;
-    hash_array* tmp_hash_arrays;
-    CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(float) * vector.size(), cudaHostAllocWriteCombined));
-    CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_hash_arrays, sizeof(hash_array) * vector.size(), cudaHostAllocWriteCombined));
-    for(int i = 0; i < vector.size(); ++i) {
-      index_map[vector[i]] = device_hash_values.size() + i;
-      reverse_map[device_hash_values.size() + i] = vector[i];
-      tmp_g_vals[i] = vector[i]->g;
-      to_hash_array(vector[i], &tmp_hash_arrays[i]);
-    }
+    //float* tmp_g_vals;
+    //hash_array* tmp_hash_arrays;
+    //CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(float) * vector.size(), cudaHostAllocWriteCombined));
+    //CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_hash_arrays, sizeof(hash_array) * vector.size(), cudaHostAllocWriteCombined));
+    //for(int i = 0; i < vector.size(); ++i) {
+    //  index_map[vector[i]] = device_hash_values.size() + i;
+    //  reverse_map[device_hash_values.size() + i] = vector[i];
+    //  tmp_g_vals[i] = vector[i]->g;
+    //  to_hash_array(vector[i], &tmp_hash_arrays[i]);
+    //}
 
-    device_g_values.insert(tmp_g_vals, tmp_g_vals + vector.size());
-    device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + vector.size());
-    //pancakes.insert(pancakes.end(), vector.begin(), vector.end());
-    cudaStreamSynchronize(device_g_values.stream);
-    CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
-    cudaStreamSynchronize(device_hash_values.stream);
-    CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
+    //device_g_values.insert(tmp_g_vals, tmp_g_vals + vector.size());
+    //device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + vector.size());
+    //cudaStreamSynchronize(device_g_values.stream);
+    //CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
+    //cudaStreamSynchronize(device_hash_values.stream);
+    //CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
 
+    pancakes.insert(pancakes.end(), vector.begin(), vector.end());
     valid_device_cache = false;
   }
 
   void erase(const PancakeType* val)
   {
-    size_t index = index_map[val];
+    /*size_t index = index_map[val];
     index_map.erase(val);
 
     const PancakeType* back_ptr = reverse_map[device_g_values.size() - 1];
@@ -142,17 +142,17 @@ public:
     #else
     device_g_values.erase(index);
     device_hash_values.erase(index);
-    #endif
+    #endif*/
     //pancakes[index] = back_ptr;
-    /*for(int i = 0; i < pancakes.size(); ++i) {
+    for(int i = 0; i < pancakes.size(); ++i) {
       if(*pancakes[i] == *val) {
         pancakes[i] = pancakes.back();
         pancakes.resize(pancakes.size() - 1);
         valid_device_cache = false;
         return;
       }
-    }*/
-    //std::cout << "Attempted to erase a pancake that wasn't present.\n";
+    }
+    std::cout << "Attempted to erase a pancake that wasn't present.\n";
   }
 
   uint32_t match_one(const PancakeType* val);
@@ -245,148 +245,148 @@ void ftf_cudastructure<PancakeType>::match_all(ftf_cudastructure<PancakeType>& o
   }
 }
 //
-//class ftf_matchstructure
-//{
-//  #define SORTED_DATASET true
-//
-//  #if SORTED_DATASET
-//  typedef std::set<const FTF_Pancake*, FTF_Less> dataset_t;
-//  #else
-//  typedef std::vector<const FTF_Pancake*> dataset_t;
-//  std::array<std::unordered_map<const FTF_Pancake*, size_t>, MAX_VAL> index_maps;
-//  #endif
-//
-//  std::array<dataset_t, MAX_PANCAKES> dataset;
-//public:
-//  void insert(const FTF_Pancake* val)
-//  {
-//    for(int i = 1; i <= NUM_PANCAKES; ++i)
-//    {
-//      #if SORTED_DATASET
-//      dataset[val->hash_values[i]].insert(val);
-//      #else
-//      index_maps[val->hash_values[i]][val] = dataset[val->hash_values[i]].size();
-//      dataset[val->hash_values[i]].push_back(val);
-//      #endif
-//    }
-//  }
-//
-//  void erase(const FTF_Pancake* val)
-//  {
-//    for(int i = 1; i <= NUM_PANCAKES; ++i)
-//    {
-//      #if SORTED_DATASET
-//      dataset[val->hash_values[i]].erase(val);
-//      #else
-//      hash_t hash = val->hash_values[i];
-//      size_t index = index_maps[hash][val];
-//      assert(memcmp(dataset[hash][index]->source, val->source, NUM_PANCAKES) == 0);
-//      dataset[hash][index] = dataset[hash].back();
-//      dataset[hash].resize(dataset[hash].size() - 1);
-//      index_maps[hash].erase(val);
-//      #endif
-//    }
-//  }
-//
-//  uint32_t match(const FTF_Pancake* val);
-//  void match(std::vector<FTF_Pancake*> values);
-//};
-//
+class ftf_matchstructure
+{
+  #define SORTED_DATASET true
 
-//
-//void ftf_matchstructure::match(std::vector<FTF_Pancake*> values)
-//{
-//  for(auto ptr : values)
-//  {
-//    ptr->h = match(ptr);
-//    ptr->f = ptr->g + ptr->h;
-//  }
-//}
-//
-//uint32_t ftf_matchstructure::match(const FTF_Pancake* val)
-//{
-//  static size_t counter = 0;
-//  uint8_t match = NUM_PANCAKES;
-//  const FTF_Pancake* ptr = nullptr;
-//
-//  std::array<dataset_t*, NUM_PANCAKES> set;
-//  for(size_t i = 1; i <= NUM_PANCAKES; ++i)
-//  {
-//    set[i - 1] = &dataset[val->hash_values[i]];
-//  }
-//  std::sort(set.begin(), set.end(), [](dataset_t* a, dataset_t* b) {
-//    return a->size() < b->size();
-//  });
-//
-//  //The largest value of match possible is NUM_PANCAKES - i
-//  for(size_t i = 0; i < NUM_PANCAKES; ++i)
-//  {
-//    if(match <= i) break;
-//    for(auto begin = set[i]->begin(), end = set[i]->end(); begin != end; ++begin)
-//    {
-//      const FTF_Pancake* other_pancake = (*begin);
-//      uint8_t tmp_match;
-//      if constexpr(SORTED_DATASET)
-//      {
-//        if(match <= i + other_pancake->g) break;
-//      }
-//
-//      /*uint8_t pop_match = __popcnt64(val->hash_64 & other_pancake->hash_64);
-//      if(pop_match > NUM_PANCAKES - i)
-//      {
-//        continue;
-//      }*/
-//
-//      uint8_t hash_index1 = 1;
-//      uint8_t hash_index2 = 1;
-//
-//      tmp_match = 0;
-//      while(hash_index1 <= NUM_PANCAKES && hash_index2 <= NUM_PANCAKES)
-//      {
-//        if(val->hash_values[hash_index1] < other_pancake->hash_values[hash_index2])
-//        {
-//          hash_index1 += 1;
-//        }
-//        else if(val->hash_values[hash_index1] > other_pancake->hash_values[hash_index2])
-//        {
-//          hash_index2 += 1;
-//        }
-//        else
-//        {
-//          tmp_match += 1;
-//          hash_index1 += 1;
-//          hash_index2 += 1;
-//        }
-//      }
-//
-//     /* uint8_t miss = 0;
-//      for(int hash_index = 1; hash_index <= NUM_PANCAKES; ++hash_index)
-//      {
-//        if(other_pancake->g + miss >= match)
-//        {
-//          break;
-//        }
-//        for(int other_hash_index = 1; other_hash_index <= NUM_PANCAKES; ++other_hash_index)
-//        {
-//          if(val->hash_values[hash_index] == other_pancake->hash_values[other_hash_index])
-//          {
-//            tmp_match += 1;
-//            break;
-//          }
-//          else if(other_hash_index == NUM_PANCAKES) miss += 1;
-//        }
-//      }*/
-//      //uint64_t combined = val->hash_64 & other_pancake->hash_64;
-//      //tmp_match = (uint8_t)__popcnt64(combined);
-//      counter += 1;
-//      tmp_match = NUM_PANCAKES - tmp_match + other_pancake->g;
-//      if(tmp_match < match)
-//      {
-//        ptr = other_pancake;
-//        match = tmp_match;
-//      }
-//    }
-//  }
-//  //std::cout << counter << "\n";
-//  return match;
-//}
+  #if SORTED_DATASET
+  typedef std::set<const FTF_Pancake*, FTF_Less<FTF_Pancake>> dataset_t;
+  #else
+  typedef std::vector<const FTF_Pancake*> dataset_t;
+  std::array<std::unordered_map<const FTF_Pancake*, size_t>, MAX_VAL> index_maps;
+  #endif
+
+  std::array<dataset_t, MAX_PANCAKES> dataset;
+public:
+  void insert(const FTF_Pancake* val)
+  {
+    for(int i = 1; i <= NUM_PANCAKES; ++i)
+    {
+      #if SORTED_DATASET
+      dataset[val->hash_values[i]].insert(val);
+      #else
+      index_maps[val->hash_values[i]][val] = dataset[val->hash_values[i]].size();
+      dataset[val->hash_values[i]].push_back(val);
+      #endif
+    }
+  }
+
+  void erase(const FTF_Pancake* val)
+  {
+    for(int i = 1; i <= NUM_PANCAKES; ++i)
+    {
+      #if SORTED_DATASET
+      dataset[val->hash_values[i]].erase(val);
+      #else
+      hash_t hash = val->hash_values[i];
+      size_t index = index_maps[hash][val];
+      assert(memcmp(dataset[hash][index]->source, val->source, NUM_PANCAKES) == 0);
+      dataset[hash][index] = dataset[hash].back();
+      dataset[hash].resize(dataset[hash].size() - 1);
+      index_maps[hash].erase(val);
+      #endif
+    }
+  }
+
+  uint32_t match(const FTF_Pancake* val);
+  void match(std::vector<FTF_Pancake*> values);
+};
+
+
+
+void ftf_matchstructure::match(std::vector<FTF_Pancake*> values)
+{
+  for(auto ptr : values)
+  {
+    ptr->ftf_h = match(ptr);
+    ptr->f = ptr->g + ptr->ftf_h;
+  }
+}
+
+uint32_t ftf_matchstructure::match(const FTF_Pancake* val)
+{
+  static size_t counter = 0;
+  uint8_t match = NUM_PANCAKES;
+  const FTF_Pancake* ptr = nullptr;
+
+  std::array<dataset_t*, NUM_PANCAKES> set;
+  for(size_t i = 1; i <= NUM_PANCAKES; ++i)
+  {
+    set[i - 1] = &dataset[val->hash_values[i]];
+  }
+  std::sort(set.begin(), set.end(), [](dataset_t* a, dataset_t* b) {
+    return a->size() < b->size();
+  });
+
+  //The largest value of match possible is NUM_PANCAKES - i
+  for(size_t i = 0; i < NUM_PANCAKES; ++i)
+  {
+    if(match <= i) break;
+    for(auto begin = set[i]->begin(), end = set[i]->end(); begin != end; ++begin)
+    {
+      const FTF_Pancake* other_pancake = (*begin);
+      uint8_t tmp_match;
+      if constexpr(SORTED_DATASET)
+      {
+        if(match <= i + other_pancake->g) break;
+      }
+
+      /*uint8_t pop_match = __popcnt64(val->hash_64 & other_pancake->hash_64);
+      if(pop_match > NUM_PANCAKES - i)
+      {
+        continue;
+      }*/
+
+      uint8_t hash_index1 = 1;
+      uint8_t hash_index2 = 1;
+
+      tmp_match = 0;
+      while(hash_index1 <= NUM_PANCAKES && hash_index2 <= NUM_PANCAKES)
+      {
+        if(val->hash_values[hash_index1] < other_pancake->hash_values[hash_index2])
+        {
+          hash_index1 += 1;
+        }
+        else if(val->hash_values[hash_index1] > other_pancake->hash_values[hash_index2])
+        {
+          hash_index2 += 1;
+        }
+        else
+        {
+          tmp_match += 1;
+          hash_index1 += 1;
+          hash_index2 += 1;
+        }
+      }
+
+     /* uint8_t miss = 0;
+      for(int hash_index = 1; hash_index <= NUM_PANCAKES; ++hash_index)
+      {
+        if(other_pancake->g + miss >= match)
+        {
+          break;
+        }
+        for(int other_hash_index = 1; other_hash_index <= NUM_PANCAKES; ++other_hash_index)
+        {
+          if(val->hash_values[hash_index] == other_pancake->hash_values[other_hash_index])
+          {
+            tmp_match += 1;
+            break;
+          }
+          else if(other_hash_index == NUM_PANCAKES) miss += 1;
+        }
+      }*/
+      //uint64_t combined = val->hash_64 & other_pancake->hash_64;
+      //tmp_match = (uint8_t)__popcnt64(combined);
+      counter += 1;
+      tmp_match = NUM_PANCAKES - tmp_match + other_pancake->g;
+      if(tmp_match < match)
+      {
+        ptr = other_pancake;
+        match = tmp_match;
+      }
+    }
+  }
+  //std::cout << counter << "\n";
+  return match;
+}

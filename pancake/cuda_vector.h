@@ -65,8 +65,7 @@ void cuda_vector<T>::resize(size_t new_capacity)
 
   if(d_ptr)
   {
-    CUDA_CHECK_RESULT(cudaMemcpyAsync(tmp_ptr, d_ptr, size_val * sizeof(T), cudaMemcpyDeviceToDevice, stream));
-    cudaStreamSynchronize(stream);
+    CUDA_CHECK_RESULT(cudaMemcpy(tmp_ptr, d_ptr, size_val * sizeof(T), cudaMemcpyDeviceToDevice));
     CUDA_CHECK_RESULT(cudaFree(d_ptr));
   }
 

@@ -20,7 +20,7 @@ public:
   uint8_t h;
   uint8_t ftf_h;
   uint8_t f;
-  //hash_t hash_values[NUM_PANCAKES + 1];
+  hash_t hash_values[NUM_PANCAKES + 1];
   //uint64_t hash_64;
 
   FTF_Pancake() : dir(Direction::forward), g(0), ftf_h(0), f(0) /*,hash_64(0) */{}
@@ -29,13 +29,13 @@ public:
     assert(NUM_PANCAKES > 0);
     memcpy(source, data, NUM_PANCAKES + 1);
     h = gap_lb(dir);
-    /*for(int i = 1; i < NUM_PANCAKES; ++i)
+    for(int i = 1; i < NUM_PANCAKES; ++i)
     {
       hash_values[i] = hash_table::hash(source[i], source[i + 1]);
     }
     hash_values[NUM_PANCAKES] = hash_table::hash(source[NUM_PANCAKES], NUM_PANCAKES + 1);
     std::sort(std::begin(hash_values) + 1, std::end(hash_values));
-    hash_64 = hash_table::compress(hash_values);*/
+    //hash_64 = hash_table::compress(hash_values);
   }
 
   FTF_Pancake(const FTF_Pancake& copy) : dir(copy.dir), g(copy.g), ftf_h(copy.ftf_h), h(copy.h), f(copy.f) /*,hash_64(copy.hash_64)*/
@@ -44,7 +44,7 @@ public:
     #endif
   {
     memcpy(source, copy.source, NUM_PANCAKES + 1);
-    //memcpy(hash_values, copy.hash_values, (NUM_PANCAKES + 1) * sizeof(hash_t));
+    memcpy(hash_values, copy.hash_values, (NUM_PANCAKES + 1) * sizeof(hash_t));
   }
 
 
@@ -85,12 +85,12 @@ FTF_Pancake FTF_Pancake::apply_action(const int i, bool match, T& structure) con
     new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
   else
     new_node.hash_values[i] = hash_table::hash(new_node.source[i], NUM_PANCAKES + 1);*/
-  //for(int i = 1; i < NUM_PANCAKES; ++i)
-  //{
-  //  new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
-  //}
-  //new_node.hash_values[NUM_PANCAKES] = hash_table::hash(new_node.source[NUM_PANCAKES], NUM_PANCAKES + 1);
-  //std::sort(std::begin(new_node.hash_values) + 1, std::end(new_node.hash_values));
+  for(int i = 1; i < NUM_PANCAKES; ++i)
+  {
+    new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
+  }
+  new_node.hash_values[NUM_PANCAKES] = hash_table::hash(new_node.source[NUM_PANCAKES], NUM_PANCAKES + 1);
+  std::sort(std::begin(new_node.hash_values) + 1, std::end(new_node.hash_values));
   //new_node.hash_64 = hash_table::compress(new_node.hash_values);
   new_node.g = g + 1;
   if(match)
@@ -101,12 +101,3 @@ FTF_Pancake FTF_Pancake::apply_action(const int i, bool match, T& structure) con
   }
   return new_node;
 }
-
-struct callback_type {
-public:
-  callback_type(std::vector<FTF_Pancake*>& _val) : val(_val) {
-
-  }
-  std::vector<FTF_Pancake*>& val;
-  float* answers;
-};
