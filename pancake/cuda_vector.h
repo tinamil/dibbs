@@ -50,6 +50,7 @@ public:
 
   inline size_t size() { return size_val; }
   inline T* data() { return d_ptr; }
+  inline void set_empty() { size_val = 0; }
 };
 
 template <typename T>

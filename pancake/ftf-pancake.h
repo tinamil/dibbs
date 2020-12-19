@@ -7,6 +7,8 @@
 #include <set>
 #include <tsl\hopscotch_map.h>
 
+//#define FTF_HASH
+
 class FTF_Pancake
 {
 public:
@@ -20,22 +22,26 @@ public:
   uint8_t h;
   uint8_t ftf_h;
   uint8_t f;
+  #ifdef FTF_HASH
   hash_t hash_values[NUM_PANCAKES + 1];
-  //uint64_t hash_64;
+  uint64_t hash_64;
+  #endif
 
-  FTF_Pancake() : dir(Direction::forward), g(0), ftf_h(0), f(0) /*,hash_64(0) */{}
+  FTF_Pancake() : dir(Direction::forward), g(0), ftf_h(0), f(0) /*,hash_64(0) */ {}
   FTF_Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), ftf_h(0), f(0)
   {
     assert(NUM_PANCAKES > 0);
     memcpy(source, data, NUM_PANCAKES + 1);
     h = gap_lb(dir);
+    #ifdef FTF_HASH
     for(int i = 1; i < NUM_PANCAKES; ++i)
     {
       hash_values[i] = hash_table::hash(source[i], source[i + 1]);
     }
     hash_values[NUM_PANCAKES] = hash_table::hash(source[NUM_PANCAKES], NUM_PANCAKES + 1);
     std::sort(std::begin(hash_values) + 1, std::end(hash_values));
-    //hash_64 = hash_table::compress(hash_values);
+    hash_64 = hash_table::compress(hash_values);
+    #endif
   }
 
   FTF_Pancake(const FTF_Pancake& copy) : dir(copy.dir), g(copy.g), ftf_h(copy.ftf_h), h(copy.h), f(copy.f) /*,hash_64(copy.hash_64)*/
@@ -44,7 +50,9 @@ public:
     #endif
   {
     memcpy(source, copy.source, NUM_PANCAKES + 1);
+    #ifdef FTF_HASH
     memcpy(hash_values, copy.hash_values, (NUM_PANCAKES + 1) * sizeof(hash_t));
+    #endif
   }
 
 
@@ -58,7 +66,9 @@ public:
   {
     assert(i >= 1 && i <= NUM_PANCAKES);
     std::reverse(source + 1, source + i + 1);
-    //std::reverse(hash_values + 1, hash_values + i);
+    #ifdef FTF_HASH
+    std::reverse(hash_values + 1, hash_values + i);
+    #endif
   }
 
   uint8_t gap_lb(Direction dir) const;
@@ -81,6 +91,7 @@ FTF_Pancake FTF_Pancake::apply_action(const int i, bool match, T& structure) con
   new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
   new_node.apply_flip(i);
   assert(new_node.h == new_node.gap_lb(dir));
+  #ifdef FTF_HASH
   /*if(i < NUM_PANCAKES)
     new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
   else
@@ -91,7 +102,8 @@ FTF_Pancake FTF_Pancake::apply_action(const int i, bool match, T& structure) con
   }
   new_node.hash_values[NUM_PANCAKES] = hash_table::hash(new_node.source[NUM_PANCAKES], NUM_PANCAKES + 1);
   std::sort(std::begin(new_node.hash_values) + 1, std::end(new_node.hash_values));
-  //new_node.hash_64 = hash_table::compress(new_node.hash_values);
+  new_node.hash_64 = hash_table::compress(new_node.hash_values);
+  #endif
   new_node.g = g + 1;
   if(match)
   {

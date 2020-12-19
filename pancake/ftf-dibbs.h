@@ -17,7 +17,7 @@
 #include "ftf-pancake.h"
 #include "ftf_cudastructure.h"
 
-#define FTF_PANCAKE "FTF_Pancake"
+//#define FTF_PANCAKE "FTF_Pancake"
 
 class FTF_Dibbs
 {
@@ -186,7 +186,7 @@ public:
       {
         //assert(pancakes[i]->ftf_h == round(answers[i]));
         pancakes[i]->ftf_h = round(answers[i]);
-        pancakes[i]->f = pancakes[i]->g + pancakes[i]->h;
+        pancakes[i]->f = pancakes[i]->g + pancakes[i]->ftf_h;
       }
       for(const FTF_Pancake *ptr : pancakes)
       {
@@ -353,8 +353,8 @@ public:
         //    lbmin = tmp;
         //}
       }
-      else if(forward)
-      //else if(open_f.size() <= open_b.size())
+      //else if(forward)
+      else if(open_f.size() <= open_b.size())
       {
         expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
       }

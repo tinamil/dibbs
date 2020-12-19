@@ -45,10 +45,15 @@ void mycuda::set_ptrs(size_t m_rows, size_t n_cols, float* A, float* g_vals)
 //  CUDA_CHECK_RESULT(cudaMalloc((void**)&d_mult_results, MAX_BATCH * num_pancakes * sizeof(float)));
 //}
 
+
+void mycuda::load_then_batch_vector_matrix()
+{
+  CUDA_CHECK_RESULT(cudaMemcpyAsync(d_hash_vals, h_hash_vals, sizeof(float) * other_num_pancakes * MAX_PANCAKES, cudaMemcpyHostToDevice, stream));
+  batch_vector_matrix();
+}
+
 void mycuda::batch_vector_matrix()
 {
-  //assert(other_num_pancakes <= MAX_BATCH);
-  CUDA_CHECK_RESULT(cudaMemcpyAsync(d_hash_vals, h_hash_vals, sizeof(float) * other_num_pancakes * MAX_PANCAKES, cudaMemcpyHostToDevice, stream));
   cublasSetStream(handle, stream);
   CUBLAS_CHECK_RESULT(cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, my_num_pancakes, other_num_pancakes, MAX_PANCAKES, one, d_a, MAX_PANCAKES, d_hash_vals, MAX_PANCAKES, zero, d_mult_results, my_num_pancakes));
   vector_add(stream, other_num_pancakes, my_num_pancakes, d_g_vals, d_mult_results);

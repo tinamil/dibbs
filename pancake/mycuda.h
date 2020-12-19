@@ -60,6 +60,19 @@ public:
     if(d_mult_results) { cudaFree(d_mult_results); d_mult_results = nullptr; }
   }
 
+  void set_d_hash_vals(float* d_vals)
+  {
+    if(d_hash_vals) {
+      cudaFree(d_hash_vals);
+    }
+    d_hash_vals = d_vals;
+  }
+
+  void clear_d_hash_vals()
+  {
+    d_hash_vals = nullptr;
+  }
+
   float* get_answers()
   {
     cudaStreamSynchronize(stream);
@@ -99,8 +112,8 @@ public:
   }
   void set_ptrs(size_t m_rows, size_t n_cols, float* A, float* g_vals);
   //void set_matrix(size_t m_rows, const float* A, const float* g_vals);
+
   void batch_vector_matrix();
-
-
+  void load_then_batch_vector_matrix();
 };
 

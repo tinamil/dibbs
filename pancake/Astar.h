@@ -48,6 +48,7 @@ public:
         std::cout << std::endl;*/
 #endif
         assert(next_val->h == 0);
+        assert(next_val->ftf_h == 0);
         break;
       }
 

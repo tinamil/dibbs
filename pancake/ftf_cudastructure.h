@@ -17,8 +17,12 @@ struct hash_array
 template <typename PancakeType>
 class ftf_cudastructure
 {
+  //The hybrid algorithm depends on host storage
+  #ifdef FTF_PANCAKE_HYBRID
+  #define HOST_STORAGE
+  #endif
+
 public:
-  std::vector<PancakeType*> pancakes;
   #define CUDA_VECTOR
   #ifdef CUDA_VECTOR
   cuda_vector<hash_array> device_hash_values;
@@ -27,104 +31,124 @@ public:
   std::vector<hash_array> opposite_hash_values;
   std::vector<float> g_values;
   #endif
-  //std::unordered_map<const PancakeType*, size_t> index_map;
-  //std::unordered_map<size_t, const PancakeType*> reverse_map;
+  std::unordered_map<const PancakeType*, size_t> index_map;
+  #ifdef HOST_STORAGE
+  std::vector<PancakeType*> pancakes;
+  #else
+  std::unordered_map<size_t, const PancakeType*> reverse_map;
+  #endif
   bool valid_device_cache = false;
 
+  float* tmp_g_vals = nullptr;
+  hash_array* tmp_hash_arrays = nullptr;
+  size_t tmp_size = 0;
 
-  inline void to_hash_array(const PancakeType* val, float* hash_array)
+  static inline void to_hash_array(const PancakeType* val, float* hash_array)
   {
     memset(hash_array, 0, MAX_PANCAKES * sizeof(float));
     for(size_t i = 1; i < NUM_PANCAKES; ++i)
     {
-      hash_array[hash_table::hash(val->source[i], val->source[i + 1])] = 1;
+      hash_array[hash_table::hash(val->source[i], val->source[i + 1])] = 1.0;
     }
-    hash_array[hash_table::hash(val->source[NUM_PANCAKES], NUM_PANCAKES + 1)] = 1;
+    hash_array[hash_table::hash(val->source[NUM_PANCAKES], NUM_PANCAKES + 1)] = 1.0;
   }
 
-  inline void to_hash_array(const PancakeType* val, hash_array* hash_array)
+  static inline void to_hash_array(const PancakeType* val, hash_array* hash_array)
   {
     to_hash_array(val, hash_array->hash);
+  }
+
+  void synchronize()
+  {
+    CUDA_CHECK_RESULT(cudaStreamSynchronize(device_g_values.stream));
+    CUDA_CHECK_RESULT(cudaStreamSynchronize(device_hash_values.stream));
   }
 
 public:
   ftf_cudastructure() {}
 
+  void resize_tmp_arrays(size_t size)
+  {
+    if(size > tmp_size) {
+      tmp_size = size;
+      CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
+      CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
+      CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(float) * tmp_size, cudaHostAllocWriteCombined));
+      CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_hash_arrays, sizeof(hash_array) * tmp_size, cudaHostAllocWriteCombined));
+    }
+  }
+
   void load_device()
   {
+    #ifdef HOST_STORAGE
     if(valid_device_cache) return;
-    float* tmp_g_vals;
-    hash_array* tmp_hash_arrays;
-    CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(float) * pancakes.size(), cudaHostAllocDefault));
-    CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_hash_arrays, sizeof(hash_array) * pancakes.size(), cudaHostAllocDefault));
+
+    resize_tmp_arrays(pancakes.size());
 
     for(int i = 0; i < pancakes.size(); ++i) {
       tmp_g_vals[i] = pancakes[i]->g;
       to_hash_array(pancakes[i], &tmp_hash_arrays[i]);
     }
 
-    device_g_values.clear();
+    device_g_values.set_empty();
     device_g_values.insert(tmp_g_vals, tmp_g_vals + pancakes.size());
-    device_hash_values.clear();
+    device_hash_values.set_empty();
     device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + pancakes.size());
-    
-    cudaStreamSynchronize(device_g_values.stream);
-    CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
-    cudaStreamSynchronize(device_hash_values.stream);
-    CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
 
     valid_device_cache = true;
+    #endif
   }
 
   void insert(PancakeType* val)
   {
-    //index_map[val] = device_hash_values.size();
-    //reverse_map[device_hash_values.size()] = val;
-    //assert(device_hash_values.size() == device_g_values.size());
+    #ifndef HOST_STORAGE
+    index_map[val] = device_hash_values.size();
+    reverse_map[device_hash_values.size()] = val;
+    assert(device_hash_values.size() == device_g_values.size());
 
-    //device_g_values.push_back(val->g);
+    resize_tmp_arrays(1);
 
-    //#ifndef CUDA_VECTOR
-    //opposite_hash_values.resize(opposite_hash_values.size() + 1);
-    //to_hash_array(val, opposite_hash_values.back().hash);
-    //#else
-    //hash_array tmp;
-    //to_hash_array(val, tmp.hash);
-    //device_hash_values.push_back(tmp);
-    //#endif
+    device_g_values.push_back(val->g);
 
+    #ifndef CUDA_VECTOR
+    opposite_hash_values.resize(opposite_hash_values.size() + 1);
+    to_hash_array(val, opposite_hash_values.back().hash);
+    #else
+    to_hash_array(val, tmp_hash_arrays);
+    device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + 1);
+    #endif
+    #else
     pancakes.push_back(val);
     valid_device_cache = false;
+    #endif
   }
 
   void insert(const std::vector<PancakeType*>& vector)
   {
     if(vector.size() == 0) return;
-    //float* tmp_g_vals;
-    //hash_array* tmp_hash_arrays;
-    //CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(float) * vector.size(), cudaHostAllocWriteCombined));
-    //CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_hash_arrays, sizeof(hash_array) * vector.size(), cudaHostAllocWriteCombined));
-    //for(int i = 0; i < vector.size(); ++i) {
-    //  index_map[vector[i]] = device_hash_values.size() + i;
-    //  reverse_map[device_hash_values.size() + i] = vector[i];
-    //  tmp_g_vals[i] = vector[i]->g;
-    //  to_hash_array(vector[i], &tmp_hash_arrays[i]);
-    //}
 
-    //device_g_values.insert(tmp_g_vals, tmp_g_vals + vector.size());
-    //device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + vector.size());
-    //cudaStreamSynchronize(device_g_values.stream);
-    //CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
-    //cudaStreamSynchronize(device_hash_values.stream);
-    //CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
+    #ifndef HOST_STORAGE
+    resize_tmp_arrays(vector.size());
 
+    for(int i = 0; i < vector.size(); ++i) {
+      index_map[vector[i]] = device_hash_values.size() + i;
+      reverse_map[device_hash_values.size() + i] = vector[i];
+      tmp_g_vals[i] = vector[i]->g;
+      to_hash_array(vector[i], &tmp_hash_arrays[i]);
+    }
+
+    device_g_values.insert(tmp_g_vals, tmp_g_vals + vector.size());
+    device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + vector.size());
+    #else
     pancakes.insert(pancakes.end(), vector.begin(), vector.end());
     valid_device_cache = false;
+    #endif
   }
 
   void erase(const PancakeType* val)
   {
-    /*size_t index = index_map[val];
+    #ifndef HOST_STORAGE
+    size_t index = index_map[val];
     index_map.erase(val);
 
     const PancakeType* back_ptr = reverse_map[device_g_values.size() - 1];
@@ -142,7 +166,8 @@ public:
     #else
     device_g_values.erase(index);
     device_hash_values.erase(index);
-    #endif*/
+    #endif
+    #else
     //pancakes[index] = back_ptr;
     for(int i = 0; i < pancakes.size(); ++i) {
       if(*pancakes[i] == *val) {
@@ -153,6 +178,7 @@ public:
       }
     }
     std::cout << "Attempted to erase a pancake that wasn't present.\n";
+    #endif
   }
 
   uint32_t match_one(const PancakeType* val);
@@ -215,7 +241,7 @@ void ftf_cudastructure<PancakeType>::match(mycuda& cuda, std::vector<PancakeType
   {
     to_hash_array(val[i], cuda.h_hash_vals + i * MAX_PANCAKES);
   }
-  cuda.batch_vector_matrix();
+  cuda.load_then_batch_vector_matrix();
 }
 
 //Must call get_answers() to retrieve the answers, because this is calculated asynchronously and get_answers() will wait until its done
@@ -236,15 +262,19 @@ void ftf_cudastructure<PancakeType>::match_all(ftf_cudastructure<PancakeType>& o
   //}
   //assert(other.device_hash_values.size() <= mycuda::MAX_BATCH);
   //size_t num_vals = std::min(val.size() - batch * mycuda::MAX_BATCH, mycuda::MAX_BATCH);
-  cuda.h_hash_vals = (float*)other.device_hash_values.data();
+  cuda.set_d_hash_vals((float*)other.device_hash_values.data());
+  other.synchronize();
+  synchronize();
   cuda.batch_vector_matrix();
   float* answers = cuda.get_answers();
+  cuda.clear_d_hash_vals();
   for(int i = 0; i < other.pancakes.size(); ++i) {
     other.pancakes[i]->ftf_h = answers[i];
     other.pancakes[i]->ftf_f = answers[i] + other.pancakes[i]->g;
   }
 }
-//
+
+#ifdef FTF_HASH
 class ftf_matchstructure
 {
   #define SORTED_DATASET true
@@ -390,3 +420,4 @@ uint32_t ftf_matchstructure::match(const FTF_Pancake* val)
   //std::cout << counter << "\n";
   return match;
 }
+#endif
