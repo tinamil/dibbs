@@ -177,7 +177,7 @@ inline int maxMatching() {
 //}
 
 void GeneratePerfectCounts() {
-  constexpr static bool findAll = true;
+  /*constexpr static bool findAll = true;
   double seed = 3.1567;
   uint8_t problem[NUM_PANCAKES + 1];
   std::cout << NUM_PANCAKES << " " << GAPX;
@@ -241,5 +241,5 @@ void GeneratePerfectCounts() {
       std::cout << maxMatching() << " ";
     }
   }
-  std::cout << "\n";
+  std::cout << "\n";*/
 }

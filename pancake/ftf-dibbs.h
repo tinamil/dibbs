@@ -17,65 +17,12 @@
 #include "ftf-pancake.h"
 #include "ftf_cudastructure.h"
 
-//#define FTF_PANCAKE "FTF_Pancake"
+#define FTF_PANCAKE "FTF_Pancake"
 
 class FTF_Dibbs
 {
 public:
-  static constexpr size_t BATCH_SIZE = 128;
-
-  struct FTFPancakeFSortHighG
-  {
-    bool operator()(const FTF_Pancake &lhs, const FTF_Pancake &rhs) const
-    {
-      return operator()(&lhs, &rhs);
-    }
-    bool operator()(const FTF_Pancake *lhs, const FTF_Pancake *rhs) const
-    {
-      int cmp = memcmp(lhs->source, rhs->source, NUM_PANCAKES + 1);
-      if(cmp == 0)
-      {
-        return false;
-      }
-      else if(lhs->f == rhs->f)
-      {
-        if(lhs->g == rhs->g)
-          return cmp < 0;
-        else
-          return lhs->g > rhs->g;
-      }
-      else
-      {
-        return lhs->f < rhs->f;
-      }
-    }
-  };
-
-  struct FTFPancakeHash
-  {
-    inline std::size_t operator() (const FTF_Pancake &x) const
-    {
-      return operator()(&x);
-    }
-    inline std::size_t operator() (const FTF_Pancake *x) const
-    {
-      return SuperFastHash(x->source + 1, NUM_PANCAKES);
-    }
-  };
-
-  struct FTFPancakeEqual
-  {
-    inline bool operator() (const FTF_Pancake *x, const FTF_Pancake *y) const
-    {
-      return memcmp(x->source, y->source, NUM_PANCAKES + 1) == 0;
-    }
-    inline bool operator() (const FTF_Pancake x, const FTF_Pancake y) const
-    {
-      return x == y;
-    }
-  };
-
-
+  
   typedef std::set<const FTF_Pancake *, FTFPancakeFSortHighG> set;
   typedef std::unordered_set<const FTF_Pancake *, FTFPancakeHash, FTFPancakeEqual> hash_set;
   //typedef std::unordered_set<const Pancake*, PancakeNeighborHash, PancakeNeighborEqual> hash_set;
@@ -85,7 +32,9 @@ public:
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
   ftf_cudastructure<FTF_Pancake> forward_index, backward_index;
-  //ftf_matchstructure f_match, b_match;
+  #ifdef FTF_HASH
+  ftf_matchstructure f_match, b_match;
+  #endif
   size_t expansions;
   size_t UB;
   size_t lbmin;
@@ -104,7 +53,8 @@ public:
   {
     auto f_val = (*open.begin())->f;
     auto g_val = (*open.begin())->g;
-    /*ftf_matchstructure* my_match, *other_match;
+    #ifdef FTF_HASH
+    ftf_matchstructure* my_match, *other_match;
     if((*open.begin())->dir == Direction::forward) {
       my_match = &f_match;
       other_match = &b_match;
@@ -112,11 +62,12 @@ public:
     else {
       my_match = &b_match;
       other_match = &f_match;
-    }*/
+    }
+    #endif
     int count = 0;
     for(int cuda_count = 0; cuda_count < num_cuda; ++cuda_count) {
       new_pancakes_vector[cuda_count].clear();
-      while(!open.empty() && (*open.begin())->f == f_val && /*(*open.begin())->g == g_val &&*/ ++count <= BATCH_SIZE / NUM_PANCAKES)
+      while(!open.empty() && (*open.begin())->f == f_val && /*(*open.begin())->g == g_val &&*/ ++count <= (BATCH_SIZE / NUM_PANCAKES))
       {
         const FTF_Pancake *next_val = *open.begin();
 
@@ -126,14 +77,16 @@ public:
         open.erase(next_val);
         assert(open_hash.size() == open.size());
         my_index.erase(next_val);
-        //my_match->erase(next_val);
+        #ifdef FTF_HASH
+        my_match->erase(next_val);
+        #endif
         ++expansions;
 
         closed.insert(next_val);
 
         for(int i = 2, j = NUM_PANCAKES; i <= j; ++i)
         {
-          FTF_Pancake new_action = next_val->apply_action(i, false, other_index);
+          FTF_Pancake new_action = next_val->apply_action(i);
 
           if((size_t)new_action.g + new_action.h >= UB) {
             continue;
@@ -175,17 +128,22 @@ public:
       }
       if(new_pancakes_vector[cuda_count].size() > 0) {
         other_index.match(cuda_vector[cuda_count], new_pancakes_vector[cuda_count]);
-        //other_match->match(new_pancakes_vector[cuda_count]);
+        #ifdef FTF_HASH
+        other_match->match(new_pancakes_vector[cuda_count]);
+        #endif
       }
     }
 
     for(int cuda_count = 0; cuda_count < num_cuda; ++cuda_count) {
-      float *answers = cuda_vector[cuda_count].get_answers();
+      uint32_t *answers = cuda_vector[cuda_count].get_answers();
       std::vector<FTF_Pancake *> &pancakes = new_pancakes_vector[cuda_count];
       for(int i = 0; i < pancakes.size(); ++i)
       {
-        //assert(pancakes[i]->ftf_h == round(answers[i]));
-        pancakes[i]->ftf_h = round(answers[i]);
+        #ifdef FTF_HASH
+        assert(pancakes[i]->ftf_h == answers[i]);
+        #endif
+        pancakes[i]->ftf_h = answers[i];
+        assert(pancakes[i]->ftf_h >= pancakes[i]->h);
         pancakes[i]->f = pancakes[i]->g + pancakes[i]->ftf_h;
       }
       for(const FTF_Pancake *ptr : pancakes)
@@ -201,7 +159,9 @@ public:
           else
           {
             open.erase(&**it_open);
-            //my_match->erase(&**it_open);
+            #ifdef FTF_HASH
+            my_match->erase(&**it_open);
+            #endif
             open_hash.erase(it_open);
             assert(open_hash.size() == open.size());
           }
@@ -211,83 +171,11 @@ public:
         auto [it2, success2] = open_hash.insert(ptr);
         assert(success2);
         assert(open_hash.size() == open.size());
-        //my_match->insert(ptr);
+        #ifdef FTF_HASH
+        my_match->insert(ptr);
+        #endif
       }
       my_index.insert(pancakes);
-    }
-  }
-
-  template<typename T>
-  void expand_node(set &open, hash_set &open_hash, const hash_set &other_open, hash_set &closed, T &my_index, T &other_index)
-  {
-    const FTF_Pancake *next_val = *open.begin();
-
-    auto it_hash = open_hash.find(next_val);
-    assert(it_hash != open_hash.end());
-    open_hash.erase(it_hash);
-    open.erase(next_val);
-    my_index.erase(next_val);
-
-    ++expansions;
-
-    closed.insert(next_val);
-
-    for(int i = 2, j = NUM_PANCAKES; i <= j; ++i)
-    {
-      FTF_Pancake new_action = next_val->apply_action(i, true, other_index);
-
-      if(new_action.f > UB)
-      {
-        continue;
-      }
-
-      auto it_closed = closed.find(&new_action);
-      if(it_closed == closed.end())
-      {
-
-        auto it_other = other_open.find(&new_action);
-        if(it_other != other_open.end())
-        {
-          #ifdef HISTORY
-          if((*it_other)->g + new_action.g < UB)
-          {
-            if(new_action.dir == Direction::forward)
-            {
-              best_f = new_action;
-              best_b = **it_other;
-            }
-            else
-            {
-              best_f = **it_other;
-              best_b = new_action;
-            }
-          }
-          #endif  
-          size_t combined = (size_t)(*it_other)->g + new_action.g;
-          if(combined < UB)
-          {
-            UB = combined;
-          }
-        }
-        auto it_open = open_hash.find(&new_action);
-        if(it_open != open_hash.end())
-        {
-          if((*it_open)->g <= new_action.g)
-          {
-            continue;
-          }
-          else
-          {
-            open.erase(&**it_open);
-            open_hash.erase(it_open);
-          }
-        }
-
-        auto ptr = storage.push_back(new_action);
-        open.insert(ptr);
-        open_hash.insert(ptr);
-        my_index.insert(ptr);
-      }
     }
   }
 
@@ -299,18 +187,24 @@ public:
   {
     expansions = 0;
     memory = 0;
-    auto ptr = storage.push_back(start);
-    forward_index.insert(ptr);
-    //f_match.insert(ptr);
-    ptr->ftf_h = ptr->f = forward_index.match_one(&goal);
-    goal.ftf_h = goal.f = ptr->ftf_h;
-    open_f.insert(ptr);
-    open_f_hash.insert(ptr);
-    ptr = storage.push_back(goal);
-    open_b.insert(ptr);
-    open_b_hash.insert(ptr);
-    backward_index.insert(ptr);
-    //b_match.insert(ptr);
+    auto ptr_start = storage.push_back(start);
+    forward_index.insert(ptr_start);
+    ptr_start->ftf_h = ptr_start->f = forward_index.match_one(&goal);
+    assert(ptr_start->ftf_h >= ptr_start->h);
+    #ifdef FTF_HASH
+    f_match.insert(ptr_start);
+    #endif
+    goal.ftf_h = goal.f = ptr_start->ftf_h;
+    open_f.insert(ptr_start);
+    open_f_hash.insert(ptr_start);
+    auto ptr_goal = storage.push_back(goal);
+    open_b.insert(ptr_goal);
+    open_b_hash.insert(ptr_goal);
+    backward_index.insert(ptr_goal);
+    #ifdef FTF_HASH
+    assert(f_match.match(ptr_goal) == ptr_start->ftf_h);
+    b_match.insert(ptr_goal);
+    #endif
     UB = std::numeric_limits<size_t>::max();
     PROCESS_MEMORY_COUNTERS memCounter;
     bool forward = false;
@@ -353,14 +247,16 @@ public:
         //    lbmin = tmp;
         //}
       }
-      //else if(forward)
-      else if(open_f.size() <= open_b.size())
+      else if(forward)
+      //else if(open_f.size() <= open_b.size())
       {
         expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
+        forward = open_f.size() < 2 * open_b.size();
       }
       else
       {
         expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
+        forward = !(open_b.size() < 2 * open_f.size());
       }
 
       lbmin = std::max((*open_f.begin())->f, (*open_b.begin())->f);

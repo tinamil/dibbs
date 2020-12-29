@@ -1,5 +1,6 @@
 #pragma once
 #include "Pancake.h"
+#include "ftf-pancake.h"
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
@@ -13,22 +14,22 @@
 #include <Psapi.h>
 #include "ftf_cudastructure.h"
 
-//#define FTF_PANCAKE_HYBRID "FTF_Pancake_Hybrid"
+#define FTF_PANCAKE_HYBRID "FTF_Pancake_Hybrid"
 
 class dibbs_ftf_hybrid
 {
 public:
 
   //typedef std::set<const Pancake*, PancakeFBarSort> set;
-  typedef std::set<const Pancake*, PancakeFBarSortHighG> set;
-  typedef std::unordered_set<const Pancake*, PancakeHash, PancakeEqual> hash_set;
+  typedef std::set<const FTF_Pancake*, FTFPancakeF_barSortHighG> set;
+  typedef std::unordered_set<const FTF_Pancake*, FTFPancakeHash, FTFPancakeEqual> hash_set;
   //typedef std::unordered_set<const Pancake*, PancakeNeighborHash, PancakeNeighborEqual> hash_set;
 
-  StackArray<Pancake> storage;
+  StackArray<FTF_Pancake> storage;
   set open_f, open_b;
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
-  ftf_cudastructure<Pancake> front_cuda, back_cuda;
+  ftf_cudastructure<FTF_Pancake> front_cuda, back_cuda;
   size_t front_ftf_f = 0;
   size_t back_ftf_f = 0;
   size_t expansions;
@@ -41,46 +42,52 @@ public:
 
   void update_ftf()
   {
-    front_cuda.load_device();
-    back_cuda.load_device();
+    for(int i = front_cuda.pancakes.size() - 1; i >= 0; --i) {
+      if(front_cuda.pancakes[i]->f_bar >= UB) {
+        open_f.erase(front_cuda.pancakes[i]);
+      }
+    }
+    for(int i = back_cuda.pancakes.size() - 1; i >= 0; --i) {
+      if(back_cuda.pancakes[i]->f_bar >= UB) {
+        open_b.erase(back_cuda.pancakes[i]);
+      }
+    }
     if(back_cuda.pancakes.size() < front_cuda.pancakes.size()) {
       front_cuda.match_all(back_cuda);
-      size_t min_ftf = back_cuda.pancakes[0]->ftf_f;
+      size_t min_ftf = back_cuda.pancakes[0]->f;
       for(int i = 1; i < back_cuda.pancakes.size(); ++i) {
-        Pancake* p = back_cuda.pancakes[i];
-        if(p->ftf_f < min_ftf) min_ftf = p->ftf_f;
-        /*if(p->ftf_f > p->f_bar) {
-          p->f_bar = p->ftf_f;
+        FTF_Pancake* p = back_cuda.pancakes[i];
+        //assert(p->f >= p->f_bar);
+        if(p->f < min_ftf) min_ftf = p->f;
+        if(p->f >= UB) {
           open_b.erase(p);
-          open_b.insert(p);
-        }*/
+        }
       }
       back_ftf_f = min_ftf;
     }
     else {
       back_cuda.match_all(front_cuda);
-      size_t min_ftf = front_cuda.pancakes[0]->ftf_f;
+      size_t min_ftf = front_cuda.pancakes[0]->f;
       for(int i = 1; i < front_cuda.pancakes.size(); ++i) {
-        Pancake* p = front_cuda.pancakes[i];
-        if(p->ftf_f < min_ftf) min_ftf = p->ftf_f;
-        /*if(p->ftf_f > p->f_bar) {
-          p->f_bar = p->ftf_f;
+        FTF_Pancake* p = front_cuda.pancakes[i];
+        //assert(p->f >= p->f_bar);
+        if(p->f < min_ftf) min_ftf = p->f;
+        if(p->f >= UB) {
           open_f.erase(p);
-          open_f.insert(p);
-        }*/
+        }
       }
       front_ftf_f = min_ftf;
     }
   }
 
-  void expand_node(set& open, hash_set& open_hash, ftf_cudastructure<Pancake>& cuda, const hash_set& other_open, hash_set& closed, std::vector<Pancake>* expansions_in_order = nullptr)
+  void expand_node(set& open, hash_set& open_hash, ftf_cudastructure<FTF_Pancake>& cuda, const hash_set& other_open, hash_set& closed, std::vector<FTF_Pancake>* expansions_in_order = nullptr)
   {
-    const Pancake* next_val = *open.begin();
+    const FTF_Pancake* next_val = *open.begin();
 
     auto it_hash = open_hash.find(next_val);
     assert(it_hash != open_hash.end());
     open_hash.erase(it_hash);
-    open.erase(next_val);
+    open.erase(open.begin());
     cuda.erase(next_val);
 
     ++expansions;
@@ -92,7 +99,7 @@ public:
 
     for(int i = 2, j = NUM_PANCAKES; i <= j; ++i)
     {
-      Pancake new_action = next_val->apply_action(i);
+      FTF_Pancake new_action = next_val->apply_action(i);
 
       if(new_action.f > UB)
       {
@@ -119,7 +126,7 @@ public:
               best_f = **it_other;
               best_b = new_action;
             }
-    }
+          }
           #endif  
           size_t combined = (size_t)(*it_other)->g + new_action.g;
           if(combined < UB)
@@ -127,7 +134,7 @@ public:
             phase_2 = true;
             UB = combined;
           }
-  }
+        }
         auto it_open = open_hash.find(&new_action);
         if(it_open != open_hash.end())
         {
@@ -148,14 +155,14 @@ public:
         open_hash.insert(ptr);
         cuda.insert(ptr);
       }
-}
+    }
   }
 
   #ifdef HISTORY
   Pancake best_f, best_b;
   #endif
 
-  std::tuple<double, size_t, size_t> run_search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr)
+  std::tuple<double, size_t, size_t> run_search(FTF_Pancake start, FTF_Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr)
   {
     expansions = 0;
     memory = 0;
@@ -225,7 +232,7 @@ public:
     }
     std::cout << std::endl;
     #endif
-    if(UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0) && UB > front_ftf_f && UB > back_ftf_f)
+    if(open_f.size() > 0 && open_b.size() > 0 && UB > ceil(((*open_f.begin())->f_bar + (*open_b.begin())->f_bar) / 2.0) && UB > front_ftf_f && UB > back_ftf_f)
     {
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, expansions_cstar);
     }
@@ -233,13 +240,13 @@ public:
     {
       return std::make_tuple((double)UB, expansions, expansions_cstar);
     }
-    }
+  }
 
 public:
 
-  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal, std::vector<Pancake>* expansions_in_order = nullptr)
+  static std::tuple<double, size_t, size_t> search(Pancake start, Pancake goal)
   {
     dibbs_ftf_hybrid instance;
-    return instance.run_search(start, goal, expansions_in_order);
+    return instance.run_search(FTF_Pancake(start.source, start.dir), FTF_Pancake(goal.source, goal.dir));
   }
-  };
+};

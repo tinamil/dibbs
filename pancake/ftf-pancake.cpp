@@ -69,6 +69,7 @@ uint8_t FTF_Pancake::gap_lb(Direction dir) const
       if(abs(source[i] - source[i - 1]) > 1) LB = LB + 1;
     }
     if((abs(NUM_PANCAKES + 1 - source[NUM_PANCAKES]) > 1) && (source[NUM_PANCAKES] > GAPX)) LB = LB + 1;
+    assert(LB <= NUM_PANCAKES - GAPX);
   }
   else if(Pancake::DUAL_SOURCE() != nullptr)
   {
@@ -78,6 +79,7 @@ uint8_t FTF_Pancake::gap_lb(Direction dir) const
       if(abs(Pancake::DUAL_SOURCE()[source[i]] - Pancake::DUAL_SOURCE()[source[i - 1]]) > 1) LB = LB + 1;
     }
     if((abs(NUM_PANCAKES + 1 - Pancake::DUAL_SOURCE()[source[NUM_PANCAKES]]) > 1) && (source[NUM_PANCAKES] > GAPX)) LB = LB + 1;
+    assert(LB <= NUM_PANCAKES - GAPX);
   }
 
   return(LB);
@@ -102,6 +104,7 @@ uint8_t FTF_Pancake::update_gap_lb(Direction dir, int i, uint8_t LB) const
 
     if((pi <= GAPX) || (pi1 <= GAPX) || (abs(pi1 - pi) <= 1)) LB = LB + 1;
     if((p1 <= GAPX) || (pi1 <= GAPX) || (abs(pi1 - p1) <= 1)) LB = LB - 1;
+    assert(LB <= NUM_PANCAKES - GAPX);
   }
   else if(Pancake::DUAL_SOURCE() != nullptr)
   {
@@ -121,7 +124,76 @@ uint8_t FTF_Pancake::update_gap_lb(Direction dir, int i, uint8_t LB) const
     }
     if((pi <= GAPX) || (pi1 <= GAPX) || (abs(inv_pi1 - inv_pi) <= 1)) LB = LB + 1;
     if((p1 <= GAPX) || (pi1 <= GAPX) || (abs(inv_pi1 - inv_p1) <= 1)) LB = LB - 1;
+    assert(LB <= NUM_PANCAKES - GAPX);
   }
 
   return(LB);
+}
+
+
+//Copies pancake, applies a flip, and updates g/h/f values
+FTF_Pancake FTF_Pancake::apply_action(const int i) const
+{
+  FTF_Pancake new_node(*this);
+  #ifdef HISTORY
+  new_node.actions.push_back(i);
+  new_node.parent = this;
+  #endif
+  assert(i > 1 && i <= NUM_PANCAKES);
+  new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
+  new_node.h2 = new_node.update_gap_lb(OppositeDirection(dir), i, new_node.h2);
+  new_node.g = g + 1;
+  new_node.f = new_node.h + new_node.g;
+  new_node.f_bar = 2 * new_node.g + new_node.h - new_node.h2;
+
+  if(i < NUM_PANCAKES)
+  {
+    if(new_node.source[i] > GAPX && new_node.source[i + 1] > GAPX)
+      new_node.hash_ints.unset_hash(hash_table::hash(new_node.source[i], new_node.source[i + 1]));
+  }
+  else {
+    if(new_node.source[i] > GAPX)
+      new_node.hash_ints.unset_hash(hash_table::hash(new_node.source[i], NUM_PANCAKES + 1));
+  }
+  new_node.apply_flip(i);
+  if(i < NUM_PANCAKES) {
+    if(new_node.source[i] > GAPX && new_node.source[i + 1] > GAPX)
+      new_node.hash_ints.set_hash(hash_table::hash(new_node.source[i], new_node.source[i + 1]));
+  }
+  else {
+    if(new_node.source[i] > GAPX)
+      new_node.hash_ints.set_hash(hash_table::hash(new_node.source[i], NUM_PANCAKES + 1));
+  }
+  assert(new_node.h == new_node.gap_lb(dir));
+  #ifndef NDEBUG 
+  hash_array hash_ints;
+  hash_ints.clear_hash();
+  for(int i = 1; i < NUM_PANCAKES; ++i)
+  {
+    if(new_node.source[i] > GAPX && new_node.source[i + 1] > GAPX) {
+      hash_ints.set_hash(hash_table::hash(new_node.source[i], new_node.source[i + 1]));
+    }
+  }
+  if(new_node.source[NUM_PANCAKES] > GAPX) {
+    hash_ints.set_hash(hash_table::hash(new_node.source[NUM_PANCAKES], NUM_PANCAKES + 1));
+  }
+  for(int i = 0; i < NUM_INTS_PER_PANCAKE; ++i) {
+    assert(hash_ints.hash[i] == new_node.hash_ints.hash[i]);
+  }
+  #endif
+  assert(new_node.hash_ints.count() <= NUM_PANCAKES - GAPX && new_node.hash_ints.count() >= NUM_PANCAKES - 2 * GAPX);
+  #ifdef FTF_HASH
+  /*if(i < NUM_PANCAKES)
+    new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
+  else
+    new_node.hash_values[i] = hash_table::hash(new_node.source[i], NUM_PANCAKES + 1);*/
+  for(int i = 1; i < NUM_PANCAKES; ++i)
+  {
+    new_node.hash_values[i] = hash_table::hash(new_node.source[i], new_node.source[i + 1]);
+  }
+  new_node.hash_values[NUM_PANCAKES] = hash_table::hash(new_node.source[NUM_PANCAKES], NUM_PANCAKES + 1);
+  std::sort(std::begin(new_node.hash_values) + 1, std::end(new_node.hash_values));
+  new_node.hash_64 = hash_table::compress(new_node.hash_values);
+  #endif
+  return new_node;
 }

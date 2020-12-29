@@ -8,9 +8,19 @@
 
 //#define HISTORY 
 
+constexpr std::int32_t const_ceil(float num)
+{
+  std::int32_t inum = static_cast<std::int32_t>(num);
+  if(num == static_cast<float>(inum)) {
+    return inum;
+  }
+  return inum + (num > 0 ? 1 : 0);
+}
+
 constexpr int NUM_PANCAKES = 20;
 constexpr uint32_t MAX_PANCAKES = NUM_PANCAKES * (NUM_PANCAKES + 1) / 2;
-constexpr int GAPX = 0;
+constexpr size_t NUM_INTS_PER_PANCAKE = const_ceil(MAX_PANCAKES / 32.f);
+constexpr int GAPX = 1;
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
 class hash_table;
 class Pancake
@@ -27,33 +37,33 @@ public:
   uint8_t g;
   uint8_t h;
   uint8_t h2;
-  uint8_t ftf_h;
-  uint8_t ftf_f;
+  //uint8_t ftf_h;
+  //uint8_t ftf_f;
   uint8_t f;
   uint8_t f_bar;
-  int32_t hdiff;
-  uint8_t delta;
+  //int32_t hdiff;
+  //uint8_t delta;
   bool threshold;
 
   uint8_t gap_lb(Direction dir) const;
   uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
   int check_inputs() const;
 
-  Pancake() : dir(Direction::forward), g(0), h(0), h2(0), ftf_h(0), ftf_f(0), f(0), f_bar(0), hdiff(0), delta(0), threshold(false) {}
-  Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), ftf_h(0), ftf_f(0), f(0), f_bar(0)
+  Pancake() : dir(Direction::forward), g(0), h(0), h2(0), /*ftf_h(0), ftf_f(0),*/ f(0), f_bar(0),/* hdiff(0), delta(0),*/ threshold(false) {}
+  Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), /*ftf_h(0), ftf_f(0),*/ f(0), f_bar(0)
   {
     assert(NUM_PANCAKES > 0);
     memcpy(source, data, NUM_PANCAKES + 1);
     h = gap_lb(dir);
     f = h;
     f_bar = f;
-    hdiff = h;
-    delta = 0;
+    //hdiff = h;
+    //delta = 0;
     threshold = h == 0;
   }
 
-  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), ftf_h(copy.ftf_h), ftf_f(copy.ftf_f), f(copy.f),
-    f_bar(copy.f_bar), hdiff(copy.hdiff), delta(copy.delta), threshold(copy.threshold)
+  Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), /*ftf_h(copy.ftf_h), ftf_f(copy.ftf_f),*/ f(copy.f),
+    f_bar(copy.f_bar), /*hdiff(copy.hdiff), delta(copy.delta),*/ threshold(copy.threshold)
     #ifdef HISTORY
     , actions(copy.actions), parent(copy.parent)
     #endif
@@ -104,9 +114,9 @@ public:
     new_node.f = new_node.g + new_node.h;
 
     new_node.f_bar = 2 * new_node.g + new_node.h - new_node.h2;
-    new_node.hdiff = new_node.h - new_node.h2;
+    //new_node.hdiff = new_node.h - new_node.h2;
     new_node.threshold = threshold || new_node.h <= new_node.h2;
-    new_node.delta = new_node.g - new_node.h2;
+    //new_node.delta = new_node.g - new_node.h2;
     new_node.apply_flip(i);
     //assert(new_node.f >= f); //Consistency check
     return new_node;

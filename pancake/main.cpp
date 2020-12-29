@@ -3,14 +3,14 @@
 //#define A_STAR
 //#define REVERSE_ASTAR
 //#define IDD
-#define DIBBS
+//#define DIBBS
 //#define GBFHS
 //#define NBS
 //#define DVCBS
 //#include "dibbs-2phase.hpp"
 //#include "2phase-lookahead.h"
 #include "ftf-dibbs.h"
-#include "dibbs-ftf-hybrid.h"
+//#include "dibbs-ftf-hybrid.h"
 
 #include "Pancake.h"
 #ifdef A_STAR
@@ -230,7 +230,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -270,7 +270,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -324,7 +324,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -416,7 +416,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -462,7 +462,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -508,7 +508,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch"; return;
       }
     }
@@ -556,7 +556,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -603,7 +603,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -648,7 +648,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -693,7 +693,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << " " << std::to_string(answers[i]) << " " << std::to_string(cstar) << std::endl;
+       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }

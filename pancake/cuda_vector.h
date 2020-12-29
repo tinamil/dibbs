@@ -10,13 +10,13 @@ class cuda_vector
 {
   static constexpr double GROWTH_FACTOR = 2;
   T* d_ptr = nullptr;
-  size_t size_val = 0;
   size_t capacity = 0;
 
   void resize(size_t new_capacity);
 
 
 public:
+  size_t size_val = 0;
   cudaStream_t stream;
   cuda_vector()
   {

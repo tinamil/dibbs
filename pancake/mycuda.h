@@ -10,37 +10,30 @@
 #include "Pancake.h"
 #include "cuda_helper.h"
 #include "ftf-pancake.h"
+#include "hash_array.h"
 
 class mycuda
 {
   static inline cublasHandle_t  handle = nullptr;
-  static inline float* d_a = nullptr;
-  //static inline float* d_batch_hash_vals = nullptr;
-  //static inline float* d_mult_results = nullptr;
-  //static inline size_t d_mult_results_size = 0;
-  static inline float* d_g_vals = nullptr;
-  //static inline float* d_batch_answers = nullptr;
+  static inline uint32_t* d_a = nullptr;
+  static inline uint32_t* d_g_vals = nullptr;
   static inline float* one = nullptr;
   static inline float* neg_one = nullptr;
   static inline float* zero = nullptr;
-  //static inline float* compare_answer = nullptr;
-  //static inline float* batch_answers = nullptr;
-
-  //static inline cudaStream_t cublas_stream1 = nullptr;
 
   size_t my_num_pancakes = 0;
   size_t max_other_pancakes = 0;
   size_t d_mult_results_size = 0;
-  float* d_hash_vals = nullptr;
-  float* d_mult_results = nullptr;
-  float* d_answers = nullptr;
+  uint32_t* d_hash_vals = nullptr;
+  uint32_t* d_mult_results = nullptr;
+  uint32_t* d_answers = nullptr;
   cudaStream_t stream = nullptr;
-  float* h_answers = nullptr;
+  uint32_t* h_answers = nullptr;
 
 public:
 
   size_t other_num_pancakes = 0;
-  float* h_hash_vals = nullptr;
+  hash_array* h_hash_vals = nullptr;
   //static constexpr size_t MAX_BATCH = 16384;
 
   mycuda()
@@ -60,7 +53,7 @@ public:
     if(d_mult_results) { cudaFree(d_mult_results); d_mult_results = nullptr; }
   }
 
-  void set_d_hash_vals(float* d_vals)
+  void set_d_hash_vals(uint32_t* d_vals)
   {
     if(d_hash_vals) {
       cudaFree(d_hash_vals);
@@ -73,7 +66,7 @@ public:
     d_hash_vals = nullptr;
   }
 
-  float* get_answers()
+  uint32_t* get_answers()
   {
     cudaStreamSynchronize(stream);
     return h_answers;
@@ -88,7 +81,7 @@ public:
       CUBLAS_CHECK_RESULT(cublasSetAtomicsMode(handle, CUBLAS_ATOMICS_ALLOWED));
       CUBLAS_CHECK_RESULT(cublasSetMathMode(handle, CUBLAS_DEFAULT_MATH));
     }
-    static constexpr float a = 1, b = -1, c = 0;
+    static constexpr int a = 1, b = -1, c = 0;
     if(!one)
     {
       CUDA_CHECK_RESULT(cudaMalloc((void**)&one, sizeof(float)));
@@ -110,7 +103,7 @@ public:
     //if (!d_batch_hash_vals) CUDA_CHECK_RESULT(cudaMalloc((void**)&d_batch_hash_vals, MAX_BATCH * MAX_PANCAKES * sizeof(float)));
     //if (!d_batch_answers) CUDA_CHECK_RESULT(cudaMalloc((void**)&d_batch_answers, MAX_BATCH * sizeof(float)));
   }
-  void set_ptrs(size_t m_rows, size_t n_cols, float* A, float* g_vals);
+  void set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint32_t* g_vals);
   //void set_matrix(size_t m_rows, const float* A, const float* g_vals);
 
   void batch_vector_matrix();

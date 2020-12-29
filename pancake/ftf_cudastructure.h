@@ -2,6 +2,8 @@
 #include "ftf-pancake.h"
 #include "cuda_vector.h"
 #include "mycuda.h"
+#include "hash_array.h"
+
 
 template <typename PancakeType>
 struct FTF_Less
@@ -9,53 +11,30 @@ struct FTF_Less
   bool operator()(const PancakeType* lhs, const PancakeType* rhs) const;
 };
 
-struct hash_array
-{
-  float hash[MAX_PANCAKES];
-};
 
 template <typename PancakeType>
 class ftf_cudastructure
 {
-  //The hybrid algorithm depends on host storage
-  #ifdef FTF_PANCAKE_HYBRID
-  #define HOST_STORAGE
-  #endif
-
 public:
   #define CUDA_VECTOR
   #ifdef CUDA_VECTOR
   cuda_vector<hash_array> device_hash_values;
-  cuda_vector<float> device_g_values;
+  cuda_vector<uint32_t> device_g_values;
   #else
   std::vector<hash_array> opposite_hash_values;
-  std::vector<float> g_values;
+  std::vector<uint32_t> g_values;
   #endif
   std::unordered_map<const PancakeType*, size_t> index_map;
-  #ifdef HOST_STORAGE
   std::vector<PancakeType*> pancakes;
-  #else
-  std::unordered_map<size_t, const PancakeType*> reverse_map;
-  #endif
   bool valid_device_cache = false;
 
-  float* tmp_g_vals = nullptr;
+  uint32_t* tmp_g_vals = nullptr;
   hash_array* tmp_hash_arrays = nullptr;
   size_t tmp_size = 0;
 
-  static inline void to_hash_array(const PancakeType* val, float* hash_array)
+  static inline void to_hash_array(const PancakeType* val, hash_array* p_hash_array)
   {
-    memset(hash_array, 0, MAX_PANCAKES * sizeof(float));
-    for(size_t i = 1; i < NUM_PANCAKES; ++i)
-    {
-      hash_array[hash_table::hash(val->source[i], val->source[i + 1])] = 1.0;
-    }
-    hash_array[hash_table::hash(val->source[NUM_PANCAKES], NUM_PANCAKES + 1)] = 1.0;
-  }
-
-  static inline void to_hash_array(const PancakeType* val, hash_array* hash_array)
-  {
-    to_hash_array(val, hash_array->hash);
+    memcpy(p_hash_array, &val->hash_ints, sizeof(hash_array));
   }
 
   void synchronize()
@@ -67,20 +46,19 @@ public:
 public:
   ftf_cudastructure() {}
 
-  void resize_tmp_arrays(size_t size)
+  void resize_tmp_arrays(size_t min_size)
   {
-    if(size > tmp_size) {
-      tmp_size = size;
-      CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
-      CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
-      CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(float) * tmp_size, cudaHostAllocWriteCombined));
+    if(min_size > tmp_size) {
+      tmp_size = std::max(min_size, 2 * tmp_size);
+      if(tmp_hash_arrays) CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
+      if(tmp_g_vals) CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
+      CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_g_vals, sizeof(uint32_t) * tmp_size, cudaHostAllocWriteCombined));
       CUDA_CHECK_RESULT(cudaHostAlloc(&tmp_hash_arrays, sizeof(hash_array) * tmp_size, cudaHostAllocWriteCombined));
     }
   }
 
   void load_device()
   {
-    #ifdef HOST_STORAGE
     if(valid_device_cache) return;
 
     resize_tmp_arrays(pancakes.size());
@@ -96,94 +74,47 @@ public:
     device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + pancakes.size());
 
     valid_device_cache = true;
-    #endif
   }
 
   void insert(PancakeType* val)
   {
-    #ifndef HOST_STORAGE
     index_map[val] = device_hash_values.size();
-    reverse_map[device_hash_values.size()] = val;
-    assert(device_hash_values.size() == device_g_values.size());
-
-    resize_tmp_arrays(1);
-
-    device_g_values.push_back(val->g);
-
-    #ifndef CUDA_VECTOR
-    opposite_hash_values.resize(opposite_hash_values.size() + 1);
-    to_hash_array(val, opposite_hash_values.back().hash);
-    #else
-    to_hash_array(val, tmp_hash_arrays);
-    device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + 1);
-    #endif
-    #else
+    device_hash_values.size_val += 1;
     pancakes.push_back(val);
     valid_device_cache = false;
-    #endif
   }
 
   void insert(const std::vector<PancakeType*>& vector)
   {
     if(vector.size() == 0) return;
 
-    #ifndef HOST_STORAGE
-    resize_tmp_arrays(vector.size());
-
     for(int i = 0; i < vector.size(); ++i) {
       index_map[vector[i]] = device_hash_values.size() + i;
-      reverse_map[device_hash_values.size() + i] = vector[i];
-      tmp_g_vals[i] = vector[i]->g;
-      to_hash_array(vector[i], &tmp_hash_arrays[i]);
     }
 
-    device_g_values.insert(tmp_g_vals, tmp_g_vals + vector.size());
-    device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + vector.size());
-    #else
+    device_hash_values.size_val += vector.size();
     pancakes.insert(pancakes.end(), vector.begin(), vector.end());
     valid_device_cache = false;
-    #endif
   }
 
   void erase(const PancakeType* val)
   {
-    #ifndef HOST_STORAGE
-    size_t index = index_map[val];
-    index_map.erase(val);
-
-    const PancakeType* back_ptr = reverse_map[device_g_values.size() - 1];
-    reverse_map[index] = back_ptr;
-    reverse_map.erase(device_g_values.size() - 1);
-    if(back_ptr != val)
-    {
-      index_map[back_ptr] = index;
+    if(val != pancakes.back()) {
+      size_t index = index_map[val];
+      index_map[pancakes.back()] = index;
+      pancakes[index] = pancakes.back();
+      valid_device_cache = false;
     }
-    #ifndef CUDA_VECTOR
-    g_values[index] = g_values.back();
-    g_values.resize(g_values.size() - 1);
-    memcpy(opposite_hash_values[index].hash, opposite_hash_values.back().hash, sizeof(float) * MAX_PANCAKES);
-    opposite_hash_values.resize(opposite_hash_values.size() - 1);
-    #else
-    device_g_values.erase(index);
-    device_hash_values.erase(index);
-    #endif
-    #else
-    //pancakes[index] = back_ptr;
-    for(int i = 0; i < pancakes.size(); ++i) {
-      if(*pancakes[i] == *val) {
-        pancakes[i] = pancakes.back();
-        pancakes.resize(pancakes.size() - 1);
-        valid_device_cache = false;
-        return;
-      }
-    }
-    std::cout << "Attempted to erase a pancake that wasn't present.\n";
-    #endif
+    device_hash_values.size_val -= 1;
+    pancakes.resize(pancakes.size() - 1);
+    size_t num_erased = index_map.erase(val);
+    assert(num_erased == 1);
   }
 
   uint32_t match_one(const PancakeType* val);
   void match(mycuda& cuda, std::vector<PancakeType*>& val);
   void match_all(ftf_cudastructure<PancakeType>& other);
+  void match_all_batched(ftf_cudastructure<PancakeType>& other);
 };
 
 template <typename PancakeType>
@@ -213,11 +144,11 @@ uint32_t ftf_cudastructure<PancakeType>::match_one(const PancakeType* val)
   cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
   #else
   assert(device_hash_values.size() == device_g_values.size());
-  cuda.set_ptrs(device_hash_values.size(), 1, reinterpret_cast<float*>(device_hash_values.data()), device_g_values.data());
+  cuda.set_ptrs(device_hash_values.size(), 1, reinterpret_cast<uint32_t*>(device_hash_values.data()), device_g_values.data());
   #endif
 
   to_hash_array(val, cuda.h_hash_vals);
-  cuda.batch_vector_matrix();
+  cuda.load_then_batch_vector_matrix();
   return round(cuda.get_answers()[0]);
 }
 
@@ -232,14 +163,14 @@ void ftf_cudastructure<PancakeType>::match(mycuda& cuda, std::vector<PancakeType
   cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
   #else
   assert(device_hash_values.size() == device_g_values.size());
-  cuda.set_ptrs(device_hash_values.size(), val.size(), reinterpret_cast<float*>(device_hash_values.data()), device_g_values.data());
+  cuda.set_ptrs(device_hash_values.size(), val.size(), reinterpret_cast<uint32_t*>(device_hash_values.data()), device_g_values.data());
   #endif
   //valid_device_cache = true;
   //}
   //size_t num_vals = std::min(val.size() - batch * mycuda::MAX_BATCH, mycuda::MAX_BATCH);
   for(size_t i = 0; i < val.size(); ++i)
   {
-    to_hash_array(val[i], cuda.h_hash_vals + i * MAX_PANCAKES);
+    to_hash_array(val[i], cuda.h_hash_vals + i);
   }
   cuda.load_then_batch_vector_matrix();
 }
@@ -248,29 +179,55 @@ void ftf_cudastructure<PancakeType>::match(mycuda& cuda, std::vector<PancakeType
 template <typename PancakeType>
 void ftf_cudastructure<PancakeType>::match_all(ftf_cudastructure<PancakeType>& other)
 {
+  //if(pancakes.size() * other.pancakes.size() * sizeof(uint32_t) > 8000000000L) {
+  match_all_batched(other);
+  return;
+/*}
+load_device();
+other.load_device();
+mycuda cuda;
+
+#ifndef CUDA_VECTOR
+cuda.set_matrix(opposite_hash_values.size(), (uint32_t*)opposite_hash_values.data(), g_values.data());
+#else
+cuda.set_ptrs(device_hash_values.size(), other.device_hash_values.size(), reinterpret_cast<uint32_t*>(device_hash_values.data()), device_g_values.data());
+#endif
+cuda.set_d_hash_vals((uint32_t*)other.device_hash_values.data());
+other.synchronize();
+synchronize();
+cuda.batch_vector_matrix();
+uint32_t* answers = cuda.get_answers();
+cuda.clear_d_hash_vals();
+for(int i = 0; i < other.pancakes.size(); ++i) {
+  other.pancakes[i]->ftf_h = answers[i];
+  other.pancakes[i]->f = answers[i] + other.pancakes[i]->g;
+}*/
+}
+
+//Must call get_answers() to retrieve the answers, because this is calculated asynchronously and get_answers() will wait until its done
+template <typename PancakeType>
+void ftf_cudastructure<PancakeType>::match_all_batched(ftf_cudastructure<PancakeType>& other)
+{
   load_device();
   other.load_device();
   mycuda cuda;
-  //if(!valid_device_cache)
-  //{
-  #ifndef CUDA_VECTOR
-  cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
-  #else
-  cuda.set_ptrs(device_hash_values.size(), other.device_hash_values.size(), reinterpret_cast<float*>(device_hash_values.data()), device_g_values.data());
-  #endif
-  //valid_device_cache = true;
-  //}
-  //assert(other.device_hash_values.size() <= mycuda::MAX_BATCH);
-  //size_t num_vals = std::min(val.size() - batch * mycuda::MAX_BATCH, mycuda::MAX_BATCH);
-  cuda.set_d_hash_vals((float*)other.device_hash_values.data());
-  other.synchronize();
-  synchronize();
-  cuda.batch_vector_matrix();
-  float* answers = cuda.get_answers();
-  cuda.clear_d_hash_vals();
-  for(int i = 0; i < other.pancakes.size(); ++i) {
-    other.pancakes[i]->ftf_h = answers[i];
-    other.pancakes[i]->ftf_f = answers[i] + other.pancakes[i]->g;
+  if(pancakes[0]->dir == Direction::forward) cuda.forward = true;
+  size_t completed = 0;
+  while(completed < other.pancakes.size()) {
+    size_t to_do = std::min(BATCH_SIZE, other.pancakes.size() - completed);
+
+    cuda.set_ptrs(device_hash_values.size(), to_do, reinterpret_cast<uint32_t*>(device_hash_values.data()), device_g_values.data());
+    cuda.set_d_hash_vals((uint32_t*)(other.device_hash_values.data() + completed));
+    other.synchronize();
+    synchronize();
+    cuda.batch_vector_matrix();
+    uint32_t* answers = cuda.get_answers();
+    cuda.clear_d_hash_vals();
+    for(int i = 0; i < to_do; ++i) {
+      other.pancakes[i + completed]->ftf_h = answers[i];
+      other.pancakes[i + completed]->f = answers[i] + other.pancakes[i + completed]->g;
+    }
+    completed += to_do;
   }
 }
 
