@@ -27,11 +27,10 @@ class mycuda
   uint32_t* d_hash_vals = nullptr;
   uint32_t* d_mult_results = nullptr;
   uint32_t* d_answers = nullptr;
-  cudaStream_t stream = nullptr;
   uint32_t* h_answers = nullptr;
 
 public:
-
+  cudaStream_t stream = nullptr;
   size_t other_num_pancakes = 0;
   hash_array* h_hash_vals = nullptr;
   //static constexpr size_t MAX_BATCH = 16384;

@@ -30,7 +30,6 @@ public:
     while (open.size() > 0) {
       const Pancake* next_val = open.top();
       open.pop();
-
       auto it = closed.find(next_val);
       if (it != closed.end())
       {

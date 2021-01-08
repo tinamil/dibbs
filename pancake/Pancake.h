@@ -17,11 +17,55 @@ constexpr std::int32_t const_ceil(float num)
   return inum + (num > 0 ? 1 : 0);
 }
 
-constexpr int NUM_PANCAKES = 20;
+
+template<int32_t NUM_BITS>
+constexpr uint32_t mask()
+{
+  constexpr int32_t index = NUM_BITS - 1;
+  if constexpr(index < 0) return 0;
+  else return ((1ui32 << index) | mask<NUM_BITS - 1>());
+
+  //Unreachable code, but CUDA throws a warning because it thinks there is no return statement without this
+  assert(false);
+  return 0;
+}
+
+
+constexpr int NUM_PANCAKES = 8;
 constexpr uint32_t MAX_PANCAKES = NUM_PANCAKES * (NUM_PANCAKES + 1) / 2;
-constexpr size_t NUM_INTS_PER_PANCAKE = const_ceil(MAX_PANCAKES / 32.f);
+constexpr uint32_t NUM_INTS_PER_PANCAKE = static_cast<uint32_t>(const_ceil(MAX_PANCAKES / 32.f));
 constexpr int GAPX = 1;
+//Sum from N-GAPX to N
+constexpr uint32_t GAP_COUNT = ((NUM_PANCAKES - 1) * (NUM_PANCAKES)-(NUM_PANCAKES - 1 - GAPX) * (NUM_PANCAKES - GAPX)) / 2 + GAPX;
+constexpr uint32_t NUM_GAP_INTS = static_cast<uint32_t>(const_ceil(GAP_COUNT / 32.f));
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB
+
+
+#define MIN(x,y) ((x < y) ? x : y)
+#define MAX(x,y) ((x >= y) ? x : y)
+struct Mask
+{
+  constexpr Mask() : x()
+  {
+    x[0] = mask<GAP_COUNT>();
+
+    if constexpr(NUM_GAP_INTS > 1) {
+      x[1] = mask<static_cast<int>(GAP_COUNT) - 32 * 1>();
+    }
+
+    if constexpr(NUM_GAP_INTS > 2) {
+      x[2] = mask<static_cast<int>(GAP_COUNT) - 32 * 2>();
+    }
+
+    if constexpr(NUM_GAP_INTS > 3) {
+      x[3] = mask<static_cast<int>(GAP_COUNT) - 32 * 3>();
+    }
+    static_assert(NUM_GAP_INTS <= 4, "Too many ints for GAP, increase this function");
+  }
+  constexpr const uint32_t& operator [](int i) const { return x[i]; }
+  uint32_t x[MAX(1, NUM_GAP_INTS)];
+};
+
 class hash_table;
 class Pancake
 {
@@ -42,14 +86,14 @@ public:
   uint8_t f;
   uint8_t f_bar;
   //int32_t hdiff;
-  //uint8_t delta;
+  uint8_t delta;
   bool threshold;
 
   uint8_t gap_lb(Direction dir) const;
   uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
   int check_inputs() const;
 
-  Pancake() : dir(Direction::forward), g(0), h(0), h2(0), /*ftf_h(0), ftf_f(0),*/ f(0), f_bar(0),/* hdiff(0), delta(0),*/ threshold(false) {}
+  Pancake() : dir(Direction::forward), g(0), h(0), h2(0), /*ftf_h(0), ftf_f(0),*/ f(0), f_bar(0),/* hdiff(0),*/ delta(0), threshold(false) {}
   Pancake(const uint8_t* data, Direction dir) : dir(dir), g(0), h(0), h2(0), /*ftf_h(0), ftf_f(0),*/ f(0), f_bar(0)
   {
     assert(NUM_PANCAKES > 0);
@@ -58,32 +102,32 @@ public:
     f = h;
     f_bar = f;
     //hdiff = h;
-    //delta = 0;
+    delta = 0;
     threshold = h == 0;
   }
 
   Pancake(const Pancake& copy) : dir(copy.dir), g(copy.g), h(copy.h), h2(copy.h2), /*ftf_h(copy.ftf_h), ftf_f(copy.ftf_f),*/ f(copy.f),
-    f_bar(copy.f_bar), /*hdiff(copy.hdiff), delta(copy.delta),*/ threshold(copy.threshold)
+    f_bar(copy.f_bar), /*hdiff(copy.hdiff),*/ delta(copy.delta), threshold(copy.threshold)
     #ifdef HISTORY
     , actions(copy.actions), parent(copy.parent)
     #endif
   {
     memcpy(source, copy.source, NUM_PANCAKES + 1);
-  }
+}
 
-  //Required to calculate reverse heuristics, not needed for forward only search
+//Required to calculate reverse heuristics, not needed for forward only search
   static void Initialize_Dual(uint8_t src[])
   {
     if(DUAL_SOURCE() == nullptr) DUAL_SOURCE() = new uint8_t[NUM_PANCAKES + 1];
     DUAL_SOURCE()[0] = NUM_PANCAKES;
-    for(int i = 1; i <= NUM_PANCAKES; i++) DUAL_SOURCE()[src[i]] = i;
+    for(uint8_t i = 1; i <= NUM_PANCAKES; i++) DUAL_SOURCE()[src[i]] = i;
   }
 
   inline static Pancake GetSortedStack(Direction dir)
   {
     uint8_t pancakes[NUM_PANCAKES + 1];
     pancakes[0] = NUM_PANCAKES;
-    for(int i = 1; i <= NUM_PANCAKES; ++i) { pancakes[i] = i; }
+    for(uint8_t i = 1; i <= NUM_PANCAKES; ++i) { pancakes[i] = i; }
 
     return Pancake(pancakes, dir);
   }
@@ -110,14 +154,17 @@ public:
     #endif
     new_node.h = new_node.update_gap_lb(dir, i, new_node.h);
     new_node.h2 = new_node.update_gap_lb(OppositeDirection(dir), i, new_node.h2);
+
+    new_node.apply_flip(i);
+    assert(new_node.h == new_node.gap_lb(dir));
+    assert(new_node.h2 == new_node.gap_lb(OppositeDirection(dir)));
     new_node.g = g + 1;
     new_node.f = new_node.g + new_node.h;
 
     new_node.f_bar = 2 * new_node.g + new_node.h - new_node.h2;
     //new_node.hdiff = new_node.h - new_node.h2;
     new_node.threshold = threshold || new_node.h <= new_node.h2;
-    //new_node.delta = new_node.g - new_node.h2;
-    new_node.apply_flip(i);
+    new_node.delta = new_node.g - new_node.h2;
     //assert(new_node.f >= f); //Consistency check
     return new_node;
   }

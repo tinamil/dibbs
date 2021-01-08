@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include "custom_kernels.cuh"
 #include "Pancake.h"
+#include "hash_array.h"
 
-#define MIN(x,y) ((x < y) ? x : y)
-#define MAX(x,y) ((x < y) ? y : x)
 
 //https://www.apriorit.com/dev-blog/614-cpp-cuda-accelerate-algorithm-cpu-gpu
 template <typename T>
@@ -91,11 +90,14 @@ void cuda_min_kernel(int num_batch, int num_frontier, const T* __restrict__ mult
   }
 }
 
-
 #define TILE_WIDTH 16
 __global__
-void cuda_bitwise_set_intersection(int rows_a, int rows_b, const uint32_t* __restrict__ hash_a, const uint32_t* __restrict__ g_vals,
-                                   const uint32_t* __restrict__ hash_b, uint32_t* __restrict__ results)
+void tiled_cuda_bitwise_set_intersection(int rows_a,
+                                   int rows_b,
+                                   const uint32_t* __restrict__ hash_a,
+                                   const uint32_t* __restrict__ g_vals,
+                                   const uint32_t* __restrict__ hash_b,
+                                   uint32_t* __restrict__ results)
 {
   __shared__ uint32_t sA[TILE_WIDTH][NUM_INTS_PER_PANCAKE];
   __shared__ uint32_t sB[TILE_WIDTH][NUM_INTS_PER_PANCAKE];
@@ -119,19 +121,38 @@ void cuda_bitwise_set_intersection(int rows_a, int rows_b, const uint32_t* __res
       sB[threadIdx.y][tidx] = hash_b[b_row * NUM_INTS_PER_PANCAKE + tidx];
     }
   }
-  if(a_row < rows_a && threadIdx.y == 0) sG[threadIdx.x] = g_vals[a_row];
+
+  if(threadIdx.y == 0 && a_row < rows_a) {
+    sG[threadIdx.x] = g_vals[a_row];
+  }
   __syncthreads();
+
   if(b_row < rows_b && a_row < rows_a) {
-    uint32_t tmp = 0, tmp_a = 0, tmp_b = 0;
+    constexpr Mask gap_mask;
+    int tmpF = 0;
+    int tmpB = 0;
+    int tmpMin;
     #pragma unroll
-    for(int i = 0; i < NUM_INTS_PER_PANCAKE; ++i) {
-      /*if constexpr(GAPX > 0) {
-        tmp_a += __popc(sA[threadIdx.x][i]);
-        tmp_b += __popc(sB[threadIdx.y][i]);
-      }*/
-      tmp += __popc((sA[threadIdx.x][i] & sB[threadIdx.y][i]));
+    for(int i = 0; i < NUM_GAP_INTS; ++i) {
+      uint32_t A = sA[threadIdx.x][i];
+      uint32_t B = sB[threadIdx.y][i];
+      tmpF += __popc(B & (A | gap_mask[i]));
+      tmpB += __popc(A & (B | gap_mask[i]));
     }
-    results[row * rows_a + col] = NUM_PANCAKES - GAPX + sG[threadIdx.x] - tmp;
+    assert(tmpF >= GAPX);
+    assert(tmpB >= GAPX);
+    tmpMin = MIN(tmpF, tmpB);
+    #pragma unroll
+    for(int i = NUM_GAP_INTS; i < NUM_INTS_PER_PANCAKE; ++i) {
+      uint32_t A = sA[threadIdx.x][i];
+      uint32_t B = sB[threadIdx.y][i];
+      tmpMin += __popc(A & B);
+    }
+    assert(tmpMin <= NUM_PANCAKES);
+    assert(tmpMin >= GAPX);
+    int val = NUM_PANCAKES + sG[threadIdx.x] - tmpMin;
+    assert(val >= 0);
+    results[row * rows_a + col] = val;
   }
 }
 
@@ -139,26 +160,37 @@ __global__
 void naive_cuda_bitwise_set_intersection(int rows_a, int rows_b, const uint32_t* __restrict__ hash_a, const uint32_t* __restrict__ g_vals,
                                          const uint32_t* __restrict__ hash_b, uint32_t* __restrict__ results)
 {
+  constexpr Mask gap_mask;
   for(int batch_idx = blockIdx.x * blockDim.x + threadIdx.x, max = rows_a * rows_b, stride = blockDim.x * gridDim.x; batch_idx < max; batch_idx += stride)
   {
     int col = batch_idx / rows_a;
     int row = batch_idx % rows_a;
-    uint32_t tmp = 0;
+    int tmpF = 0;
+    int tmpB = 0;
     for(int i = 0; i < NUM_INTS_PER_PANCAKE; ++i) {
-      tmp += __popc(hash_a[row * NUM_INTS_PER_PANCAKE + i] & hash_b[col * NUM_INTS_PER_PANCAKE + i]);
+      uint32_t A = hash_a[row * NUM_INTS_PER_PANCAKE + i];
+      uint32_t B = hash_b[col * NUM_INTS_PER_PANCAKE + i];
+      tmpF += __popc(B & (A | gap_mask[i]));
+      tmpB += __popc(A & (B | gap_mask[i]));
     }
-    results[batch_idx] = NUM_PANCAKES - 2 * GAPX + g_vals[row] - tmp;
+    results[batch_idx] = NUM_PANCAKES + g_vals[row] - MIN(tmpF, tmpB);
   }
 }
 
-void bitwise_set_intersection(cudaStream_t stream, int rows_a, int rows_b, const uint32_t* __restrict__ hash_a, const uint32_t* __restrict__ g_vals, const uint32_t* __restrict__ hash_b, uint32_t* __restrict__ mult_results)
+void bitwise_set_intersection(cudaStream_t stream,
+                              int rows_a,
+                              int rows_b,
+                              const uint32_t* __restrict__ hash_a,
+                              const uint32_t* __restrict__ g_vals,
+                              const uint32_t* __restrict__ hash_b,
+                              uint32_t* __restrict__ mult_results)
 {
   //constexpr int threadsPerBlock = 96;
   //int blocksPerGrid = (rows_a * rows_b + threadsPerBlock - 1) / threadsPerBlock;
   //naive_cuda_bitwise_set_intersection << <blocksPerGrid, threadsPerBlock, 0, stream >> > (rows_a, rows_b, hash_a, g_vals, hash_b, mult_results);
   dim3 threadsPerBlock(TILE_WIDTH, TILE_WIDTH, 1);
   dim3 blocksPerGrid((rows_a + TILE_WIDTH - 1) / TILE_WIDTH, (rows_b + TILE_WIDTH - 1) / TILE_WIDTH, 1);
-  cuda_bitwise_set_intersection << <blocksPerGrid, threadsPerBlock, 0, stream >> > (rows_a, rows_b, hash_a, g_vals, hash_b, mult_results);
+  tiled_cuda_bitwise_set_intersection << <blocksPerGrid, threadsPerBlock, 0, stream >> > (rows_a, rows_b, hash_a, g_vals, hash_b, mult_results);
 }
 
 void vector_add(cudaStream_t stream, int num_batch, int num_frontier, const uint32_t* __restrict__ g_vals, uint32_t* __restrict__ mult_results)

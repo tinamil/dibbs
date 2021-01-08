@@ -2,7 +2,7 @@
 //#define IDA_STAR
 //#define A_STAR
 //#define REVERSE_ASTAR
-//#define IDD
+#define IDD
 //#define DIBBS
 //#define GBFHS
 //#define NBS
@@ -77,7 +77,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
   random_permutation2(NUM_PANCAKES, problem, seed);
 }
 
- void output_data(std::ostream& stream)
+void output_data(std::ostream& stream)
 {
   std::cout << "Pancakes = " << NUM_PANCAKES << " gap-x = " << GAPX << '\n';
   stream << "Pancakes = " << NUM_PANCAKES << " gap-x = " << GAPX << '\n';
@@ -128,7 +128,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
   std::stringstream expansions_after_cstar_stream;
   std::stringstream expansions_after_ub_stream;
   uint8_t problem[NUM_PANCAKES + 1];
-  double answers[NUM_PROBLEMS + 1];
+  double* answers = new double[NUM_PROBLEMS + 1];
   for(int i = 0; i <= NUM_PROBLEMS; ++i)
   {
     answers[i] = -1;
@@ -230,7 +230,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -270,7 +270,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -292,6 +292,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
     {
       std::cout << i << " ";
       generate_random_instance(seed, problem);
+      //if(i != 2348) continue;
       //if (i != 19) continue;
       /*std::cout << "Problem:";
       for (int j = 0; j < 21; ++j) {
@@ -324,7 +325,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -416,7 +417,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -462,16 +463,16 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
     }
     stream << expansion_stream.rdbuf() << std::endl;
     stream << time_stream.rdbuf() << std::endl;
-    stream << memory_stream.rdbuf() << std::endl;
-    stream << expansions_after_cstar_stream.rdbuf() << std::endl;
-    stream << expansions_after_ub_stream.rdbuf() << std::endl;
+    //stream << memory_stream.rdbuf() << std::endl;
+    //stream << expansions_after_cstar_stream.rdbuf() << std::endl;
+    //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
 
@@ -508,7 +509,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch"; return;
       }
     }
@@ -556,7 +557,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -603,7 +604,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -623,6 +624,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
     {
       std::cout << i << " ";
       generate_random_instance(seed, problem);
+      if(i != 2348) continue;
       Pancake::Initialize_Dual(problem);
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
@@ -648,8 +650,9 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
-        std::cout << "ERROR Cstar mismatch";
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
+        std::cout << "ERROR Cstar mismatch ";
+        std::cout << expansions << "\n";
         return;
       }
     }
@@ -693,7 +696,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
       }
       else if(!std::isinf(cstar) && answers[i] != cstar)
       {
-       std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " was different than the previous c* of " << std::to_string(cstar) << std::endl;
+        std::cout << std::to_string(i) << ": " << std::to_string(answers[i]) << " previous C* is different than the new C* of " << std::to_string(cstar) << std::endl;
         std::cout << "ERROR Cstar mismatch";
         return;
       }
@@ -705,6 +708,7 @@ void generate_random_instance(double& seed, uint8_t problem[])
     //stream << expansions_after_ub_stream.rdbuf() << std::endl;
     #endif
   }
+  delete[] answers;
 }
 
 std::string return_formatted_time(std::string format)
@@ -775,7 +779,7 @@ int main()
   int deviceCount;
   cudaGetDeviceCount(&deviceCount);
   int device;
-  for (device = 0; device < deviceCount; ++device) {
+  for(device = 0; device < deviceCount; ++device) {
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, device);
     std::cout << "Device " << device << " has compute capability " << deviceProp.major << "." << deviceProp.minor << "\n";

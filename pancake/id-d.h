@@ -169,7 +169,7 @@ class ID_D
     expansions = 0;
     UB = std::numeric_limits<size_t>::max();
     LB = 1;
-
+    //assert(start.gap_lb(start.dir) == goal.gap_lb(goal.dir));
     size_t iteration = 0;
     size_t forward_expansions = 0;
     size_t backward_expansions = 0;

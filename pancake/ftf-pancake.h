@@ -7,8 +7,10 @@
 #include <set>
 #include <tsl\hopscotch_map.h>
 #include "hash_array.h"
+#include <string>
 
-static constexpr size_t BATCH_SIZE = 1024;
+static constexpr size_t BATCH_SIZE = 512;
+//#define FTF_HASH
 
 class FTF_Pancake
 {
@@ -36,13 +38,9 @@ public:
     hash_ints.clear_hash();
     for(int i = 1; i < NUM_PANCAKES; ++i)
     {
-      if(source[i] > GAPX && source[i + 1] > GAPX) {
-        hash_ints.set_hash(hash_table::hash(source[i], source[i + 1]));
-      }
+      hash_ints.set_hash(hash_table::hash(source[i], source[i + 1]));
     }
-    if(source[NUM_PANCAKES] > GAPX) {
-      hash_ints.set_hash(hash_table::hash(source[NUM_PANCAKES], NUM_PANCAKES + 1));
-    }
+    hash_ints.set_hash(hash_table::hash(source[NUM_PANCAKES], NUM_PANCAKES + 1));
   }
 
   FTF_Pancake() : dir(Direction::forward), g(0), h(0), h2(0), ftf_h(0), f(0), f_bar(0)
@@ -96,8 +94,34 @@ public:
     #endif
   }
 
+  inline std::string to_string() const
+  {
+    std::string res = "";
+    res += "Direction: ";
+    res += dir == Direction::forward ? "Forward" : "Backward";
+    res += " g = ";
+    res += std::to_string(g);
+    res += " h = ";
+    res += std::to_string(h);
+    res += " h2 = ";
+    res += std::to_string(h2);
+    res += " ftf_h = ";
+    res += std::to_string(ftf_h);
+    res += " f = ";
+    res += std::to_string(f);
+    res += " fbar = ";
+    res += std::to_string(f_bar);
+    res += " SRC = [";
+    for(int i = 0; i <= NUM_PANCAKES; ++i) {
+      res += std::to_string(source[i]);
+      if(i < NUM_PANCAKES) res += ", ";
+    }
+    res += "]";
+    return res;
+  }
+
   uint8_t gap_lb(Direction dir) const;
-  uint8_t update_gap_lb(Direction dir, int i, uint8_t LB) const;
+  uint8_t update_gap_lb(Direction dir, int i, int8_t LB) const;
   //Copies pancake, applies a flip, and updates g/h/f values
   FTF_Pancake apply_action(const int i) const;
 };

@@ -6,7 +6,8 @@
 struct hash_array
 {
   uint32_t hash[NUM_INTS_PER_PANCAKE];
-
+  
+  
   void clear_hash()
   {
     for(int i = 0; i < NUM_INTS_PER_PANCAKE; ++i) {
@@ -28,6 +29,13 @@ struct hash_array
     uint32_t hash_bit = 1u << (hash_val % 32u);
     assert((hash_bit & hash[which_int]) > 0);
     hash[which_int] ^= hash_bit;
+  }
+
+  bool check_hash(uint32_t hash_val)
+  {
+    uint32_t which_int = hash_val / 32u;
+    uint32_t hash_bit = 1u << (hash_val % 32u);
+    return((hash_bit & hash[which_int]) > 0);
   }
 
   uint32_t count()
