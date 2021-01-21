@@ -219,6 +219,7 @@ public:
         }
       }
     }
+  
     if(max_bsize >= max_fsize)
     {
       if(back_f == -1) forward_dir = front.size() < back.size();

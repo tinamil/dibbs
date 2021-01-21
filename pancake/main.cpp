@@ -1,13 +1,13 @@
 
 //#define IDA_STAR
-//#define A_STAR
+#define A_STAR
 //#define REVERSE_ASTAR
-#define IDD
-//#define DIBBS
-//#define GBFHS
+//#define IDD
+#define DIBBS
+#define GBFHS
 //#define NBS
-//#define DVCBS
-//#include "dibbs-2phase.hpp"
+#define DVCBS
+#include "dibbs-2phase.hpp"
 //#include "2phase-lookahead.h"
 #include "ftf-dibbs.h"
 //#include "dibbs-ftf-hybrid.h"
@@ -624,7 +624,6 @@ void output_data(std::ostream& stream)
     {
       std::cout << i << " ";
       generate_random_instance(seed, problem);
-      if(i != 2348) continue;
       Pancake::Initialize_Dual(problem);
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);

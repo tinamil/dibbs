@@ -200,6 +200,6 @@ struct FTFPancakeEqual
   }
   inline bool operator() (const FTF_Pancake x, const FTF_Pancake y) const
   {
-    return x == y;
+    return memcmp(x.source, y.source, NUM_PANCAKES + 1) == 0;
   }
 };

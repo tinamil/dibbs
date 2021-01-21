@@ -29,7 +29,7 @@ public:
   set open_f, open_b;
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
-  ftf_cudastructure<FTF_Pancake> front_cuda, back_cuda;
+  ftf_cudastructure<FTF_Pancake, FTFPancakeHash, FTFPancakeEqual> front_cuda, back_cuda;
   size_t front_ftf_f = 0;
   size_t back_ftf_f = 0;
   size_t expansions;
@@ -56,7 +56,7 @@ public:
       front_cuda.match_all(back_cuda);
       size_t min_ftf = back_cuda.pancakes[0]->f;
       for(int i = 1; i < back_cuda.pancakes.size(); ++i) {
-        FTF_Pancake* p = back_cuda.pancakes[i];
+        const FTF_Pancake* p = back_cuda.pancakes[i];
         //assert(p->f >= p->f_bar);
         if(p->f < min_ftf) min_ftf = p->f;
         if(p->f >= UB) {
@@ -69,7 +69,7 @@ public:
       back_cuda.match_all(front_cuda);
       size_t min_ftf = front_cuda.pancakes[0]->f;
       for(int i = 1; i < front_cuda.pancakes.size(); ++i) {
-        FTF_Pancake* p = front_cuda.pancakes[i];
+        const FTF_Pancake* p = front_cuda.pancakes[i];
         //assert(p->f >= p->f_bar);
         if(p->f < min_ftf) min_ftf = p->f;
         if(p->f >= UB) {
@@ -80,7 +80,7 @@ public:
     }
   }
 
-  void expand_node(set& open, hash_set& open_hash, ftf_cudastructure<FTF_Pancake>& cuda, const hash_set& other_open, hash_set& closed, std::vector<FTF_Pancake>* expansions_in_order = nullptr)
+  void expand_node(set& open, hash_set& open_hash, ftf_cudastructure<FTF_Pancake, FTFPancakeHash, FTFPancakeEqual>& cuda, const hash_set& other_open, hash_set& closed, std::vector<FTF_Pancake>* expansions_in_order = nullptr)
   {
     const FTF_Pancake* next_val = *open.begin();
 

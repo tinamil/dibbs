@@ -117,10 +117,15 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\John\git\dibbs\tsl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <WholeProgramOptimization>true</WholeProgramOptimization>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <ControlFlowGuard>false</ControlFlowGuard>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <CreateHotpatchableImage>false</CreateHotpatchableImage>
+      <GuardEHContMetadata>false</GuardEHContMetadata>
+      <EnableModules>true</EnableModules>
     </ClCompile>
     <Link>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
@@ -132,14 +137,10 @@
     <CudaCompile>
       <FastMath>true</FastMath>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <Optimization>O3</Optimization>
+      <Optimization>O2</Optimization>
       <CodeGeneration>compute_86,sm_86</CodeGeneration>
       <AdditionalOptions>--std c++17  --expt-relaxed-constexpr %(AdditionalOptions)</AdditionalOptions>
-      <InterleaveSourceInPTX>true</InterleaveSourceInPTX>
-      <GPUDebugInfo>true</GPUDebugInfo>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <HostDebugInfo>true</HostDebugInfo>
-      <Warning>InheritFromHost</Warning>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

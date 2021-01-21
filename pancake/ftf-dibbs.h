@@ -21,6 +21,7 @@
 
 class FTF_Dibbs
 {
+  static constexpr size_t CUDA_STREAMS_COUNT = 1;
 public:
 
   typedef std::set<const FTF_Pancake*, FTFPancakeFSortHighG> set;
@@ -31,7 +32,7 @@ public:
   set open_f, open_b;
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
-  ftf_cudastructure<FTF_Pancake> forward_index, backward_index;
+  ftf_cudastructure<FTF_Pancake, FTFPancakeHash, FTFPancakeEqual> forward_index, backward_index;
   #ifdef FTF_HASH
   ftf_matchstructure f_match, b_match;
   #endif
@@ -39,9 +40,8 @@ public:
   size_t UB;
   size_t lbmin;
   size_t memory;
-  static constexpr size_t num_cuda = 1;
-  static inline std::vector<mycuda> cuda_vector = std::vector<mycuda>(num_cuda);
-  static inline std::vector<std::vector<FTF_Pancake*>> new_pancakes_vector = std::vector<std::vector<FTF_Pancake*>>(num_cuda);
+  static inline std::vector<mycuda> cuda_vector = std::vector<mycuda>(CUDA_STREAMS_COUNT);
+  static inline std::vector<std::vector<FTF_Pancake*>> new_pancakes_vector = std::vector<std::vector<FTF_Pancake*>>(CUDA_STREAMS_COUNT);
 
   FTF_Dibbs() : expansions(0), UB(0), lbmin(0), memory(0)
   {
@@ -65,9 +65,9 @@ public:
     }
     #endif
     int count = 0;
-    for(int cuda_count = 0; cuda_count < num_cuda; ++cuda_count) {
+    for(int cuda_count = 0; cuda_count < CUDA_STREAMS_COUNT; ++cuda_count) {
       new_pancakes_vector[cuda_count].clear();
-      while(!open.empty() && (*open.begin())->f == f_val/* && (*open.begin())->g == g_val*/ && ++count <= (BATCH_SIZE / NUM_PANCAKES))
+      while(UB > lbmin && !open.empty() && (*open.begin())->f == f_val/* && (*open.begin())->g == g_val*/ && ++count <= (BATCH_SIZE / NUM_PANCAKES / CUDA_STREAMS_COUNT))
       {
         const FTF_Pancake* next_val = *open.begin();
         
@@ -75,8 +75,8 @@ public:
         assert(it_hash != open_hash.end());
         open_hash.erase(it_hash);
         open.erase(next_val);
-        assert(open_hash.size() == open.size());
         my_index.erase(next_val);
+        assert(open_hash.size() == open.size());
         assert(open.size() == my_index.size());
         #ifdef FTF_HASH
         my_match->erase(next_val);
@@ -92,37 +92,41 @@ public:
           if((size_t)new_action.g + new_action.h >= UB) {
             continue;
           }
-
+          auto it_other = other_open.find(&new_action);
+          if(it_other != other_open.end())
+          {
+            #ifdef HISTORY
+            if((*it_other)->g + new_action.g < UB)
+            {
+              if(new_action.dir == Direction::forward)
+              {
+                best_f = new_action;
+                best_b = **it_other;
+              }
+              else
+              {
+                best_f = **it_other;
+                best_b = new_action;
+              }
+            }
+            #endif  
+            size_t combined = (size_t)(*it_other)->g + new_action.g;
+            if(combined < UB)
+            {
+              UB = combined;
+            }
+          }
           auto it_closed = closed.find(&new_action);
           if(it_closed == closed.end())
           {
-            auto it_other = other_open.find(&new_action);
-            if(it_other != other_open.end())
-            {
-              #ifdef HISTORY
-              if((*it_other)->g + new_action.g < UB)
-              {
-                if(new_action.dir == Direction::forward)
-                {
-                  best_f = new_action;
-                  best_b = **it_other;
-                }
-                else
-                {
-                  best_f = **it_other;
-                  best_b = new_action;
-                }
-              }
-              #endif  
-              size_t combined = (size_t)(*it_other)->g + new_action.g;
-              if(combined < UB)
-              {
-                UB = combined;
-              }
-            }
+            auto ptr = storage.push_back(new_action);
+            new_pancakes_vector[cuda_count].push_back(ptr);
           }
-          auto ptr = storage.push_back(new_action);
-          new_pancakes_vector[cuda_count].push_back(ptr);
+          else if((*it_closed)->g > new_action.g) {
+            auto ptr = storage.push_back(new_action);
+            new_pancakes_vector[cuda_count].push_back(ptr);
+            closed.erase(it_closed);
+          }
         }
       }
       if(new_pancakes_vector[cuda_count].size() > 0) {
@@ -133,7 +137,7 @@ public:
       }
     }
 
-    for(int cuda_count = 0; cuda_count < num_cuda; ++cuda_count) {
+    for(int cuda_count = 0; cuda_count < CUDA_STREAMS_COUNT && UB > lbmin; ++cuda_count) {
       uint32_t* answers = cuda_vector[cuda_count].get_answers();
       std::vector<FTF_Pancake*>& pancakes = new_pancakes_vector[cuda_count];
       for(int i = 0; i < pancakes.size(); ++i)
@@ -157,15 +161,16 @@ public:
         {
           if((*it_open)->g <= ptr->g)
           {
-            pancakes.erase(pancakes.begin() + i);
+            pancakes[i] = pancakes.back();
+            pancakes.resize(pancakes.size() - 1);
             i -= 1;
             continue;
           }
           else
           {
-            my_index.erase(&**it_open);
             size_t num_erased = open.erase(&**it_open);
             assert(num_erased == 1);
+            my_index.erase(*it_open);
             #ifdef FTF_HASH
             my_match->erase(&**it_open);
             #endif
@@ -173,18 +178,20 @@ public:
             assert(open_hash.size() == open.size());
           }
         }
+        assert(my_index.contains(ptr) == false);
         auto [it, success] = open.insert(ptr);
         assert(success);
         auto [it2, success2] = open_hash.insert(ptr);
         assert(success2);
         assert(open_hash.size() == open.size());
-        assert(my_index.size() + i + 1 == open.size());
+        my_index.insert(ptr);
+        assert(open.size() == my_index.size());
         #ifdef FTF_HASH
         my_match->insert(ptr);
         #endif
       }
-      my_index.insert(pancakes);
-      assert(open.size() == my_index.size());
+      //Consistency errors with the pancakes vector, need to delete an earlier pancake
+      //my_index.insert(pancakes);
     }
   }
 
