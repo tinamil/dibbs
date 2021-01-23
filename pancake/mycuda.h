@@ -15,8 +15,6 @@
 class mycuda
 {
   static inline cublasHandle_t  handle = nullptr;
-  static inline uint32_t* d_a = nullptr;
-  static inline uint32_t* d_g_vals = nullptr;
   static inline float* one = nullptr;
   static inline float* neg_one = nullptr;
   static inline float* zero = nullptr;
@@ -28,6 +26,8 @@ class mycuda
   uint32_t* d_mult_results = nullptr;
   uint32_t* d_answers = nullptr;
   uint32_t* h_answers = nullptr;
+  uint32_t* d_a = nullptr;
+  uint32_t* d_g_vals = nullptr;
 
 public:
   cudaStream_t stream = nullptr;
@@ -37,6 +37,7 @@ public:
 
   mycuda()
   {
+    std::cout << "Allocating CUDA variables and stream\n";
     initialize();
     CUDA_CHECK_RESULT(cudaStreamCreate(&stream));
   }

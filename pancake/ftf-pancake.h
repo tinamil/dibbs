@@ -9,7 +9,7 @@
 #include "hash_array.h"
 #include <string>
 
-static constexpr size_t BATCH_SIZE = 512;
+static constexpr size_t BATCH_SIZE = 1024;
 //#define FTF_HASH
 
 class FTF_Pancake

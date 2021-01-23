@@ -47,3 +47,5 @@ struct hash_array
     return tmp;
   }
 };
+
+static_assert(sizeof(hash_array) == sizeof(uint32_t) * NUM_INTS_PER_PANCAKE);

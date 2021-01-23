@@ -205,7 +205,7 @@ public:
     //assert(start.h == goal.h);
     auto ptr_start = storage.push_back(start);
     forward_index.insert(ptr_start);
-    ptr_start->ftf_h = ptr_start->f = forward_index.match_one(&goal);
+    ptr_start->ftf_h = ptr_start->f = forward_index.match_one(cuda_vector[0], &goal);
     assert(ptr_start->ftf_h == MAX(ptr_start->h, goal.h));
     #ifdef FTF_HASH
     f_match.insert(ptr_start);
@@ -226,8 +226,10 @@ public:
     if(memcmp(start.source, goal.source, NUM_PANCAKES + 1) == 0) UB = 0;
     PROCESS_MEMORY_COUNTERS memCounter;
     bool forward = false;
+    int i = 0;
     while(open_f.size() > 0 && open_b.size() > 0 && UB > lbmin)
     {
+      if(++i % 500 == 0) std::cout << i << " ";
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
       memory = std::max(memory, memCounter.PagefileUsage);
@@ -235,31 +237,36 @@ public:
       {
         break;
       }
+      try {
+        if((*open_f.begin())->f < (*open_b.begin())->f)
+        {
+          expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
+          forward = open_f.size() < open_b.size();
+        }
+        else if((*open_f.begin())->f > (*open_b.begin())->f)
+        {
+          expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
+          forward = open_f.size() < open_b.size();
+        }
+        else if(forward)
+        //else if(open_f.size() <= open_b.size())
+        {
+          expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
+          forward = open_f.size() < 2 * open_b.size();
+        }
+        else
+        {
+          expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
+          forward = !(open_b.size() < 2 * open_f.size());
+        }
 
-      if((*open_f.begin())->f < (*open_b.begin())->f)
-      {
-        expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
-        forward = open_f.size() < open_b.size();
+        if(open_f.size() > 0 && open_b.size() > 0) {
+          lbmin = std::max((*open_f.begin())->f, (*open_b.begin())->f);
+        }
       }
-      else if((*open_f.begin())->f > (*open_b.begin())->f)
-      {
-        expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
-        forward = open_f.size() < open_b.size();
-      }
-      else if(forward)
-      //else if(open_f.size() <= open_b.size())
-      {
-        expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
-        forward = open_f.size() < 2 * open_b.size();
-      }
-      else
-      {
-        expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
-        forward = !(open_b.size() < 2 * open_f.size());
-      }
-
-      if(open_f.size() > 0 && open_b.size() > 0) {
-        lbmin = std::max((*open_f.begin())->f, (*open_b.begin())->f);
+      catch(std::exception e) {
+        std::cout << "Failure at " << i << "\n";
+        break;
       }
     }
 
@@ -276,6 +283,7 @@ public:
     }
     std::cout << std::endl;
     #endif
+    
     if(UB > (*open_f.begin())->f && UB > (*open_b.begin())->f)
     {
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);

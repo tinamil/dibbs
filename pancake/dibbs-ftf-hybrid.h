@@ -37,6 +37,7 @@ public:
   size_t memory;
   size_t expansions_cstar = 0;
   bool phase_2 = false;
+  static inline mycuda cuda;
 
   dibbs_ftf_hybrid() : open_f(), open_b(), closed_f(), closed_b(), open_f_hash(), open_b_hash(), expansions(0), UB(0), memory(0) {}
 
@@ -53,7 +54,7 @@ public:
       }
     }
     if(back_cuda.pancakes.size() < front_cuda.pancakes.size()) {
-      front_cuda.match_all(back_cuda);
+      front_cuda.match_all(cuda, back_cuda);
       size_t min_ftf = back_cuda.pancakes[0]->f;
       for(int i = 1; i < back_cuda.pancakes.size(); ++i) {
         const FTF_Pancake* p = back_cuda.pancakes[i];
@@ -66,7 +67,7 @@ public:
       back_ftf_f = min_ftf;
     }
     else {
-      back_cuda.match_all(front_cuda);
+      back_cuda.match_all(cuda, front_cuda);
       size_t min_ftf = front_cuda.pancakes[0]->f;
       for(int i = 1; i < front_cuda.pancakes.size(); ++i) {
         const FTF_Pancake* p = front_cuda.pancakes[i];

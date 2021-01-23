@@ -60,8 +60,14 @@ void cuda_vector<T>::resize(size_t new_capacity)
   {
     throw std::exception("Tried to resize down, not supported");
   }
+  size_t free_mem, total_mem;
+  CUDA_CHECK_RESULT(cudaMemGetInfo(&free_mem, &total_mem));
+  if(free_mem < new_capacity * sizeof(T)) {
+    std::cout << "Out of CUDA memory: " << free_mem / 1024. / 1024. / 1024. << " GB\n";
+    throw new std::exception("Out of CUDA memory");
+  }
 
-  T* tmp_ptr;
+  T* tmp_ptr = nullptr;
   CUDA_CHECK_RESULT(cudaMalloc(&tmp_ptr, new_capacity * sizeof(T)));
 
   if(d_ptr)
@@ -99,7 +105,7 @@ void cuda_vector<T>::insert(const T* begin, const T* end)
   if(size_diff == 0) return;
   if(d_ptr == nullptr || size_val + size_diff >= capacity)
   {
-    resize(std::max(size_val + size_diff, static_cast<uint64_t>(GROWTH_FACTOR * capacity)));
+    resize(MAX(1024 * 1024 / sizeof(T), MAX(size_val + size_diff, static_cast<uint64_t>(GROWTH_FACTOR * capacity))));
   }
   CUDA_CHECK_RESULT(cudaMemcpyAsync(d_ptr + size_val, begin, sizeof(T) * size_diff, cudaMemcpyHostToDevice, stream));
   size_val += size_diff;

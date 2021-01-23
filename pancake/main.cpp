@@ -1,13 +1,13 @@
 
 //#define IDA_STAR
-#define A_STAR
+//#define A_STAR
 //#define REVERSE_ASTAR
 //#define IDD
-#define DIBBS
-#define GBFHS
+//#define DIBBS
+//#define GBFHS
 //#define NBS
-#define DVCBS
-#include "dibbs-2phase.hpp"
+//#define DVCBS
+//#include "dibbs-2phase.hpp"
 //#include "2phase-lookahead.h"
 #include "ftf-dibbs.h"
 //#include "dibbs-ftf-hybrid.h"
@@ -625,6 +625,7 @@ void output_data(std::ostream& stream)
       std::cout << i << " ";
       generate_random_instance(seed, problem);
       Pancake::Initialize_Dual(problem);
+      //if(i != 20) continue;
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
@@ -773,6 +774,48 @@ void run_random_test()
   output_data(file);
 }
 
+template<size_t range_from, size_t range_to>
+uint32_t good_random()
+{
+  static std::random_device                  rand_dev;
+  static std::mt19937                        generator(rand_dev());
+  static std::uniform_int_distribution<uint32_t>    distr(range_from, range_to);
+  return distr(generator);
+}
+
+void test_cuda()
+{
+
+  size_t my_num_pancakes = 1000000;
+  size_t other_num_pancakes = BATCH_SIZE;
+  uint32_t* d_a, * d_g_vals, * d_hash_vals, * d_mult_results, * d_answers;
+  cudaMalloc(&d_a, sizeof(hash_array) * my_num_pancakes);
+  cudaMalloc(&d_g_vals, sizeof(uint32_t) * my_num_pancakes);
+  cudaMalloc(&d_hash_vals, sizeof(hash_array) * other_num_pancakes);
+  cudaMalloc(&d_mult_results, sizeof(uint32_t) * other_num_pancakes * my_num_pancakes);
+  cudaMalloc(&d_answers, sizeof(uint32_t) * other_num_pancakes);
+
+  uint32_t* a, * g_vals, * hash_vals, * answers;
+  cudaHostAlloc(&a, sizeof(hash_array) * my_num_pancakes, cudaHostAllocWriteCombined);
+  cudaHostAlloc(&g_vals, sizeof(uint32_t) * my_num_pancakes, cudaHostAllocWriteCombined);
+  cudaHostAlloc(&hash_vals, sizeof(hash_array) * other_num_pancakes, cudaHostAllocWriteCombined);
+  cudaHostAlloc(&answers, sizeof(uint32_t) * other_num_pancakes, cudaHostAllocDefault);
+
+  for(size_t i = 0; i < my_num_pancakes; ++i) {
+    g_vals[i] = good_random<0, 50>();
+    a[i] = good_random<0, UINT32_MAX>();
+  }
+  for(size_t i = 0; i < other_num_pancakes; ++i) {
+    hash_vals[i] = good_random<0, UINT32_MAX>();
+  }
+  CUDA_CHECK_RESULT(cudaMemcpy(d_a, a, sizeof(hash_array) * my_num_pancakes, cudaMemcpyHostToDevice));
+  CUDA_CHECK_RESULT(cudaMemcpy(d_g_vals, g_vals, sizeof(uint32_t) * my_num_pancakes, cudaMemcpyHostToDevice));
+  CUDA_CHECK_RESULT(cudaMemcpy(d_hash_vals, hash_vals, sizeof(hash_array) * other_num_pancakes, cudaMemcpyHostToDevice));
+  bitwise_set_intersection(0, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results);
+  reduce_min(0, other_num_pancakes, my_num_pancakes, d_mult_results, d_answers);
+  CUDA_CHECK_RESULT(cudaMemcpy(answers, d_answers, sizeof(uint32_t) * other_num_pancakes, cudaMemcpyDeviceToHost));
+}
+
 int main()
 {
   int deviceCount;
@@ -786,6 +829,8 @@ int main()
   hash_table::initialize_hash_values();
   mycuda::initialize();
   run_random_test();
+
+  //test_cuda();
 
   //std::cout << "\nDone\n";
   //while(true);

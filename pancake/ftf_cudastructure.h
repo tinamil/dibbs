@@ -45,6 +45,11 @@ public:
 
 public:
   ftf_cudastructure() {}
+  ~ftf_cudastructure()
+  {
+    device_g_values.clear();
+    device_hash_values.clear();
+  }
 
   size_t size() const
   {
@@ -126,9 +131,9 @@ public:
     assert(index_map.size() == pancakes.size());
   }
 
-  uint32_t match_one(const PancakeType* val);
+  uint32_t match_one(mycuda& cuda, const PancakeType* val);
   void match(mycuda& cuda, std::vector<PancakeType*>& val);
-  void match_all(ftf_cudastructure<PancakeType, Hash, Equal>& other);
+  void match_all(mycuda& cuda, ftf_cudastructure<PancakeType, Hash, Equal>& other);
   //void match_all_batched(ftf_cudastructure<PancakeType>& other);
 };
 
@@ -151,10 +156,9 @@ bool FTF_Less<PancakeType>::operator()(const PancakeType* lhs, const PancakeType
 }
 
 template <typename PancakeType, typename Hash, typename Equal>
-uint32_t ftf_cudastructure<PancakeType, Hash, Equal>::match_one(const PancakeType* val)
+uint32_t ftf_cudastructure<PancakeType, Hash, Equal>::match_one(mycuda& cuda, const PancakeType* val)
 {
   load_device();
-  mycuda cuda;
   #ifndef CUDA_VECTOR
   cuda.set_matrix(opposite_hash_values.size(), (float*)opposite_hash_values.data(), g_values.data());
   #else
@@ -194,11 +198,10 @@ void ftf_cudastructure<PancakeType, Hash, Equal>::match(mycuda& cuda, std::vecto
 
 //Must call get_answers() to retrieve the answers, because this is calculated asynchronously and get_answers() will wait until its done
 template <typename PancakeType, typename Hash, typename Equal>
-void ftf_cudastructure<PancakeType, Hash, Equal>::match_all(ftf_cudastructure<PancakeType, Hash, Equal>& other)
+void ftf_cudastructure<PancakeType, Hash, Equal>::match_all(mycuda& cuda, ftf_cudastructure<PancakeType, Hash, Equal>& other)
 {
   load_device();
   other.load_device();
-  mycuda cuda;
   size_t completed = 0;
   while(completed < other.pancakes.size()) {
     size_t to_do = std::min(BATCH_SIZE, other.pancakes.size() - completed);

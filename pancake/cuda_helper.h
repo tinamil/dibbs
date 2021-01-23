@@ -158,7 +158,8 @@ static inline std::string errorString(cudaError_t errorCode)
 	if (res != cudaSuccess)																				\
 	{																									\
 		std::cout << "Fatal : cudaError is \"" << errorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
-		assert(res == cudaSuccess);																		\
+		if(res != cudaSuccess) throw std::exception("FATAL CUDA"); \
+    assert(res == cudaSuccess);																		\
 	}																									\
 }
 #define CUBLAS_CHECK_RESULT(f)																				\

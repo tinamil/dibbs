@@ -9,7 +9,7 @@ void mycuda::set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint32_t* g_val
   my_num_pancakes = m_rows;
 
   if(n_cols > max_other_pancakes) {
-    max_other_pancakes = n_cols;
+    max_other_pancakes = MAX(BATCH_SIZE, n_cols);
     if(h_answers) { cudaFreeHost(h_answers);       h_answers = nullptr; }
     if(d_answers) { cudaFree(d_answers);           d_answers = nullptr; }
     if(h_hash_vals) { cudaFreeHost(h_hash_vals);   h_hash_vals = nullptr; }
@@ -21,11 +21,24 @@ void mycuda::set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint32_t* g_val
   }
 
   if(other_num_pancakes * my_num_pancakes > d_mult_results_size) {
-    d_mult_results_size = other_num_pancakes * my_num_pancakes;
+    d_mult_results_size = MAX(other_num_pancakes * my_num_pancakes, d_mult_results_size * 1.5);
     if(d_mult_results) {
       CUDA_CHECK_RESULT(cudaFree(d_mult_results));
       d_mult_results = nullptr;
     }
+    size_t free_mem, total_mem;
+    CUDA_CHECK_RESULT(cudaMemGetInfo(&free_mem, &total_mem));
+    if(d_mult_results_size * sizeof(uint32_t) > free_mem) {
+
+      if(other_num_pancakes * my_num_pancakes * sizeof(uint32_t) > free_mem) {
+        std::cout << "Out of memory: " << free_mem / 1024. / 1024. / 1024. << " GB\n";
+        throw new std::exception("Out of memory");
+      }
+      else {
+        d_mult_results_size = other_num_pancakes * my_num_pancakes;
+      }
+    }
+
     CUDA_CHECK_RESULT(cudaMalloc((void**)&d_mult_results, d_mult_results_size * sizeof(uint32_t)));
   }
 
