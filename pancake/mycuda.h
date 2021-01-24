@@ -23,11 +23,11 @@ class mycuda
   size_t max_other_pancakes = 0;
   size_t d_mult_results_size = 0;
   uint32_t* d_hash_vals = nullptr;
-  uint32_t* d_mult_results = nullptr;
-  uint32_t* d_answers = nullptr;
-  uint32_t* h_answers = nullptr;
+  uint8_t* d_mult_results = nullptr;
+  uint8_t* d_answers = nullptr;
+  uint8_t* h_answers = nullptr;
   uint32_t* d_a = nullptr;
-  uint32_t* d_g_vals = nullptr;
+  uint8_t* d_g_vals = nullptr;
 
 public:
   cudaStream_t stream = nullptr;
@@ -66,7 +66,7 @@ public:
     d_hash_vals = nullptr;
   }
 
-  uint32_t* get_answers()
+  uint8_t* get_answers()
   {
     cudaStreamSynchronize(stream);
     return h_answers;
@@ -103,7 +103,7 @@ public:
     //if (!d_batch_hash_vals) CUDA_CHECK_RESULT(cudaMalloc((void**)&d_batch_hash_vals, MAX_BATCH * MAX_PANCAKES * sizeof(float)));
     //if (!d_batch_answers) CUDA_CHECK_RESULT(cudaMalloc((void**)&d_batch_answers, MAX_BATCH * sizeof(float)));
   }
-  void set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint32_t* g_vals);
+  void set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint8_t* g_vals);
   //void set_matrix(size_t m_rows, const float* A, const float* g_vals);
 
   void batch_vector_matrix();

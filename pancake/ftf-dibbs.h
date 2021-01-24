@@ -138,7 +138,7 @@ public:
     }
 
     for(int cuda_count = 0; cuda_count < CUDA_STREAMS_COUNT && UB > lbmin; ++cuda_count) {
-      uint32_t* answers = cuda_vector[cuda_count].get_answers();
+      uint8_t* answers = cuda_vector[cuda_count].get_answers();
       std::vector<FTF_Pancake*>& pancakes = new_pancakes_vector[cuda_count];
       for(int i = 0; i < pancakes.size(); ++i)
       {
@@ -149,7 +149,6 @@ public:
         pancakes[i]->ftf_h = answers[i];
         if(answers[i] == 255) std::cout << "ERROR";
         assert(pancakes[i]->ftf_h >= pancakes[i]->h);
-        if(pancakes[i]->h > pancakes[i]->ftf_h) pancakes[i]->ftf_h = pancakes[i]->h;
         pancakes[i]->f = pancakes[i]->g + pancakes[i]->ftf_h;
       }
       for(int i = 0; i < pancakes.size(); ++i)

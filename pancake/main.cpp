@@ -786,20 +786,25 @@ uint32_t good_random()
 void test_cuda()
 {
 
-  size_t my_num_pancakes = 1000000;
-  size_t other_num_pancakes = BATCH_SIZE;
-  uint32_t* d_a, * d_g_vals, * d_hash_vals, * d_mult_results, * d_answers;
-  cudaMalloc(&d_a, sizeof(hash_array) * my_num_pancakes);
-  cudaMalloc(&d_g_vals, sizeof(uint32_t) * my_num_pancakes);
-  cudaMalloc(&d_hash_vals, sizeof(hash_array) * other_num_pancakes);
-  cudaMalloc(&d_mult_results, sizeof(uint32_t) * other_num_pancakes * my_num_pancakes);
-  cudaMalloc(&d_answers, sizeof(uint32_t) * other_num_pancakes);
+  constexpr size_t my_num_pancakes = 1000000;
+  constexpr size_t other_num_pancakes = BATCH_SIZE;
 
-  uint32_t* a, * g_vals, * hash_vals, * answers;
+  uint32_t* d_a, * d_hash_vals;
+  cudaMalloc(&d_a, sizeof(hash_array) * my_num_pancakes);
+  cudaMalloc(&d_hash_vals, sizeof(hash_array) * other_num_pancakes);
+
+  uint8_t* d_g_vals, * d_mult_results, * d_answers;
+  cudaMalloc(&d_g_vals, sizeof(uint8_t) * my_num_pancakes);
+  cudaMalloc(&d_mult_results, sizeof(uint8_t) * other_num_pancakes * my_num_pancakes);
+  cudaMalloc(&d_answers, sizeof(uint8_t) * other_num_pancakes);
+
+  uint32_t* a, * hash_vals;
   cudaHostAlloc(&a, sizeof(hash_array) * my_num_pancakes, cudaHostAllocWriteCombined);
-  cudaHostAlloc(&g_vals, sizeof(uint32_t) * my_num_pancakes, cudaHostAllocWriteCombined);
   cudaHostAlloc(&hash_vals, sizeof(hash_array) * other_num_pancakes, cudaHostAllocWriteCombined);
-  cudaHostAlloc(&answers, sizeof(uint32_t) * other_num_pancakes, cudaHostAllocDefault);
+
+  uint8_t* g_vals, * answers;
+  cudaHostAlloc(&g_vals, sizeof(uint8_t) * my_num_pancakes, cudaHostAllocWriteCombined);
+  cudaHostAlloc(&answers, sizeof(uint8_t) * other_num_pancakes, cudaHostAllocDefault);
 
   for(size_t i = 0; i < my_num_pancakes; ++i) {
     g_vals[i] = good_random<0, 50>();
@@ -809,11 +814,11 @@ void test_cuda()
     hash_vals[i] = good_random<0, UINT32_MAX>();
   }
   CUDA_CHECK_RESULT(cudaMemcpy(d_a, a, sizeof(hash_array) * my_num_pancakes, cudaMemcpyHostToDevice));
-  CUDA_CHECK_RESULT(cudaMemcpy(d_g_vals, g_vals, sizeof(uint32_t) * my_num_pancakes, cudaMemcpyHostToDevice));
+  CUDA_CHECK_RESULT(cudaMemcpy(d_g_vals, g_vals, sizeof(uint8_t) * my_num_pancakes, cudaMemcpyHostToDevice));
   CUDA_CHECK_RESULT(cudaMemcpy(d_hash_vals, hash_vals, sizeof(hash_array) * other_num_pancakes, cudaMemcpyHostToDevice));
   bitwise_set_intersection(0, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results);
   reduce_min(0, other_num_pancakes, my_num_pancakes, d_mult_results, d_answers);
-  CUDA_CHECK_RESULT(cudaMemcpy(answers, d_answers, sizeof(uint32_t) * other_num_pancakes, cudaMemcpyDeviceToHost));
+  CUDA_CHECK_RESULT(cudaMemcpy(answers, d_answers, sizeof(uint8_t) * other_num_pancakes, cudaMemcpyDeviceToHost));
 }
 
 int main()

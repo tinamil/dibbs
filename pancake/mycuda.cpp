@@ -1,7 +1,7 @@
 #pragma once
 #include "mycuda.h"
 
-void mycuda::set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint32_t* g_vals)
+void mycuda::set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint8_t* g_vals)
 {
   d_a = A;
   d_g_vals = g_vals;
@@ -14,8 +14,8 @@ void mycuda::set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint32_t* g_val
     if(d_answers) { cudaFree(d_answers);           d_answers = nullptr; }
     if(h_hash_vals) { cudaFreeHost(h_hash_vals);   h_hash_vals = nullptr; }
     if(d_hash_vals) { cudaFree(d_hash_vals);       d_hash_vals = nullptr; }
-    CUDA_CHECK_RESULT(cudaHostAlloc(&h_answers, max_other_pancakes * sizeof(uint32_t), cudaHostAllocDefault));
-    CUDA_CHECK_RESULT(cudaMalloc(&d_answers, max_other_pancakes * sizeof(uint32_t)));
+    CUDA_CHECK_RESULT(cudaHostAlloc(&h_answers, max_other_pancakes * sizeof(uint8_t), cudaHostAllocDefault));
+    CUDA_CHECK_RESULT(cudaMalloc(&d_answers, max_other_pancakes * sizeof(uint8_t)));
     CUDA_CHECK_RESULT(cudaHostAlloc(&h_hash_vals, max_other_pancakes * sizeof(hash_array), cudaHostAllocWriteCombined));
     CUDA_CHECK_RESULT(cudaMalloc(&d_hash_vals, max_other_pancakes * sizeof(hash_array)));
   }
@@ -28,9 +28,9 @@ void mycuda::set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint32_t* g_val
     }
     size_t free_mem, total_mem;
     CUDA_CHECK_RESULT(cudaMemGetInfo(&free_mem, &total_mem));
-    if(d_mult_results_size * sizeof(uint32_t) > free_mem) {
+    if(d_mult_results_size * sizeof(uint8_t) > free_mem) {
 
-      if(other_num_pancakes * my_num_pancakes * sizeof(uint32_t) > free_mem) {
+      if(other_num_pancakes * my_num_pancakes * sizeof(uint8_t) > free_mem) {
         std::cout << "Out of memory: " << free_mem / 1024. / 1024. / 1024. << " GB\n";
         throw new std::exception("Out of memory");
       }
@@ -39,7 +39,7 @@ void mycuda::set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint32_t* g_val
       }
     }
 
-    CUDA_CHECK_RESULT(cudaMalloc((void**)&d_mult_results, d_mult_results_size * sizeof(uint32_t)));
+    CUDA_CHECK_RESULT(cudaMalloc((void**)&d_mult_results, d_mult_results_size * sizeof(uint8_t)));
   }
 
 }
@@ -72,5 +72,5 @@ void mycuda::batch_vector_matrix()
   bitwise_set_intersection(stream, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results);
   //vector_add(stream, other_num_pancakes, my_num_pancakes, d_g_vals, d_mult_results);
   reduce_min(stream, other_num_pancakes, my_num_pancakes, d_mult_results, d_answers);
-  CUDA_CHECK_RESULT(cudaMemcpyAsync(h_answers, d_answers, sizeof(uint32_t) * other_num_pancakes, cudaMemcpyDeviceToHost, stream));
+  CUDA_CHECK_RESULT(cudaMemcpyAsync(h_answers, d_answers, sizeof(uint8_t) * other_num_pancakes, cudaMemcpyDeviceToHost, stream));
 }

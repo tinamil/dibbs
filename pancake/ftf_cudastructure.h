@@ -19,7 +19,7 @@ public:
   #define CUDA_VECTOR
   #ifdef CUDA_VECTOR
   cuda_vector<hash_array> device_hash_values;
-  cuda_vector<uint32_t> device_g_values;
+  cuda_vector<uint8_t> device_g_values;
   #else
   std::vector<hash_array> opposite_hash_values;
   std::vector<uint32_t> g_values;
@@ -28,7 +28,7 @@ public:
   std::vector<const PancakeType*> pancakes;
   bool valid_device_cache = false;
 
-  uint32_t* tmp_g_vals = nullptr;
+  uint8_t* tmp_g_vals = nullptr;
   hash_array* tmp_hash_arrays = nullptr;
   size_t capacity = 0;
 
@@ -131,7 +131,7 @@ public:
     assert(index_map.size() == pancakes.size());
   }
 
-  uint32_t match_one(mycuda& cuda, const PancakeType* val);
+  uint8_t match_one(mycuda& cuda, const PancakeType* val);
   void match(mycuda& cuda, std::vector<PancakeType*>& val);
   void match_all(mycuda& cuda, ftf_cudastructure<PancakeType, Hash, Equal>& other);
   //void match_all_batched(ftf_cudastructure<PancakeType>& other);
@@ -156,7 +156,7 @@ bool FTF_Less<PancakeType>::operator()(const PancakeType* lhs, const PancakeType
 }
 
 template <typename PancakeType, typename Hash, typename Equal>
-uint32_t ftf_cudastructure<PancakeType, Hash, Equal>::match_one(mycuda& cuda, const PancakeType* val)
+uint8_t ftf_cudastructure<PancakeType, Hash, Equal>::match_one(mycuda& cuda, const PancakeType* val)
 {
   load_device();
   #ifndef CUDA_VECTOR
@@ -169,7 +169,7 @@ uint32_t ftf_cudastructure<PancakeType, Hash, Equal>::match_one(mycuda& cuda, co
   to_hash_array(val, cuda.h_hash_vals);
   cuda.load_then_batch_vector_matrix();
   cudaStreamSynchronize(cuda.stream);
-  uint32_t* ptr = cuda.get_answers();
+  uint8_t* ptr = cuda.get_answers();
   return ptr[0];
 }
 
@@ -211,7 +211,7 @@ void ftf_cudastructure<PancakeType, Hash, Equal>::match_all(mycuda& cuda, ftf_cu
     other.synchronize();
     synchronize();
     cuda.batch_vector_matrix();
-    uint32_t* answers = cuda.get_answers();
+    uint8_t* answers = cuda.get_answers();
     cuda.clear_d_hash_vals();
     for(int i = 0; i < to_do; ++i) {
       FTF_Pancake* ptr = const_cast<FTF_Pancake*>(other.pancakes[i + completed]);
