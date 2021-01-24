@@ -1,13 +1,13 @@
 
 //#define IDA_STAR
-//#define A_STAR
+#define A_STAR
 //#define REVERSE_ASTAR
 //#define IDD
-//#define DIBBS
-//#define GBFHS
+#define DIBBS
+#define GBFHS
 //#define NBS
-//#define DVCBS
-//#include "dibbs-2phase.hpp"
+#define DVCBS
+#include "dibbs-2phase.hpp"
 //#include "2phase-lookahead.h"
 #include "ftf-dibbs.h"
 //#include "dibbs-ftf-hybrid.h"
