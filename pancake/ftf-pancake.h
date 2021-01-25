@@ -10,7 +10,10 @@
 #include <string>
 
 static constexpr size_t BATCH_SIZE = 1024;
-//#define FTF_HASH
+
+#ifndef NDEBUG
+#define FTF_HASH
+#endif
 
 class FTF_Pancake
 {

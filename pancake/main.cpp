@@ -1,13 +1,13 @@
 
 //#define IDA_STAR
-#define A_STAR
+//#define A_STAR
 //#define REVERSE_ASTAR
 //#define IDD
-#define DIBBS
-#define GBFHS
+//#define DIBBS
+//#define GBFHS
 //#define NBS
-#define DVCBS
-#include "dibbs-2phase.hpp"
+//#define DVCBS
+//#include "dibbs-2phase.hpp"
 //#include "2phase-lookahead.h"
 #include "ftf-dibbs.h"
 //#include "dibbs-ftf-hybrid.h"
@@ -625,7 +625,7 @@ void output_data(std::ostream& stream)
       std::cout << i << " ";
       generate_random_instance(seed, problem);
       Pancake::Initialize_Dual(problem);
-      //if(i != 20) continue;
+      //if(i != 66) continue;
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
@@ -816,8 +816,8 @@ void test_cuda()
   CUDA_CHECK_RESULT(cudaMemcpy(d_a, a, sizeof(hash_array) * my_num_pancakes, cudaMemcpyHostToDevice));
   CUDA_CHECK_RESULT(cudaMemcpy(d_g_vals, g_vals, sizeof(uint8_t) * my_num_pancakes, cudaMemcpyHostToDevice));
   CUDA_CHECK_RESULT(cudaMemcpy(d_hash_vals, hash_vals, sizeof(hash_array) * other_num_pancakes, cudaMemcpyHostToDevice));
-  bitwise_set_intersection(0, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results);
-  reduce_min(0, other_num_pancakes, my_num_pancakes, d_mult_results, d_answers);
+  bitwise_set_intersection(0, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results, d_answers);
+  //reduce_min(0, other_num_pancakes, my_num_pancakes, d_mult_results, d_answers);
   CUDA_CHECK_RESULT(cudaMemcpy(answers, d_answers, sizeof(uint8_t) * other_num_pancakes, cudaMemcpyDeviceToHost));
 }
 

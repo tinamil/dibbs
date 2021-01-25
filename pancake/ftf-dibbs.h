@@ -51,6 +51,7 @@ public:
   template<typename T>
   void expand_all_nodes(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, T& my_index, T& other_index)
   {
+    i++;
     auto f_val = (*open.begin())->f;
     auto g_val = (*open.begin())->g;
     #ifdef FTF_HASH
@@ -70,7 +71,7 @@ public:
       while(UB > lbmin && !open.empty() && (*open.begin())->f == f_val/* && (*open.begin())->g == g_val*/ && ++count <= (BATCH_SIZE / NUM_PANCAKES / CUDA_STREAMS_COUNT))
       {
         const FTF_Pancake* next_val = *open.begin();
-        
+
         auto it_hash = open_hash.find(next_val);
         assert(it_hash != open_hash.end());
         open_hash.erase(it_hash);
@@ -130,7 +131,18 @@ public:
         }
       }
       if(new_pancakes_vector[cuda_count].size() > 0) {
+        #ifndef NDEBUG
+        try {
+          other_index.match(cuda_vector[cuda_count], new_pancakes_vector[cuda_count]);
+        }
+        catch(std::exception e) {
+          std::cout << "Failed at iteration i = " << i << std::endl;
+          exit(-1);
+        }
+        #else
         other_index.match(cuda_vector[cuda_count], new_pancakes_vector[cuda_count]);
+        #endif
+
         #ifdef FTF_HASH
         other_match->match(new_pancakes_vector[cuda_count]);
         #endif
@@ -143,7 +155,7 @@ public:
       for(int i = 0; i < pancakes.size(); ++i)
       {
         #ifdef FTF_HASH
-        if(pancakes[i]->ftf_h != answers[i]) std::cout << "FTF Mismatch Error: " << std::to_string(pancakes[i]->ftf_h) << " did not equal the GPU value of " << answers[i] << "\n";
+        if(pancakes[i]->ftf_h != answers[i]) std::cout << "FTF Mismatch Error: " << std::to_string(pancakes[i]->ftf_h) << " did not equal the GPU value of " << std::to_string(answers[i]) << "\n";
         assert(pancakes[i]->ftf_h == answers[i]);
         #endif
         pancakes[i]->ftf_h = answers[i];
@@ -194,6 +206,7 @@ public:
     }
   }
 
+  int i = 0;
   #ifdef HISTORY
   Pancake best_f, best_b;
   #endif
@@ -225,10 +238,8 @@ public:
     if(memcmp(start.source, goal.source, NUM_PANCAKES + 1) == 0) UB = 0;
     PROCESS_MEMORY_COUNTERS memCounter;
     bool forward = false;
-    int i = 0;
     while(open_f.size() > 0 && open_b.size() > 0 && UB > lbmin)
     {
-      if(++i % 500 == 0) std::cout << i << " ";
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
       assert(result);
       memory = std::max(memory, memCounter.PagefileUsage);
@@ -236,36 +247,30 @@ public:
       {
         break;
       }
-      try {
-        if((*open_f.begin())->f < (*open_b.begin())->f)
-        {
-          expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
-          forward = open_f.size() < open_b.size();
-        }
-        else if((*open_f.begin())->f > (*open_b.begin())->f)
-        {
-          expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
-          forward = open_f.size() < open_b.size();
-        }
-        else if(forward)
-        //else if(open_f.size() <= open_b.size())
-        {
-          expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
-          forward = open_f.size() < 2 * open_b.size();
-        }
-        else
-        {
-          expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
-          forward = !(open_b.size() < 2 * open_f.size());
-        }
-
-        if(open_f.size() > 0 && open_b.size() > 0) {
-          lbmin = std::max((*open_f.begin())->f, (*open_b.begin())->f);
-        }
+      if((*open_f.begin())->f < (*open_b.begin())->f)
+      {
+        expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
+        forward = open_f.size() < open_b.size();
       }
-      catch(std::exception e) {
-        std::cout << "Failure at " << i << "\n";
-        break;
+      else if((*open_f.begin())->f > (*open_b.begin())->f)
+      {
+        expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
+        forward = open_f.size() < open_b.size();
+      }
+      else if(forward)
+      //else if(open_f.size() <= open_b.size())
+      {
+        expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
+        forward = open_f.size() < 2 * open_b.size();
+      }
+      else
+      {
+        expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
+        forward = !(open_b.size() < 2 * open_f.size());
+      }
+
+      if(open_f.size() > 0 && open_b.size() > 0) {
+        lbmin = std::max((*open_f.begin())->f, (*open_b.begin())->f);
       }
     }
 
@@ -282,7 +287,7 @@ public:
     }
     std::cout << std::endl;
     #endif
-    
+
     if(UB > (*open_f.begin())->f && UB > (*open_b.begin())->f)
     {
       return std::make_tuple(std::numeric_limits<double>::infinity(), expansions, memory);

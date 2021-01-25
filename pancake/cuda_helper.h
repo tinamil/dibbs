@@ -148,10 +148,10 @@ static inline std::string errorString(cudaError_t errorCode)
       return "UNKNOWN_ERROR";
   }
 }
-//#ifdef NDEBUG
-//#define CUDA_CHECK_RESULT(f) (f)
-//#define CUBLAS_CHECK_RESULT(f) (f)
-//#else
+#ifdef NDEBUG_CUDA
+#define CUDA_CHECK_RESULT(f) (f)
+#define CUBLAS_CHECK_RESULT(f) (f)
+#else
 #define CUDA_CHECK_RESULT(f)																				\
 {																										\
 	cudaError_t res = (f);																					\
@@ -171,4 +171,4 @@ static inline std::string errorString(cudaError_t errorCode)
 		assert(res == CUBLAS_STATUS_SUCCESS);																		\
 	}																									\
 }
-//#endif
+#endif

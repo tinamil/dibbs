@@ -137,10 +137,10 @@
     <CudaCompile>
       <FastMath>true</FastMath>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <Optimization>O2</Optimization>
+      <Optimization>Od</Optimization>
       <CodeGeneration>compute_86,sm_86</CodeGeneration>
       <AdditionalOptions>--std c++17  --expt-relaxed-constexpr %(AdditionalOptions)</AdditionalOptions>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat>None</DebugInformationFormat>
       <GenerateLineInfo>true</GenerateLineInfo>
     </CudaCompile>
   </ItemDefinitionGroup>
