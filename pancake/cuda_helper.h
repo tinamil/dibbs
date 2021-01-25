@@ -148,7 +148,7 @@ static inline std::string errorString(cudaError_t errorCode)
       return "UNKNOWN_ERROR";
   }
 }
-#ifdef NDEBUG_CUDA
+#ifdef NDEBUG
 #define CUDA_CHECK_RESULT(f) (f)
 #define CUBLAS_CHECK_RESULT(f) (f)
 #else

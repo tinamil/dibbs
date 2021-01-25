@@ -156,9 +156,19 @@ void cuda_min_kernel(int num_batch, int num_frontier, const T* __restrict__ mult
   }
 }
 
+
+__global__ void transpose_device(const int rowDim, const int colDim, const uint32_t* __restrict__ input, uint32_t* output)
+{
+  for(int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < rowDim * colDim; tid += blockDim.x * gridDim.x) {
+    const int orow = tid % colDim;
+    const int ocol = tid / colDim;
+    output[orow * rowDim + ocol] = input[tid];
+  }
+}
+
 #define TILE 16
 __global__
-void tiled_cuda_bitwise_set_intersection(const uint32_t rows_a,//x-axis
+void tiled_cuda_bitwise_set_intersection(const uint32_t cols_a,//x-axis
                                          const uint32_t rows_b,//y-axis
                                          const unsigned max_a,
                                          const uint32_t* __restrict__ hash_a,
@@ -166,7 +176,7 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t rows_a,//x-axis
                                          const uint32_t* __restrict__ hash_b,
                                          uint8_t* __restrict__ results)
 {
-  assert(blockIdx.x * blockDim.x < rows_a);
+  assert(blockIdx.x * blockDim.x < cols_a);
   assert(blockIdx.y * blockDim.y < rows_b);
 
   __shared__ uint8_t sMin[TILE][TILE];
@@ -200,13 +210,14 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t rows_a,//x-axis
   //x goes 0 to rows_a
   for(uint32_t bx = blockIdx.x; bx < max_a; bx += gridDim.x) {
     uint32_t output_col = bx * blockDim.x + threadIdx.x;
-    if(output_col < rows_a) {
+    if(output_col < cols_a) {
       for(int tidy = threadIdx.y; tidy < NUM_INTS_PER_PANCAKE; tidy += blockDim.y) {
-        sA[tidy][threadIdx.x] = hash_a[output_col * NUM_INTS_PER_PANCAKE + tidy];
+        sA[tidy][threadIdx.x] = hash_a[tidy * cols_a + output_col];
+        //sA[tidy][threadIdx.x] = hash_a[tidy + output_col * NUM_INTS_PER_PANCAKE];
       }
     }
     block.sync();
-    if(output_row < rows_b && output_col < rows_a) {
+    if(output_row < rows_b && output_col < cols_a) {
       #pragma unroll
       for(uint32_t i = 0; i < NUM_INTS_PER_PANCAKE; ++i) {
         localA[i] = sA[i][threadIdx.x];
@@ -313,5 +324,17 @@ void reduce_min(cudaStream_t stream, int num_batch, int num_frontier, const uint
   constexpr int threadsPerBlock = 96;
   int blocksPerGrid = MIN(int_div_ceil(num_batch * num_frontier, threadsPerBlock), 16384);
   myReduceMinAtomic << <blocksPerGrid, threadsPerBlock, 0, stream >> > (num_batch, num_frontier, mult_results, d_batch_answers);
+}
+
+void transpose_cuda(cudaStream_t stream,
+                         const int rows,
+                         const int cols,
+                         const uint32_t* __restrict__ input,
+                         uint32_t* __restrict output)
+{
+  constexpr int threadsPerBlock = 96;
+  int blocksPerGrid = MIN(int_div_ceil(rows * cols, threadsPerBlock), 16384);
+  transpose_device << <blocksPerGrid, threadsPerBlock, 0, stream >> > (rows, cols, input, output);
+  CUDA_CHECK_RESULT(cudaGetLastError());
 }
 

@@ -625,7 +625,6 @@ void output_data(std::ostream& stream)
       std::cout << i << " ";
       generate_random_instance(seed, problem);
       Pancake::Initialize_Dual(problem);
-      if(i != 66) continue;
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
@@ -786,7 +785,7 @@ uint32_t good_random()
 void test_cuda()
 {
 
-  constexpr size_t my_num_pancakes = 10000000;
+  constexpr size_t my_num_pancakes = 1000000;
   constexpr size_t other_num_pancakes = BATCH_SIZE;
 
   uint32_t* d_a, * d_hash_vals;
@@ -816,27 +815,27 @@ void test_cuda()
   CUDA_CHECK_RESULT(cudaMemcpy(d_a, a, sizeof(hash_array) * my_num_pancakes, cudaMemcpyHostToDevice));
   CUDA_CHECK_RESULT(cudaMemcpy(d_g_vals, g_vals, sizeof(uint8_t) * my_num_pancakes, cudaMemcpyHostToDevice));
   CUDA_CHECK_RESULT(cudaMemcpy(d_hash_vals, hash_vals, sizeof(hash_array) * other_num_pancakes, cudaMemcpyHostToDevice));
+  //transpose_cuda(0, my_num_pancakes, NUM_INTS_PER_PANCAKE, reinterpret_cast<uint32_t*>(d_a), );
   bitwise_set_intersection(0, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results, d_answers);
-  //reduce_min(0, other_num_pancakes, my_num_pancakes, d_mult_results, d_answers);
   CUDA_CHECK_RESULT(cudaMemcpy(answers, d_answers, sizeof(uint8_t) * other_num_pancakes, cudaMemcpyDeviceToHost));
 }
 
 int main()
 {
-  //int deviceCount;
-  //cudaGetDeviceCount(&deviceCount);
-  //int device;
-  //for(device = 0; device < deviceCount; ++device) {
-  //  cudaDeviceProp deviceProp;
-  //  cudaGetDeviceProperties(&deviceProp, device);
-  //  std::cout << "Device " << device << " has compute capability " << deviceProp.major << "." << deviceProp.minor << "\n";
-  //  std::cout << "Device shared memory limit per block = " << deviceProp.sharedMemPerBlock << "\n";
-  //}
-  //hash_table::initialize_hash_values();
-  //mycuda::initialize();
-  //run_random_test();
-
-  test_cuda();
+  int deviceCount;
+  cudaGetDeviceCount(&deviceCount);
+  int device;
+  for(device = 0; device < deviceCount; ++device) {
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, device);
+    std::cout << "Device " << device << " has compute capability " << deviceProp.major << "." << deviceProp.minor << "\n";
+    std::cout << "Device shared memory limit per block = " << deviceProp.sharedMemPerBlock << "\n";
+  }
+  hash_table::initialize_hash_values();
+  mycuda::initialize();
+  
+  run_random_test();
+  //test_cuda();
 
   //std::cout << "\nDone\n";
   //while(true);

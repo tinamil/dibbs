@@ -4,6 +4,7 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 #include <vector>
+#include "custom_kernels.cuh"
 
 template<typename T>
 class cuda_vector
@@ -51,6 +52,15 @@ public:
   inline size_t size() { return size_val; }
   inline T* data() { return d_ptr; }
   inline void set_empty() { size_val = 0; }
+  void tranpose()
+  {
+    uint32_t* result;
+    CUDA_CHECK_RESULT(cudaMalloc(&result, capacity * sizeof(T)));
+    transpose_cuda(stream, size_val, NUM_INTS_PER_PANCAKE, reinterpret_cast<uint32_t*>(d_ptr), result);
+    CUDA_CHECK_RESULT(cudaStreamSynchronize(stream));
+    CUDA_CHECK_RESULT(cudaFree(d_ptr));
+    d_ptr = (T*)(void*)result;
+  }
 };
 
 template <typename T>
@@ -105,7 +115,7 @@ void cuda_vector<T>::insert(const T* begin, const T* end)
   if(size_diff == 0) return;
   if(d_ptr == nullptr || size_val + size_diff >= capacity)
   {
-    resize(MAX(1024 * 1024 / sizeof(T), MAX(size_val + size_diff, static_cast<uint64_t>(GROWTH_FACTOR * capacity))));
+    resize(MAX(1024 / sizeof(T), MAX(size_val + size_diff, static_cast<uint64_t>(GROWTH_FACTOR * capacity))));
   }
   CUDA_CHECK_RESULT(cudaMemcpyAsync(d_ptr + size_val, begin, sizeof(T) * size_diff, cudaMemcpyHostToDevice, stream));
   size_val += size_diff;

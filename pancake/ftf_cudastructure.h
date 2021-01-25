@@ -82,7 +82,7 @@ public:
     device_g_values.insert(tmp_g_vals, tmp_g_vals + pancakes.size());
     device_hash_values.set_empty();
     device_hash_values.insert(tmp_hash_arrays, tmp_hash_arrays + pancakes.size());
-
+    device_hash_values.tranpose();
     valid_device_cache = true;
   }
 
