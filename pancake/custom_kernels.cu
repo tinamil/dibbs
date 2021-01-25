@@ -2,6 +2,7 @@
 #include "custom_kernels.cuh"
 #include "Pancake.h"
 #include "hash_array.h"
+#include "cuda_helper.h"
 
 #include <cooperative_groups/memcpy_async.h>
 #include <cooperative_groups/reduce.h>
@@ -9,7 +10,6 @@
 #include <cooperative_groups.h>
 #include <cuda/barrier>
 namespace cg = cooperative_groups;
-
 
 #define int_div_ceil(x,y) ((x + y - 1) / y)
 
@@ -72,7 +72,7 @@ __device__ char atomicMinChar(char* address, char val)
 }
 
 template <typename T>
-__global__ void reduceMin(int num_batch, int num_frontier, const T* __restrict__ mult_results, T* __restrict__ batch_answers)
+__global__ void myReduceMinAtomic(const int num_batch, const int num_frontier, const T* __restrict__ mult_results, T* __restrict__ batch_answers)
 {
   __shared__ char sharedMin;
 
@@ -105,6 +105,41 @@ __global__ void reduceMin(int num_batch, int num_frontier, const T* __restrict__
   }
 }
 
+#define REDUCE_THREADS 64
+template <typename T>
+__global__ void myReduceMinSharedMem(const uint32_t xDim, const uint32_t xStride, const T* __restrict__ mult_results, T* __restrict__ batch_answers)
+{
+  cg::thread_block block = cg::this_thread_block();
+  __shared__ T sharedMin[REDUCE_THREADS];
+  constexpr size_t max_val = std::numeric_limits<T>::max();
+  //for(int batch_idx = blockIdx.x; batch_idx < num_batch; batch_idx += gridDim.x) {
+  const T* start_results = mult_results + blockIdx.x * xStride;
+  T localMin = max_val;
+  for(unsigned int i = threadIdx.x; i < xDim; i += blockDim.x)
+  {
+    const uint8_t tmpMinVal = start_results[i];
+    localMin = MIN(localMin, tmpMinVal);
+  }
+  sharedMin[threadIdx.x] = localMin;
+  block.sync();
+  for(unsigned int s = REDUCE_THREADS / 2; s > 0; s >>= 1) {
+    if(threadIdx.x < s) {
+      const uint8_t tmpMinVal = sharedMin[threadIdx.x + s];
+      if(localMin > tmpMinVal) {
+        localMin = tmpMinVal;
+        sharedMin[threadIdx.x] = localMin;
+      }
+    }
+    block.sync();
+  }
+  if(0 == threadIdx.x)
+  {
+    batch_answers[blockIdx.x] = localMin;
+  }
+//}
+}
+
+
 template<typename T>
 __global__
 void cuda_min_kernel(int num_batch, int num_frontier, const T* __restrict__ mult_results, T* __restrict__ batch_answers)
@@ -131,21 +166,21 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t rows_a,//x-axis
                                          const uint32_t* __restrict__ hash_b,
                                          uint8_t* __restrict__ results)
 {
-  assert(threadIdx.x < TILE);
-  assert(threadIdx.y < TILE);
   assert(blockIdx.x * blockDim.x < rows_a);
   assert(blockIdx.y * blockDim.y < rows_b);
+
+  __shared__ uint8_t sMin[TILE][TILE];
+  uint8_t localMin = UINT8_MAX;
 
   __shared__ uint32_t sA[NUM_INTS_PER_PANCAKE][TILE];
   __shared__ uint32_t sB[TILE][NUM_INTS_PER_PANCAKE];
   uint32_t localB[NUM_INTS_PER_PANCAKE];
   uint32_t localA[NUM_INTS_PER_PANCAKE];
-  volatile __shared__ uint8_t sMin[TILE][TILE];
-  volatile uint8_t minVal = UINT8_MAX;
 
   cg::thread_block block = cg::this_thread_block();
 
   //for(uint32_t by = blockIdx.y; by < int_div_ceil(rows_b, NUM_INTS_PER_PANCAKE); by += gridDim.y) {
+
   const uint32_t output_row = blockIdx.y * blockDim.y + threadIdx.y;
 
   if(output_row < rows_b) {
@@ -162,7 +197,6 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t rows_a,//x-axis
       localB[i] = sB[threadIdx.y][i];
     }
   }
-
   //x goes 0 to rows_a
   for(uint32_t bx = blockIdx.x; bx < max_a; bx += gridDim.x) {
     uint32_t output_col = bx * blockDim.x + threadIdx.x;
@@ -189,29 +223,37 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t rows_a,//x-axis
         tmpB += __popc(A & (B | gap_mask[i]));
       }
       tmpMin = MIN(tmpF, tmpB);
+      assert(localMin > GAPX);
       #pragma unroll
       for(uint32_t i = NUM_GAP_INTS; i < NUM_INTS_PER_PANCAKE; ++i) {
         uint32_t A = localA[i];
         uint32_t B = localB[i];
         tmpMin += __popc(A & B);
       }
-      results[output_row * rows_a + output_col] = static_cast<uint8_t>(NUM_PANCAKES + g_vals[output_col] - tmpMin);
-      //minVal = MIN(minVal, NUM_PANCAKES + g_vals[col] - tmpMin);
-      //assert(minVal > GAPX);
+      const uint8_t h_val = static_cast<uint8_t>(NUM_PANCAKES + g_vals[output_col] - tmpMin);
+      localMin = MIN(localMin, h_val);
     }
     block.sync();
   }
-  
-  //assert(minVal > GAPX);
-  //sMin[threadIdx.y][threadIdx.x] = minVal;
-  //block.sync();
-  //if(threadIdx.x == 0 && output_row < rows_b) {
-  //  for(uint32_t a = 1; a < TILE && blockIdx.x * blockDim.x + a < rows_a; a++) {
-  //    minVal = MIN(minVal, sMin[threadIdx.y][a]);
-  //    assert(minVal > GAPX);
-  //  }
-  //  results[output_row * gridDim.x + blockIdx.x] = minVal;
-  //}
+
+  sMin[threadIdx.y][threadIdx.x] = localMin;
+  block.sync();
+
+  for(unsigned int s = TILE / 2; s > 0; s >>= 1) {
+    if(threadIdx.x < s) {
+      const uint8_t tmpMinVal = sMin[threadIdx.y][threadIdx.x + s];
+      if(tmpMinVal < localMin) {
+        localMin = tmpMinVal;
+        sMin[threadIdx.y][threadIdx.x] = tmpMinVal;
+      }
+    }
+    block.sync();
+  }
+
+  if(0 == threadIdx.x && output_row < rows_b)
+  {
+    results[output_row * gridDim.x + blockIdx.x] = localMin;
+  }
 //}
 }
 
@@ -236,35 +278,6 @@ void naive_cuda_bitwise_set_intersection(int rows_a, int rows_b, const uint32_t*
   }
 }
 
-__global__ void sharedReduceMin(const uint32_t xDim, 
-                                const uint32_t yDim, 
-                                const uint8_t* __restrict__ mult_results, 
-                                uint8_t* __restrict__ batch_answers)
-{
-  cg::thread_block block = cg::this_thread_block();
-  volatile uint8_t minVal = UINT8_MAX;
-  volatile __shared__ uint8_t sharedMin[TILE][TILE];
-  assert(threadIdx.y < TILE);
-  const uint32_t output_row = blockIdx.y * blockDim.y + threadIdx.y;
-  if(output_row < yDim) {
-    const uint8_t* __restrict__ start_row = mult_results + output_row * xDim;
-    for(unsigned input_column = blockIdx.x * blockDim.x + threadIdx.x; input_column < xDim; input_column += gridDim.x) {
-      minVal = MIN(start_row[input_column], minVal);
-      assert(minVal > GAPX);
-    }
-  }
-  sharedMin[threadIdx.y][threadIdx.x] = minVal;
-  block.sync();
-  if(threadIdx.x == 0 && output_row < yDim) {
-    #pragma unroll
-    for(int i = 1; i < TILE && blockIdx.x * blockDim.x + i < xDim; ++i) {
-      minVal = MIN(minVal, sharedMin[threadIdx.y][i]);
-      assert(minVal > GAPX);
-    }
-    batch_answers[output_row] = minVal;
-  }
-}
-
 void bitwise_set_intersection(cudaStream_t stream,
                               int rows_a,
                               int rows_b,
@@ -274,36 +287,31 @@ void bitwise_set_intersection(cudaStream_t stream,
                               uint8_t* __restrict__ mult_results,
                               uint8_t* __restrict__ d_answers)
 {
-  
+
   //constexpr int threadsPerBlock = 256;
   //int blocksPerGrid = (rows_a * rows_b + threadsPerBlock - 1) / threadsPerBlock;
   //naive_cuda_bitwise_set_intersection << <blocksPerGrid, threadsPerBlock, 0, stream >> > (rows_a, rows_b, hash_a, g_vals, hash_b, mult_results);
   constexpr uint32_t MAX_BLOCKS_X = 1024;
-  constexpr uint32_t MAX_BLOCKS_Y = 65535;
-  constexpr uint32_t THREADS_X = TILE;
-  constexpr uint32_t THREADS_Y = TILE;
-  dim3 threadsPerBlock(MIN(rows_a, THREADS_X), MIN(rows_b, THREADS_Y), 1);
-  uint32_t gridDimX = MIN(MAX_BLOCKS_X, int_div_ceil(rows_a, threadsPerBlock.x));
-  uint32_t gridDimY = MIN(MAX_BLOCKS_Y, int_div_ceil(rows_b, threadsPerBlock.y));
+  dim3 threadsPerBlock(TILE, TILE, 1);
   int max_a = int_div_ceil(rows_a, threadsPerBlock.x);
-  assert(gridDimY < 65535);
+  uint32_t gridDimX = MIN(MAX_BLOCKS_X, max_a);
+  uint32_t gridDimY = int_div_ceil(rows_b, threadsPerBlock.y);
+  assert(gridDimY <= 65535);
   dim3 blocksPerGrid(gridDimX, gridDimY, 1);
-  
-  //TODO: DO THIS WHERE IT SHOULD BE DONE
-  //cudaMalloc(mult_results, rows_b * gridDimY * sizeof(uint8_t));
 
   tiled_cuda_bitwise_set_intersection << <blocksPerGrid, threadsPerBlock, 0, stream >> > (rows_a, rows_b, max_a, hash_a, g_vals, hash_b, mult_results);
-
+  CUDA_CHECK_RESULT(cudaGetLastError());
   threadsPerBlock = dim3(TILE, TILE, 1);
-  blocksPerGrid = dim3(int_div_ceil(gridDimX, threadsPerBlock.x), gridDimY, 1);
-  //sharedReduceMin <<<blocksPerGrid, threadsPerBlock, 0, stream >>> (gridDimX, rows_b, mult_results, d_answers);
-  reduceMin << <96, 16384, 0, stream >> > (rows_b, rows_a, mult_results, d_answers);
+  //reduceMin2 << <blocksPerGrid, threadsPerBlock, TILE* gridDimX * sizeof(uint8_t), stream >> > (rows_a, int_div_ceil(rows_a, gridDimX) rows_b, mult_results, d_answers);
+  //myReduceMinAtomic << <1024, 96, 0, stream >> > (rows_b, rows_a, mult_results, d_answers);
+  myReduceMinSharedMem << <rows_b, REDUCE_THREADS, 0, stream >> > (gridDimX, gridDimX, mult_results, d_answers);
+  CUDA_CHECK_RESULT(cudaGetLastError());
 }
 
 void reduce_min(cudaStream_t stream, int num_batch, int num_frontier, const uint8_t* __restrict__ mult_results, uint8_t* __restrict__ d_batch_answers)
 {
   constexpr int threadsPerBlock = 96;
   int blocksPerGrid = MIN(int_div_ceil(num_batch * num_frontier, threadsPerBlock), 16384);
-  reduceMin << <blocksPerGrid, threadsPerBlock, 0, stream >> > (num_batch, num_frontier, mult_results, d_batch_answers);
+  myReduceMinAtomic << <blocksPerGrid, threadsPerBlock, 0, stream >> > (num_batch, num_frontier, mult_results, d_batch_answers);
 }
 

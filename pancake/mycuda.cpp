@@ -67,10 +67,7 @@ void mycuda::load_then_batch_vector_matrix()
 
 void mycuda::batch_vector_matrix()
 {
-  //cublasSetStream(handle, stream);
-  //CUBLAS_CHECK_RESULT(cublasSgemm_v2(handle, CUBLAS_OP_T, CUBLAS_OP_N, my_num_pancakes, other_num_pancakes, MAX_PANCAKES, one, d_a, MAX_PANCAKES, d_hash_vals, MAX_PANCAKES, zero, d_mult_results, my_num_pancakes));
   bitwise_set_intersection(stream, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results, d_answers);
-  //vector_add(stream, other_num_pancakes, my_num_pancakes, d_g_vals, d_mult_results);
   //reduce_min(stream, other_num_pancakes, my_num_pancakes, d_mult_results, d_answers);
   CUDA_CHECK_RESULT(cudaMemcpyAsync(h_answers, d_answers, sizeof(uint8_t) * other_num_pancakes, cudaMemcpyDeviceToHost, stream));
 }

@@ -22,6 +22,7 @@
 class FTF_Dibbs
 {
   static constexpr size_t CUDA_STREAMS_COUNT = 1;
+  int iteration_count = 0;
 public:
 
   typedef std::set<const FTF_Pancake*, FTFPancakeFSortHighG> set;
@@ -51,7 +52,8 @@ public:
   template<typename T>
   void expand_all_nodes(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, T& my_index, T& other_index)
   {
-    i++;
+    iteration_count++;
+    if(iteration_count % 5000 == 0) std::cout << iteration_count << " " << open_hash.size() << " " << other_open.size() << " " << lbmin << " " << UB << "\n";
     auto f_val = (*open.begin())->f;
     auto g_val = (*open.begin())->g;
     #ifdef FTF_HASH
@@ -68,7 +70,7 @@ public:
     int count = 0;
     for(int cuda_count = 0; cuda_count < CUDA_STREAMS_COUNT; ++cuda_count) {
       new_pancakes_vector[cuda_count].clear();
-      while(UB > lbmin && !open.empty() && (*open.begin())->f == f_val/* && (*open.begin())->g == g_val*/ && ++count <= (BATCH_SIZE / NUM_PANCAKES / CUDA_STREAMS_COUNT))
+      while(UB > lbmin && !open.empty() && (*open.begin())->f == f_val/* && (*open.begin())->g == g_val*/ && ++count <= (BATCH_SIZE / NUM_PANCAKES))
       {
         const FTF_Pancake* next_val = *open.begin();
 
@@ -136,7 +138,7 @@ public:
           other_index.match(cuda_vector[cuda_count], new_pancakes_vector[cuda_count]);
         }
         catch(std::exception e) {
-          std::cout << "Failed at iteration i = " << i << std::endl;
+          std::cout << "Failed at iteration i = " << iteration_count << std::endl;
           exit(-1);
         }
         #else
@@ -155,7 +157,9 @@ public:
       for(int i = 0; i < pancakes.size(); ++i)
       {
         #ifdef FTF_HASH
-        if(pancakes[i]->ftf_h != answers[i]) std::cout << "FTF Mismatch Error: " << std::to_string(pancakes[i]->ftf_h) << " did not equal the GPU value of " << std::to_string(answers[i]) << "\n";
+        if(pancakes[i]->ftf_h != answers[i]) {
+          std::cout << "FTF Mismatch Error iteration " << iteration_count << ": " << std::to_string(pancakes[i]->ftf_h) << " did not equal the GPU value of " << std::to_string(answers[i]) << "\n";
+        }
         assert(pancakes[i]->ftf_h == answers[i]);
         #endif
         pancakes[i]->ftf_h = answers[i];
@@ -206,7 +210,6 @@ public:
     }
   }
 
-  int i = 0;
   #ifdef HISTORY
   Pancake best_f, best_b;
   #endif
@@ -296,7 +299,7 @@ public:
     {
       return std::make_tuple((double)UB, expansions, memory);
     }
-  }
+    }
 
 public:
 
@@ -305,4 +308,4 @@ public:
     FTF_Dibbs instance;
     return instance.run_search(FTF_Pancake(start.source, start.dir), FTF_Pancake(goal.source, goal.dir));
   }
-};
+  };

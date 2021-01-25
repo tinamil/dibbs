@@ -625,7 +625,7 @@ void output_data(std::ostream& stream)
       std::cout << i << " ";
       generate_random_instance(seed, problem);
       Pancake::Initialize_Dual(problem);
-      //if(i != 66) continue;
+      if(i != 66) continue;
       Pancake node(problem, Direction::forward);
       Pancake goal = Pancake::GetSortedStack(Direction::backward);
       auto start = std::chrono::system_clock::now();
@@ -786,7 +786,7 @@ uint32_t good_random()
 void test_cuda()
 {
 
-  constexpr size_t my_num_pancakes = 1000000;
+  constexpr size_t my_num_pancakes = 10000000;
   constexpr size_t other_num_pancakes = BATCH_SIZE;
 
   uint32_t* d_a, * d_hash_vals;
@@ -823,19 +823,20 @@ void test_cuda()
 
 int main()
 {
-  int deviceCount;
-  cudaGetDeviceCount(&deviceCount);
-  int device;
-  for(device = 0; device < deviceCount; ++device) {
-    cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, device);
-    std::cout << "Device " << device << " has compute capability " << deviceProp.major << "." << deviceProp.minor << "\n";
-  }
-  hash_table::initialize_hash_values();
-  mycuda::initialize();
-  run_random_test();
+  //int deviceCount;
+  //cudaGetDeviceCount(&deviceCount);
+  //int device;
+  //for(device = 0; device < deviceCount; ++device) {
+  //  cudaDeviceProp deviceProp;
+  //  cudaGetDeviceProperties(&deviceProp, device);
+  //  std::cout << "Device " << device << " has compute capability " << deviceProp.major << "." << deviceProp.minor << "\n";
+  //  std::cout << "Device shared memory limit per block = " << deviceProp.sharedMemPerBlock << "\n";
+  //}
+  //hash_table::initialize_hash_values();
+  //mycuda::initialize();
+  //run_random_test();
 
-  //test_cuda();
+  test_cuda();
 
   //std::cout << "\nDone\n";
   //while(true);
