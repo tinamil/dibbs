@@ -11,7 +11,6 @@
 #include <cuda/barrier>
 namespace cg = cooperative_groups;
 
-#define int_div_ceil(x,y) ((x + y - 1) / y)
 
 constexpr uint32_t npow2(uint32_t v)
 {

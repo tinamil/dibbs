@@ -43,6 +43,7 @@ public:
   size_t memory;
   static inline std::vector<mycuda> cuda_vector = std::vector<mycuda>(CUDA_STREAMS_COUNT);
   static inline std::vector<std::vector<FTF_Pancake*>> new_pancakes_vector = std::vector<std::vector<FTF_Pancake*>>(CUDA_STREAMS_COUNT);
+  Direction dir = Direction::forward;
 
   FTF_Dibbs() : expansions(0), UB(0), lbmin(0), memory(0)
   {
@@ -210,6 +211,27 @@ public:
     }
   }
 
+  inline void choose_dir()
+  {
+    if((*open_f.begin())->f < (*open_b.begin())->f) {
+      dir = Direction::forward;
+    }
+    else if((*open_f.begin())->f > (*open_b.begin())->f)
+    {
+      dir = Direction::backward;
+    }
+    else if(UB - lbmin == 1) {
+      //Do nothing, just expand dir until done
+    }
+    else if(dir == Direction::forward && open_f.size() > 2 * open_b.size())
+    {
+      dir = Direction::backward;
+    }
+    else if(dir == Direction::backward && open_b.size() > 2 * open_f.size()) {
+      dir = Direction::forward;
+    }
+  }
+
   #ifdef HISTORY
   Pancake best_f, best_b;
   #endif
@@ -240,7 +262,6 @@ public:
     UB = std::numeric_limits<size_t>::max();
     if(memcmp(start.source, goal.source, NUM_PANCAKES + 1) == 0) UB = 0;
     PROCESS_MEMORY_COUNTERS memCounter;
-    bool forward = false;
     while(open_f.size() > 0 && open_b.size() > 0 && UB > lbmin)
     {
       BOOL result = GetProcessMemoryInfo(GetCurrentProcess(), &memCounter, sizeof(memCounter));
@@ -250,26 +271,14 @@ public:
       {
         break;
       }
-      if((*open_f.begin())->f < (*open_b.begin())->f)
+      choose_dir();
+      if(dir == Direction::forward)
       {
         expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
-        forward = open_f.size() < open_b.size();
-      }
-      else if((*open_f.begin())->f > (*open_b.begin())->f)
-      {
-        expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
-        forward = open_f.size() < open_b.size();
-      }
-      else if(forward)
-      //else if(open_f.size() <= open_b.size())
-      {
-        expand_all_nodes(open_f, open_f_hash, open_b_hash, closed_f, forward_index, backward_index);
-        forward = open_f.size() < 2 * open_b.size();
       }
       else
       {
         expand_all_nodes(open_b, open_b_hash, open_f_hash, closed_b, backward_index, forward_index);
-        forward = !(open_b.size() < 2 * open_f.size());
       }
 
       if(open_f.size() > 0 && open_b.size() > 0) {
@@ -308,4 +317,4 @@ public:
     FTF_Dibbs instance;
     return instance.run_search(FTF_Pancake(start.source, start.dir), FTF_Pancake(goal.source, goal.dir));
   }
-  };
+};

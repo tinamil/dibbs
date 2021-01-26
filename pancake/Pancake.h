@@ -8,6 +8,8 @@
 
 //#define HISTORY 
 
+#define int_div_ceil(x,y) ((x + y - 1) / y)
+
 constexpr std::int32_t const_ceil(float num)
 {
   std::int32_t inum = static_cast<std::int32_t>(num);
@@ -31,7 +33,7 @@ constexpr uint32_t mask()
 }
 
 
-constexpr int NUM_PANCAKES = 30;
+constexpr int NUM_PANCAKES = 20;
 constexpr uint32_t MAX_PANCAKES = NUM_PANCAKES * (NUM_PANCAKES + 1) / 2;
 constexpr uint32_t NUM_INTS_PER_PANCAKE = static_cast<uint32_t>(const_ceil(MAX_PANCAKES / 32.f));
 constexpr int GAPX = 1;

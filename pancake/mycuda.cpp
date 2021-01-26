@@ -20,15 +20,17 @@ void mycuda::set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint8_t* g_vals
     CUDA_CHECK_RESULT(cudaMalloc(&d_hash_vals, max_other_pancakes * sizeof(hash_array)));
   }
 
-  if(other_num_pancakes * my_num_pancakes > d_mult_results_size) {
-    d_mult_results_size = MAX(other_num_pancakes * my_num_pancakes, d_mult_results_size * 1.5);
+  size_t results_size = MAX(int_div_ceil(other_num_pancakes, 16), 1024) * my_num_pancakes;
+  if(results_size > d_mult_results_size) {
+    d_mult_results_size = MAX(results_size, d_mult_results_size * 1.5);
     if(d_mult_results) {
       CUDA_CHECK_RESULT(cudaFree(d_mult_results));
       d_mult_results = nullptr;
     }
+    size_t d_mem = d_mult_results_size * sizeof(uint8_t);
     size_t free_mem, total_mem;
     CUDA_CHECK_RESULT(cudaMemGetInfo(&free_mem, &total_mem));
-    if(d_mult_results_size * sizeof(uint8_t) > free_mem) {
+    if(d_mem > free_mem) {
 
       if(other_num_pancakes * my_num_pancakes * sizeof(uint8_t) > free_mem) {
         std::cout << "Out of memory: " << free_mem / 1024. / 1024. / 1024. << " GB\n";
@@ -36,10 +38,10 @@ void mycuda::set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint8_t* g_vals
       }
       else {
         d_mult_results_size = other_num_pancakes * my_num_pancakes;
+        d_mem = d_mult_results_size * sizeof(uint8_t);
       }
     }
-
-    CUDA_CHECK_RESULT(cudaMalloc((void**)&d_mult_results, d_mult_results_size * sizeof(uint8_t)));
+    CUDA_CHECK_RESULT(cudaMalloc((void**)&d_mult_results, d_mem));
   }
 
 }
