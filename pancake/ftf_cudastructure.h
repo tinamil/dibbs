@@ -49,6 +49,8 @@ public:
   {
     device_g_values.clear();
     device_hash_values.clear();
+    if(tmp_hash_arrays) CUDA_CHECK_RESULT(cudaFreeHost(tmp_hash_arrays));
+    if(tmp_g_vals) CUDA_CHECK_RESULT(cudaFreeHost(tmp_g_vals));
   }
 
   size_t size() const
