@@ -782,10 +782,16 @@ uint32_t good_random()
   return distr(generator);
 }
 
+template <typename T>
+constexpr T ipow(T num, unsigned int pow)
+{
+  return (pow >= sizeof(unsigned int) * 8) ? 0 : pow == 0 ? 1 : num * ipow(num, pow - 1);
+}
+
 void test_cuda()
 {
 
-  constexpr size_t my_num_pancakes = 1000000;
+  constexpr size_t my_num_pancakes = ipow(2,5);
   constexpr size_t other_num_pancakes = BATCH_SIZE;
 
   uint32_t* d_a, * d_hash_vals;
@@ -814,10 +820,22 @@ void test_cuda()
   }
   CUDA_CHECK_RESULT(cudaMemcpy(d_a, a, sizeof(hash_array) * my_num_pancakes, cudaMemcpyHostToDevice));
   CUDA_CHECK_RESULT(cudaMemcpy(d_g_vals, g_vals, sizeof(uint8_t) * my_num_pancakes, cudaMemcpyHostToDevice));
-  CUDA_CHECK_RESULT(cudaMemcpy(d_hash_vals, hash_vals, sizeof(hash_array) * other_num_pancakes, cudaMemcpyHostToDevice));
-  //transpose_cuda(0, my_num_pancakes, NUM_INTS_PER_PANCAKE, reinterpret_cast<uint32_t*>(d_a), );
-  bitwise_set_intersection(0, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results, d_answers);
-  CUDA_CHECK_RESULT(cudaMemcpy(answers, d_answers, sizeof(uint8_t) * other_num_pancakes, cudaMemcpyDeviceToHost));
+  for(int i = 0; i < 100; ++i) {
+    CUDA_CHECK_RESULT(cudaMemcpy(d_hash_vals, hash_vals, sizeof(hash_array) * other_num_pancakes, cudaMemcpyHostToDevice));
+    bitwise_set_intersection(0, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results, d_answers);
+    CUDA_CHECK_RESULT(cudaMemcpy(answers, d_answers, sizeof(uint8_t) * other_num_pancakes, cudaMemcpyDeviceToHost));
+  }
+  auto start = std::chrono::system_clock::now();
+  for(int i = 0; i < 1000; ++i) {
+    CUDA_CHECK_RESULT(cudaMemcpy(d_hash_vals, hash_vals, sizeof(hash_array) * other_num_pancakes, cudaMemcpyHostToDevice));
+    //transpose_cuda(0, my_num_pancakes, NUM_INTS_PER_PANCAKE, reinterpret_cast<uint32_t*>(d_a), );
+    bitwise_set_intersection(0, my_num_pancakes, other_num_pancakes, d_a, d_g_vals, d_hash_vals, d_mult_results, d_answers);
+    CUDA_CHECK_RESULT(cudaMemcpy(answers, d_answers, sizeof(uint8_t) * other_num_pancakes, cudaMemcpyDeviceToHost));
+  }
+
+  auto end = std::chrono::system_clock::now();
+  std::cout << std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) << " ";
+  while(true);
 }
 
 int main()
@@ -829,7 +847,7 @@ int main()
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, device);
     std::cout << "Device " << device << " has compute capability " << deviceProp.major << "." << deviceProp.minor << "\n";
-    std::cout << "Device shared memory limit per block = " << deviceProp.sharedMemPerBlock << "\n";
+    //std::cout << "Device shared memory limit per block = " << deviceProp.sharedMemPerBlock << "\n";
   }
   hash_table::initialize_hash_values();
   mycuda::initialize();
