@@ -133,7 +133,9 @@ public:
           }
         }
       }
-      if(new_pancakes_vector[cuda_count].size() > 0) {
+      //std::cout << "Expanding " << new_pancakes_vector[cuda_count].size() << " x " << other_index.size() << "\n";
+      if(new_pancakes_vector[cuda_count].size() == 0) return;
+      else {
         other_index.match(cuda_vector[cuda_count], new_pancakes_vector[cuda_count]);
 
         #ifdef FTF_HASH
@@ -157,7 +159,7 @@ public:
         if(answers[i] == UINT32_MAX) std::cout << "ERROR";
         assert(pancakes[i]->ftf_h >= pancakes[i]->h);
         pancakes[i]->f = pancakes[i]->g + pancakes[i]->ftf_h;
-      }
+    }
       for(int i = 0; i < pancakes.size(); ++i)
       {
         const FTF_Node* ptr = pancakes[i];
@@ -196,8 +198,8 @@ public:
         my_match->insert(ptr);
         #endif
       }
-    }
   }
+}
 
   inline void choose_dir()
   {
@@ -296,7 +298,7 @@ public:
     {
       return std::make_tuple((double)UB, expansions, memory);
     }
-  }
+    }
 
 public:
 
@@ -305,4 +307,4 @@ public:
     Ffgbs instance;
     return instance.run_search(FTF_Node(start), FTF_Node(goal));
   }
-};
+  };

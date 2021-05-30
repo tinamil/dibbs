@@ -3,17 +3,17 @@
 #include "astar.h"
 //#include "dibbs.h"
 //#include "dvcbs.h"
-//#include "gbfhs.h"
+#include "gbfhs.h"
 //#include "idd.h"
 //#include "cbbs.h"
-#include "ffgbs.h"
+//#include "ffgbs.h"
 #include <iostream>
 #include <iomanip> 
 #include <chrono>
 #include <random>
 #include <functional>
 
-constexpr size_t NUM_PROBLEMS = 100;
+constexpr size_t NUM_PROBLEMS = 1000;
 constexpr Type MAP_TYPE = Type::NY;
 
 constexpr uint32_t SEED = 0;
@@ -82,13 +82,14 @@ Result test_problem(std::function<std::tuple<double, size_t, size_t>(Node, Node)
   };
 }
 
-std::vector<Result> random_problem(const std::uniform_int_distribution<uint32_t>& rng)
+std::vector<Result> random_problem(const std::uniform_int_distribution<uint32_t>& rng, bool run = true)
 {
   uint32_t start_index = 0, goal_index = 0;
   while(start_index == goal_index) {
     start_index = rng(rng_engine);
     goal_index = rng(rng_engine);
   }
+  if(!run) return {};
   Node::goal_node_index = goal_index;
   Node::start_node_index = start_index;
 
@@ -145,6 +146,7 @@ std::string return_formatted_time(std::string format)
 
 void output(std::unordered_map<std::string_view, std::vector<Result>>& alg_results)
 {
+  if(alg_results.size() == 0) return;
   std::ofstream file;
   std::string dir = R"(C:\Users\John\Dropbox\UIUC\Research\RoadData\)";
   std::string name = std::string("output_") + type_str[MAP_TYPE] + "_";
@@ -181,7 +183,8 @@ int main()
   std::unordered_map<std::string_view, std::vector<Result>> alg_results;
   for(int i = 0; i < NUM_PROBLEMS; ++i) {
     std::cout << i << std::endl;
-    auto results = random_problem(uniform_dist);
+    
+    auto results = random_problem(uniform_dist, i >= 475);
 
     for(auto& r : results) {
       alg_results[r.algorithm].push_back(r);

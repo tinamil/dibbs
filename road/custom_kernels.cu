@@ -121,10 +121,10 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t cols_a,
   __shared__ uint32_t sMin[TILE][TILE];
   uint32_t localMin = UINT32_MAX;
 
-  __shared__ uint32_t sA[TILE];
-  __shared__ uint32_t sB[TILE];
-  uint32_t localB;
-  uint32_t localA;
+  __shared__ Coordinate sA[TILE];
+  __shared__ Coordinate sB[TILE];
+  Coordinate localB;
+  Coordinate localA;
 
   cg::thread_block block = cg::this_thread_block();
 
@@ -134,7 +134,7 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t cols_a,
 
   if(output_row < rows_b) {
     if(threadIdx.x == 0) {
-      sB[threadIdx.y] = hash_b[output_row];
+      sB[threadIdx.y] = coordinates[hash_b[output_row]];
     }
   }
 
@@ -148,12 +148,12 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t cols_a,
   for(uint32_t bx = blockIdx.x; bx < max_a; bx += gridDim.x) {
     uint32_t output_col = bx * blockDim.x + threadIdx.x;
     if(output_col < cols_a && threadIdx.y == 0) {
-      sA[threadIdx.x] = hash_a[output_col];
+      sA[threadIdx.x] = coordinates[hash_a[output_col]];
     }
     block.sync();
     if(output_row < rows_b && output_col < cols_a) {
       localA = sA[threadIdx.x];
-      const uint32_t h_val = g_vals[output_col] + calculateDistanceInMeter(coordinates[localA], coordinates[localB]);
+      const uint32_t h_val = g_vals[output_col] + calculateDistanceInMeter(localA, localB);
       localMin = MIN(localMin, h_val);
     }
     block.sync();
@@ -218,8 +218,8 @@ void bitwise_set_intersection(cudaStream_t stream,
   //threadsPerBlock = dim3(TILE, TILE, 1);
   //reduceMin2 << <blocksPerGrid, threadsPerBlock, TILE* gridDimX * sizeof(uint8_t), stream >> > (rows_a, int_div_ceil(rows_a, gridDimX) rows_b, mult_results, d_answers);
   //myReduceMinAtomic << <1024, 96, 0, stream >> > (rows_b, rows_a, mult_results, d_answers);
-  //myReduceMinSharedMem <<<rows_b, REDUCE_THREADS, 0, stream >>> (gridDimX, gridDimX, mult_results, d_answers);
-  cuda_min_kernel << <blocksPerGridInt, threadsPerBlockInt, 0, stream >> > (rows_a, rows_b, mult_results, d_answers);
+  myReduceMinSharedMem <<<rows_b, REDUCE_THREADS, 0, stream >>> (gridDimX, gridDimX, mult_results, d_answers);
+  //cuda_min_kernel << <blocksPerGridInt, threadsPerBlockInt, 0, stream >> > (rows_a, rows_b, mult_results, d_answers);
  CUDA_CHECK_RESULT(cudaGetLastError());
 }
 
