@@ -184,6 +184,7 @@
     <ClInclude Include="dibbs-ftf-hybrid.h" />
     <ClInclude Include="ftf_cudastructure.h" />
     <ClInclude Include="hash_array.h" />
+    <ClInclude Include="int_bitset.h" />
     <ClInclude Include="mycuda.h" />
     <ClInclude Include="dibbs-2phase-queue.hpp" />
     <ClInclude Include="dibbs-2phase.hpp" />

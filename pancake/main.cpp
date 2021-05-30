@@ -5,11 +5,11 @@
 //#define IDD
 //#define DIBBS
 //#define GBFHS
-//#define NBS
+#define NBS
 //#define DVCBS
-//#include "dibbs-2phase.hpp"
+#include "dibbs-2phase.hpp"
 //#include "2phase-lookahead.h"
-#include "ftf-dibbs.h"
+//#include "ftf-dibbs.h"
 //#include "dibbs-ftf-hybrid.h"
 
 #include "Pancake.h"
@@ -344,8 +344,15 @@ void output_data(std::ostream& stream)
     double seed = 3.1567;
     for(int i = 1; i <= NUM_PROBLEMS; ++i)
     {
-      std::cout << i << " ";
+      //std::cout << i << " ";
       generate_random_instance(seed, problem);
+      for(int j = 0; j <= NUM_PANCAKES; ++j) {
+        if(j > 0) std::cout << ", ";
+        std::cout  << std::setw(2) << std::to_string(problem[j]);
+      }
+      std::cout << "\n";
+      continue;
+
       //easy_problem(NUM_PANCAKES, problem);
       Pancake::Initialize_Dual(problem);
       Pancake node(problem, Direction::forward);
@@ -838,8 +845,11 @@ void test_cuda()
   while(true);
 }
 
+#include "int_bitset.h"
 int main()
 {
+  int_bitset x(50);
+
   int deviceCount;
   cudaGetDeviceCount(&deviceCount);
   int device;
