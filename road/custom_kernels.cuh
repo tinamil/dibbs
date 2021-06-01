@@ -13,6 +13,7 @@ void bitwise_set_intersection(cudaStream_t stream,
                               uint32_t* __restrict__ answers,
                               const Coordinate* __restrict__ coordinates);
 
+void empty(cudaStream_t stream, int rows_a, int rows_b);
 //void transpose_cuda(cudaStream_t stream,
 //                    const int rows,
 //                    const int cols,

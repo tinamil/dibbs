@@ -13,20 +13,37 @@ static constexpr const char* type_str[] = {"USA", "CTR", "W", "E", "LKS", "CAL",
 enum Type { USA, CTR, W, E, LKS, CALI, NE, NW, FLA, COL, BAY, NY };
 
 template <typename T>
-inline T square(T l)
+constexpr inline T square(T l)
 {
   return l * l;
 }
 
-uint32_t inline calculateDistanceInMeter(double lat1, double lng1, double lat2, double lng2)
+uint32_t inline perimeterDistance(double lat1, double lng1, double lat2, double lng2)
 {
-  double latDistance = DEG_TO_RAD * (lat1 - lat2);
-  double lngDistance = DEG_TO_RAD * (lng1 - lng2);
-  double a = square(sin(latDistance / 2.)) + cos(DEG_TO_RAD * lat1) * cos(DEG_TO_RAD * lat2) * square(sin(lngDistance / 2.));
-  double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-  double dist = AVERAGE_RADIUS_OF_EARTH_M * c;
-  //Round down to to 1 decimal point
-  return static_cast<uint32_t>(floor(dist));
+  auto earthCyclePerimeter = EARTH_PERIMETER * cos((lat1 + lat2) / 2.0);
+  auto dx = (lng1 - lng2) * earthCyclePerimeter * RAD_TO_DEG_I360;
+  auto dy = AVERAGE_DIAMETER_OF_EARTH_M * PI * (lat1 - lat2) * RAD_TO_DEG_I360;
+
+  return static_cast<uint32_t>(floor(.99f * sqrt(square(dx) + square(dy))));
+}
+
+uint32_t inline flatDistance(double lat1, double lng1, double lat2, double lng2)
+{
+  auto a = HALF_PI - lat1;
+  auto b = HALF_PI - lat2;
+  auto u = a * a + b * b;
+  auto v = -2 * a * b * cos(lng2 - lng1);
+  auto c = sqrt(abs(u + v));
+  return static_cast<uint32_t>(floor(AVERAGE_DIAMETER_OF_EARTH_M / 2 * c * 0.8));
+}
+
+uint32_t inline haversineDistance(double lat1, double lng1, double lat2, double lng2)
+{
+  double latDistance = sin((lat1 - lat2) / 2);
+  double lngDistance = sin((lng1 - lng2) / 2);
+  double a = square(latDistance) + cos(lat1) * cos(lat2) * square(lngDistance);
+  double c = AVERAGE_DIAMETER_OF_EARTH_M * asin(sqrt(a));
+  return static_cast<uint32_t>(floor(c));
 }
 
 struct Edge
@@ -54,9 +71,12 @@ public:
     return adj_vertices[node][edge_index];
   }
 
-  static uint32_t haversine_distance(uint32_t left, uint32_t right)
+  static uint32_t heuristic(uint32_t left, uint32_t right)
   {
-    return calculateDistanceInMeter(coordinates[left].lat, coordinates[left].lng, coordinates[right].lat, coordinates[right].lng);
+    uint32_t p = perimeterDistance(coordinates[left].lat, coordinates[left].lng, coordinates[right].lat, coordinates[right].lng);
+    //uint32_t f = flatDistance(coordinates[left].lat, coordinates[left].lng, coordinates[right].lat, coordinates[right].lng);
+    //uint32_t h = haversineDistance(coordinates[left].lat, coordinates[left].lng, coordinates[right].lat, coordinates[right].lng);
+    return p;
   }
 
   static int LoadGraph(Type t)
@@ -79,9 +99,9 @@ public:
       if(line[0] == 'v') {
         std::stringstream stream(line.substr(1));
         uint32_t index;
-        double x, y;
+        coordinate_t x, y;
         stream >> index >> x >> y;
-        coordinates[static_cast<size_t>(index) - 1] = {x, y};
+        coordinates[static_cast<size_t>(index) - 1] = {DEG_TO_RAD * x, DEG_TO_RAD * y};
       }
     }
 

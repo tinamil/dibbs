@@ -21,8 +21,9 @@
 
 class Ffgbs
 {
+  static constexpr size_t BATCH_SIZE = 124;
   static constexpr size_t CUDA_STREAMS_COUNT = 1;
-  //int iteration_count = 0;
+  int iteration_count = 0;
 public:
 
   typedef std::set<const FTF_Node*, FTFNodeFSortHighG> set;
@@ -34,9 +35,6 @@ public:
   hash_set open_f_hash, open_b_hash;
   hash_set closed_f, closed_b;
   ftf_cudastructure<FTF_Node, FTFNodeHash, FTFNodeEqual> forward_index, backward_index;
-  #ifdef FTF_HASH
-  ftf_matchstructure f_match, b_match;
-  #endif
   size_t expansions;
   size_t UB;
   size_t lbmin;
@@ -53,25 +51,13 @@ public:
   template<typename T>
   void expand_all_nodes(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, T& my_index, T& other_index)
   {
-    //iteration_count++;
+    iteration_count++;
     //if(iteration_count % 5000 == 0) std::cout << iteration_count << " " << open_hash.size() << " " << other_open.size() << " " << lbmin << " " << UB << "\n";
-    auto f_val = (*open.begin())->f;
-    auto g_val = (*open.begin())->g;
-    #ifdef FTF_HASH
-    ftf_matchstructure* my_match, * other_match;
-    if((*open.begin())->dir == Direction::forward) {
-      my_match = &f_match;
-      other_match = &b_match;
-    }
-    else {
-      my_match = &b_match;
-      other_match = &f_match;
-    }
-    #endif
+    auto f_val = (*open.begin())->f * 1.0002;
     int count = 0;
     for(int cuda_count = 0; cuda_count < CUDA_STREAMS_COUNT; ++cuda_count) {
       new_pancakes_vector[cuda_count].clear();
-      while(UB > lbmin && !open.empty() && (*open.begin())->f == f_val/* && (*open.begin())->g == g_val*/ && ++count <= BATCH_SIZE)
+      while(UB > lbmin && !open.empty() && (*open.begin())->f <= f_val && (*open.begin())->f < UB && new_pancakes_vector[cuda_count].size() < BATCH_SIZE)
       {
         const FTF_Node* next_val = *open.begin();
 
@@ -82,9 +68,6 @@ public:
         my_index.erase(next_val);
         assert(open_hash.size() == open.size());
         assert(open.size() == my_index.size());
-        #ifdef FTF_HASH
-        my_match->erase(next_val);
-        #endif
         ++expansions;
 
         closed.insert(next_val);
@@ -133,14 +116,16 @@ public:
           }
         }
       }
-      //std::cout << "Expanding " << new_pancakes_vector[cuda_count].size() << " x " << other_index.size() << "\n";
-      if(new_pancakes_vector[cuda_count].size() == 0) return;
+      //std::cout << "Expanding iteration " << iteration_count << " with " << new_pancakes_vector[cuda_count].size() << " x " << other_index.size() << "\n";
+      if(new_pancakes_vector[cuda_count].size() == 0) continue;
+      /*else if(new_pancakes_vector[cuda_count].size() < BATCH_SIZE / 2) {
+        for(int i = 0; i < new_pancakes_vector[cuda_count].size(); ++i) {
+          auto& p = new_pancakes_vector[cuda_count][i];
+          p->ftf_h = p->h;
+        }
+      }*/
       else {
         other_index.match(cuda_vector[cuda_count], new_pancakes_vector[cuda_count]);
-
-        #ifdef FTF_HASH
-        other_match->match(new_pancakes_vector[cuda_count]);
-        #endif
       }
     }
 
@@ -149,17 +134,11 @@ public:
       std::vector<FTF_Node*>& pancakes = new_pancakes_vector[cuda_count];
       for(int i = 0; i < pancakes.size(); ++i)
       {
-        #ifdef FTF_HASH
-        if(pancakes[i]->ftf_h != answers[i]) {
-          std::cout << "FTF Mismatch Error iteration " << iteration_count << ": " << std::to_string(pancakes[i]->ftf_h) << " did not equal the GPU value of " << std::to_string(answers[i]) << "\n";
-        }
-        assert(pancakes[i]->ftf_h == answers[i]);
-        #endif
         pancakes[i]->ftf_h = answers[i];
         if(answers[i] == UINT32_MAX) std::cout << "ERROR";
         assert(pancakes[i]->ftf_h >= pancakes[i]->h);
         pancakes[i]->f = pancakes[i]->g + pancakes[i]->ftf_h;
-    }
+      }
       for(int i = 0; i < pancakes.size(); ++i)
       {
         const FTF_Node* ptr = pancakes[i];
@@ -179,9 +158,6 @@ public:
             size_t num_erased = open.erase(&**it_open);
             assert(num_erased == 1);
             my_index.erase(*it_open);
-            #ifdef FTF_HASH
-            my_match->erase(&**it_open);
-            #endif
             open_hash.erase(it_open);
             assert(open_hash.size() == open.size());
           }
@@ -194,30 +170,32 @@ public:
         assert(open_hash.size() == open.size());
         my_index.insert(ptr);
         assert(open.size() == my_index.size());
-        #ifdef FTF_HASH
-        my_match->insert(ptr);
-        #endif
       }
+    }
   }
-}
 
   inline void choose_dir()
   {
-    if((*open_f.begin())->f < (*open_b.begin())->f) {
-      dir = Direction::forward;
-    }
-    else if((*open_f.begin())->f > (*open_b.begin())->f)
-    {
-      dir = Direction::backward;
-    }
-    else if(UB - lbmin == 1) {
+    //if((*open_f.begin())->f * 1.001 < (*open_b.begin())->f) {
+    //  //if(dir == Direction::backward) std::cout << "Switching direction 1 backward to forward\n";
+    //  dir = Direction::forward;
+    //}
+    //else if((*open_b.begin())->f * 1.001 < (*open_f.begin())->f)
+    //{
+    //  //if(dir == Direction::forward) std::cout << "Switching direction 1 forward to backward\n";
+    //  dir = Direction::backward;
+    //}
+    //else 
+      if(UB < SIZE_MAX) {
       //Do nothing, just expand dir until done
     }
     else if(dir == Direction::forward && open_f.size() > 2 * open_b.size())
     {
+      //if(dir == Direction::forward) std::cout << "Switching direction 2 forward to backward\n";
       dir = Direction::backward;
     }
     else if(dir == Direction::backward && open_b.size() > 2 * open_f.size()) {
+      //if(dir == Direction::backward) std::cout << "Switching direction 2 backward to forward\n";
       dir = Direction::forward;
     }
   }
@@ -234,9 +212,6 @@ public:
     forward_index.insert(ptr_start);
     ptr_start->ftf_h = ptr_start->f = forward_index.match_one(cuda_vector[0], &goal);
     assert(ptr_start->ftf_h == MAX(ptr_start->h, goal.h));
-    #ifdef FTF_HASH
-    f_match.insert(ptr_start);
-    #endif
     open_f.insert(ptr_start);
     open_f_hash.insert(ptr_start);
     auto ptr_goal = storage.push_back(goal);
@@ -244,10 +219,6 @@ public:
     ptr_goal->ftf_h = ptr_goal->f = ptr_start->ftf_h;
     open_b.insert(ptr_goal);
     open_b_hash.insert(ptr_goal);
-    #ifdef FTF_HASH
-    assert(f_match.match(ptr_goal) == ptr_start->ftf_h);
-    b_match.insert(ptr_goal);
-    #endif    
 
     UB = std::numeric_limits<size_t>::max();
     if(start.vertex_index == goal.vertex_index) UB = 0;
@@ -276,6 +247,8 @@ public:
       }
     }
 
+    //std::cout << "iterations: " << iteration_count << '\n';
+
     #ifdef HISTORY
     std::cout << "Actions: ";
     for(int i = 0; i < best_f.actions.size(); ++i)
@@ -298,7 +271,7 @@ public:
     {
       return std::make_tuple((double)UB, expansions, memory);
     }
-    }
+  }
 
 public:
 
@@ -307,4 +280,4 @@ public:
     Ffgbs instance;
     return instance.run_search(FTF_Node(start), FTF_Node(goal));
   }
-  };
+};

@@ -69,7 +69,6 @@ public:
     device_nodes.set_empty();
     device_nodes.insert(tmp_nodes, tmp_nodes + nodes.size());
     assert(device_g_values.size() == device_nodes.size());
-    //device_nodes.tranpose();
     valid_device_cache = true;
   }
 
@@ -120,7 +119,6 @@ public:
 
   uint32_t match_one(mycuda& cuda, const Type* val);
   void match(mycuda& cuda, std::vector<Type*>& val);
-  void match_all(mycuda& cuda, ftf_cudastructure<Type, Hash, Equal>& other);
 };
 
 
@@ -142,42 +140,11 @@ template <typename Type, typename Hash, typename Equal>
 void ftf_cudastructure<Type, Hash, Equal>::match(mycuda& cuda, std::vector<Type*>& val)
 {
   load_device();
-  //if(!valid_device_cache)
-  //{
   assert(device_nodes.size() == device_g_values.size());
   cuda.set_ptrs(device_nodes.size(), val.size(), device_nodes.data(), device_g_values.data());
-  //valid_device_cache = true;
-  //}
-  //size_t num_vals = std::min(val.size() - batch * mycuda::MAX_BATCH, mycuda::MAX_BATCH);
   for(size_t i = 0; i < val.size(); ++i)
   {
     cuda.h_nodes[i] = val[i]->vertex_index;
   }
   cuda.load_then_batch_vector_matrix();
-}
-
-//Must call get_answers() to retrieve the answers, because this is calculated asynchronously and get_answers() will wait until its done
-template <typename Type, typename Hash, typename Equal>
-void ftf_cudastructure<Type, Hash, Equal>::match_all(mycuda& cuda, ftf_cudastructure<Type, Hash, Equal>& other)
-{
-  load_device();
-  other.load_device();
-  size_t completed = 0;
-  while(completed < other.nodes.size()) {
-    size_t to_do = std::min(BATCH_SIZE, other.nodes.size() - completed);
-
-    cuda.set_ptrs(device_nodes.size(), to_do, device_nodes.data(), device_g_values.data());
-    cuda.set_d_hash_vals(other.device_nodes.data() + completed);
-    other.synchronize();
-    synchronize();
-    cuda.batch_vector_matrix();
-    uint32_t* answers = cuda.get_answers();
-    cuda.clear_d_hash_vals();
-    for(int i = 0; i < to_do; ++i) {
-      FTF_Node* ptr = const_cast<FTF_Node*>(other.nodes[i + completed]);
-      ptr->ftf_h = answers[i];
-      ptr->f = answers[i] + other.nodes[i + completed]->g;
-    }
-    completed += to_do;
-  }
 }

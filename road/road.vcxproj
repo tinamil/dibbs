@@ -67,7 +67,7 @@
       <CodeGeneration>compute_86,sm_86</CodeGeneration>
     </CudaCompile>
     <CudaCompile>
-      <FastMath>false</FastMath>
+      <FastMath>true</FastMath>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <AdditionalOptions>--std c++17  --expt-relaxed-constexpr %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Od</Optimization>

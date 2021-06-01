@@ -35,12 +35,12 @@ struct Node
 
     uint32_t heuristic_dist = 0, reverse_heuristic = 0;
     if(dir == Direction::forward) {
-      heuristic_dist = Road::haversine_distance(goal_node_index, edge.other);
-      reverse_heuristic = Road::haversine_distance(start_node_index, edge.other);
+      heuristic_dist = Road::heuristic(goal_node_index, edge.other);
+      reverse_heuristic = Road::heuristic(start_node_index, edge.other);
     }
     else {
-      heuristic_dist = Road::haversine_distance(start_node_index, edge.other);
-      reverse_heuristic = Road::haversine_distance(goal_node_index, edge.other);
+      heuristic_dist = Road::heuristic(start_node_index, edge.other);
+      reverse_heuristic = Road::heuristic(goal_node_index, edge.other);
     }
 
     Node n{
@@ -125,7 +125,7 @@ struct NodeFSort
   {
     if(lhs->f == rhs->f)
     {
-      return lhs->g < rhs->g;
+      return lhs->g > rhs->g;
     }
     return lhs->f > rhs->f;
   }

@@ -792,12 +792,11 @@ uint32_t good_random()
 template <typename T>
 constexpr T ipow(T num, unsigned int pow)
 {
-  return (pow >= sizeof(unsigned int) * 8) ? 0 : pow == 0 ? 1 : num * ipow(num, pow - 1);
+  return (pow >= 32) ? 0 : pow == 0 ? 1 : num * ipow(num, pow - 1);
 }
 
 void test_cuda()
 {
-
   constexpr size_t my_num_pancakes = ipow(2,5);
   constexpr size_t other_num_pancakes = BATCH_SIZE;
 

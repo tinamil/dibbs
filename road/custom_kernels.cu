@@ -11,23 +11,23 @@
 #include <cuda/barrier>
 namespace cg = cooperative_groups;
 
-template <typename T>
 __device__
-inline T square(T l)
+uint32_t calculateDistanceInMeter(const Coordinate& coord1, const Coordinate& coord2)
 {
-  return l * l;
-}
+  constexpr float DIAMETER_PI_F = AVERAGE_DIAMETER_OF_EARTH_M * PI * RAD_TO_DEG_I360;
+  constexpr float EARTH_PERIMETER_F = EARTH_PERIMETER * RAD_TO_DEG_I360;
 
-__device__
-uint32_t inline calculateDistanceInMeter(const Coordinate& coord1, const Coordinate& coord2)
-{
-  double latDistance = DEG_TO_RAD * (coord1.lat - coord2.lat);
-  double lngDistance = DEG_TO_RAD * (coord1.lng - coord2.lng);
-  double a = square(sin(latDistance / 2.)) + cos(DEG_TO_RAD * coord1.lat) * cos(DEG_TO_RAD * coord2.lat) * square(sin(lngDistance / 2.));
-  double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-  double dist = AVERAGE_RADIUS_OF_EARTH_M * c;
-  //Round down to to 1 decimal point
-  return static_cast<uint32_t>(floor(dist));
+  const float earthCyclePerimeter = EARTH_PERIMETER_F * __cosf(__double2float_rd(coord1.lat + coord2.lat) / 2.0f);
+  const float dx = __double2float_rd(coord1.lng - coord2.lng) * earthCyclePerimeter;
+  const float dy = DIAMETER_PI_F * __double2float_rd(coord1.lat - coord2.lat);
+
+  return __float2uint_rd(.99f * __fsqrt_rz(dx * dx + dy * dy));
+
+  //const auto latDistance = __sinf(__double2float_rd((coord1.lat - coord2.lat) / 2));
+  //const auto lngDistance = __sinf(__double2float_rd((coord1.lng - coord2.lng) / 2));
+  //const auto a = latDistance * latDistance + __cosf(__double2float_rd(coord1.lat)) * __cosf(__double2float_rd(coord2.lat)) * lngDistance * lngDistance;
+  //const auto c = AVERAGE_DIAMETER_OF_EARTH_M * asinf(fminf(1.0f, __fsqrt_rd(a)));
+  //return __double2uint_rd(c);
 }
 
 constexpr uint32_t npow2(uint32_t v)
@@ -44,7 +44,7 @@ constexpr uint32_t npow2(uint32_t v)
 }
 static_assert(npow2(3) == 4);
 
-#define REDUCE_THREADS 64
+#define REDUCE_THREADS 128
 template <typename T>
 __global__ void myReduceMinSharedMem(const uint32_t xDim, const uint32_t xStride, const T* __restrict__ mult_results, T* __restrict__ batch_answers)
 {
@@ -104,11 +104,12 @@ void cuda_min_kernel(int cols_a, int rows_b, const T* __restrict__ mult_results,
 //  }
 //}
 
-#define TILE 16
+#define TILE_X 16
+#define TILE_Y 16
 __global__
 void tiled_cuda_bitwise_set_intersection(const uint32_t cols_a,
                                          const uint32_t rows_b,
-                                         const unsigned max_a,
+                                         const uint32_t max_a,
                                          const uint32_t* __restrict__ hash_a,
                                          const uint32_t* __restrict__ g_vals,
                                          const uint32_t* __restrict__ hash_b,
@@ -118,13 +119,12 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t cols_a,
   assert(blockIdx.x * blockDim.x < cols_a);
   assert(blockIdx.y * blockDim.y < rows_b);
 
-  __shared__ uint32_t sMin[TILE][TILE];
+  __shared__ uint32_t sMin[TILE_Y][TILE_X];
   uint32_t localMin = UINT32_MAX;
 
-  __shared__ Coordinate sA[TILE];
-  __shared__ Coordinate sB[TILE];
+  __shared__ Coordinate sA[TILE_X];
+  __shared__ Coordinate sB[TILE_Y];
   Coordinate localB;
-  Coordinate localA;
 
   cg::thread_block block = cg::this_thread_block();
 
@@ -134,7 +134,7 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t cols_a,
 
   if(output_row < rows_b) {
     if(threadIdx.x == 0) {
-      sB[threadIdx.y] = coordinates[hash_b[output_row]];
+      memcpy(sB + threadIdx.y, coordinates + hash_b[output_row], sizeof(Coordinate));
     }
   }
 
@@ -148,13 +148,11 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t cols_a,
   for(uint32_t bx = blockIdx.x; bx < max_a; bx += gridDim.x) {
     uint32_t output_col = bx * blockDim.x + threadIdx.x;
     if(output_col < cols_a && threadIdx.y == 0) {
-      sA[threadIdx.x] = coordinates[hash_a[output_col]];
+      memcpy(sA + threadIdx.x, coordinates + hash_a[output_col], sizeof(Coordinate));
     }
     block.sync();
     if(output_row < rows_b && output_col < cols_a) {
-      localA = sA[threadIdx.x];
-      const uint32_t h_val = g_vals[output_col] + calculateDistanceInMeter(localA, localB);
-      localMin = MIN(localMin, h_val);
+      localMin = umin(localMin, g_vals[output_col] + calculateDistanceInMeter(sA[threadIdx.x], localB));
     }
     block.sync();
   }
@@ -162,7 +160,7 @@ void tiled_cuda_bitwise_set_intersection(const uint32_t cols_a,
   sMin[threadIdx.y][threadIdx.x] = localMin;
   block.sync();
 
-  for(unsigned int s = TILE / 2; s > 0; s >>= 1) {
+  for(unsigned int s = TILE_X / 2; s > 0; s >>= 1) {
     if(threadIdx.x < s) {
       const uint32_t tmpMinVal = sMin[threadIdx.y][threadIdx.x + s];
       if(tmpMinVal < localMin) {
@@ -206,21 +204,38 @@ void bitwise_set_intersection(cudaStream_t stream,
   //int blocksPerGridInt = (rows_a * rows_b + threadsPerBlockInt - 1) / threadsPerBlockInt;
   //naive_cuda_heuristic << <blocksPerGridInt, threadsPerBlockInt, 0, stream >> > (rows_a, rows_b, hash_a, g_vals, hash_b, d_coordinates, mult_results);
   constexpr uint32_t MAX_BLOCKS_X = 1024;
-  dim3 threadsPerBlock(TILE, TILE, 1);
+  dim3 threadsPerBlock(TILE_X, TILE_Y, 1);
   int max_a = int_div_ceil(rows_a, threadsPerBlock.x);
   uint32_t gridDimX = MIN(MAX_BLOCKS_X, max_a);
   uint32_t gridDimY = int_div_ceil(rows_b, threadsPerBlock.y);
   assert(gridDimY <= 65535);
   dim3 blocksPerGrid(gridDimX, gridDimY, 1);
 
-  tiled_cuda_bitwise_set_intersection <<<blocksPerGrid, threadsPerBlock, 0, stream >>> (rows_a, rows_b, max_a, hash_a, g_vals, hash_b, d_coordinates, mult_results);
+  tiled_cuda_bitwise_set_intersection << <blocksPerGrid, threadsPerBlock, 0, stream >> > (rows_a, rows_b, max_a, hash_a, g_vals, hash_b, d_coordinates, mult_results);
   CUDA_CHECK_RESULT(cudaGetLastError());
   //threadsPerBlock = dim3(TILE, TILE, 1);
   //reduceMin2 << <blocksPerGrid, threadsPerBlock, TILE* gridDimX * sizeof(uint8_t), stream >> > (rows_a, int_div_ceil(rows_a, gridDimX) rows_b, mult_results, d_answers);
   //myReduceMinAtomic << <1024, 96, 0, stream >> > (rows_b, rows_a, mult_results, d_answers);
-  myReduceMinSharedMem <<<rows_b, REDUCE_THREADS, 0, stream >>> (gridDimX, gridDimX, mult_results, d_answers);
+  myReduceMinSharedMem << <rows_b, REDUCE_THREADS, 0, stream >> > (gridDimX, gridDimX, mult_results, d_answers);
   //cuda_min_kernel << <blocksPerGridInt, threadsPerBlockInt, 0, stream >> > (rows_a, rows_b, mult_results, d_answers);
- CUDA_CHECK_RESULT(cudaGetLastError());
+  CUDA_CHECK_RESULT(cudaGetLastError());
+}
+__global__ void EmptyKernel() {}
+
+void empty(cudaStream_t stream, int rows_a, int rows_b)
+{
+  constexpr uint32_t MAX_BLOCKS_X = 1024;
+  dim3 threadsPerBlock(TILE_X, TILE_Y, 1);
+  int max_a = int_div_ceil(rows_a, threadsPerBlock.x);
+  uint32_t gridDimX = MIN(MAX_BLOCKS_X, max_a);
+  uint32_t gridDimY = int_div_ceil(rows_b, threadsPerBlock.y);
+  assert(gridDimY <= 65535);
+  dim3 blocksPerGrid(gridDimX, gridDimY, 1);
+
+  EmptyKernel <<<blocksPerGrid, threadsPerBlock, 0, stream >>> ();
+  CUDA_CHECK_RESULT(cudaGetLastError());
+  EmptyKernel <<<rows_b, REDUCE_THREADS, 0, stream >>> ();
+  CUDA_CHECK_RESULT(cudaGetLastError());
 }
 
 //void reduce_min(cudaStream_t stream, int num_batch, int num_frontier, const uint32_t* __restrict__ mult_results, uint32_t* __restrict__ d_batch_answers)

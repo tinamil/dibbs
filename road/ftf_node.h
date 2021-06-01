@@ -6,7 +6,6 @@
 #include <string>
 #include "node.h"
 
-static constexpr size_t BATCH_SIZE = 1024;
 
 class FTF_Node
 {
@@ -24,7 +23,7 @@ public:
 
   FTF_Node() : vertex_index(0), g(0), h(0), f(0), h2(0), f_bar(0), delta(0), ftf_h(0), dir(Direction::forward), threshold(false) {}
   FTF_Node(Node n) : vertex_index(n.vertex_index), g(n.g), h(n.h), f(n.f), h2(n.h2), f_bar(n.f_bar), delta(n.delta),
-    ftf_h(n.h), dir(n.dir), threshold(n.threshold)
+    ftf_h(0), dir(n.dir), threshold(n.threshold)
   {}
 
   inline bool operator==(const FTF_Node& right) const
@@ -42,12 +41,12 @@ public:
 
     uint32_t heuristic_dist = 0, reverse_heuristic = 0;
     if(dir == Direction::forward) {
-      heuristic_dist = Road::haversine_distance(Node::goal_node_index, edge.other);
-      reverse_heuristic = Road::haversine_distance(Node::start_node_index, edge.other);
+      heuristic_dist = Road::heuristic(Node::goal_node_index, edge.other);
+      reverse_heuristic = Road::heuristic(Node::start_node_index, edge.other);
     }
     else {
-      heuristic_dist = Road::haversine_distance(Node::start_node_index, edge.other);
-      reverse_heuristic = Road::haversine_distance(Node::goal_node_index, edge.other);
+      heuristic_dist = Road::heuristic(Node::start_node_index, edge.other);
+      reverse_heuristic = Road::heuristic(Node::goal_node_index, edge.other);
     }
 
     FTF_Node n(

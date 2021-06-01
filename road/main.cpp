@@ -1,22 +1,22 @@
 #include "road.h"
 #include "node.h"
 #include "astar.h"
-//#include "dibbs.h"
+#include "dibbs.h"
 //#include "dvcbs.h"
-#include "gbfhs.h"
+//#include "gbfhs.h"
 //#include "idd.h"
 //#include "cbbs.h"
-//#include "ffgbs.h"
+#include "ffgbs.h"
 #include <iostream>
 #include <iomanip> 
 #include <chrono>
 #include <random>
 #include <functional>
 
-constexpr size_t NUM_PROBLEMS = 1000;
-constexpr Type MAP_TYPE = Type::NY;
+constexpr size_t NUM_PROBLEMS = 100;
+constexpr Type MAP_TYPE = Type::USA;
 
-constexpr uint32_t SEED = 0;
+constexpr uint32_t SEED = 1;
 //32-bit Mersenne Twister by Matsumoto and Nishimura, 1998
 std::mt19937 rng_engine(SEED);
 std::vector<std::string> algorithm_names;
@@ -93,7 +93,7 @@ std::vector<Result> random_problem(const std::uniform_int_distribution<uint32_t>
   Node::goal_node_index = goal_index;
   Node::start_node_index = start_index;
 
-  uint32_t dist = Road::haversine_distance(Node::start_node_index, Node::goal_node_index);
+  uint32_t dist = Road::heuristic(Node::start_node_index, Node::goal_node_index);
 
   Node start{
     .vertex_index = Node::start_node_index,
@@ -183,15 +183,29 @@ int main()
   std::unordered_map<std::string_view, std::vector<Result>> alg_results;
   for(int i = 0; i < NUM_PROBLEMS; ++i) {
     std::cout << i << std::endl;
-    
-    auto results = random_problem(uniform_dist, i >= 475);
+
+    auto results = random_problem(uniform_dist, i >= 0);
 
     for(auto& r : results) {
       alg_results[r.algorithm].push_back(r);
-      std::cout << r.algorithm << " " << std::fixed << std::setprecision(1) << std::to_string(r.microseconds / 1000000.) << " seconds; " << r.expansions << " expansions" << std::endl;
+      std::cout << r.algorithm << " " << std::fixed << std::setprecision(1) << r.microseconds / 1000000. << " seconds; " << r.expansions << " expansions" << std::endl;
     }
-
     output(alg_results);
+  }
+
+
+  std::cout << "\n\nFinal Results:\n";
+  for(auto& pair : alg_results) {
+    std::cout << pair.first << ": ";
+    uint64_t microseconds = 0, expansions = 0, count = 0;
+    for(size_t i = 0; i < pair.second.size(); ++i) {
+      microseconds += pair.second[i].microseconds;
+      expansions += pair.second[i].expansions;
+      count += 1;
+    }
+    std::cout << std::fixed << std::setprecision(1) << static_cast<double>(microseconds) / count / 1000. << " milliseconds and ";
+    std::cout << std::fixed << std::setprecision(1) << static_cast<double>(expansions) / count << " expansions";
+    std::cout << std::endl;
   }
 
   return 0;
