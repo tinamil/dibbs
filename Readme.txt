@@ -19,3 +19,6 @@ Sliding tile instances are located in
 sliding_tile/main.cpp
 
 Format is a permutation of the numbers 0 to 15.  0 indicates the empty space on the board.  The position in the list indicates the position on the board, e.g. the first number is the top left corner and last number is the bottom right corner, and the number indicates which piece is located in that position.  The goal state is 0, 1, 2, ..., 15.
+
+
+The problem results for expansions, time taken, and memory usage for each instance are located in IDD_PancakeResults.xlsx, IDD_RubiksData.xlsx, and IDD_SlidingTileResults.xlsx.
