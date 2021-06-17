@@ -21,14 +21,13 @@
 
 class Ffgbs
 {
-  static constexpr size_t BATCH_SIZE = 124;
+  static constexpr size_t BATCH_SIZE = 254;
   static constexpr size_t CUDA_STREAMS_COUNT = 1;
-  int iteration_count = 0;
+  //int iteration_count = 0;
 public:
 
   typedef std::set<const FTF_Node*, FTFNodeFSortHighG> set;
   typedef std::unordered_set<const FTF_Node*, FTFNodeHash, FTFNodeEqual> hash_set;
-  //typedef std::unordered_set<const Pancake*, PancakeNeighborHash, PancakeNeighborEqual> hash_set;
 
   StackArray<FTF_Node> storage;
   set open_f, open_b;
@@ -51,11 +50,10 @@ public:
   template<typename T>
   void expand_all_nodes(set& open, hash_set& open_hash, const hash_set& other_open, hash_set& closed, T& my_index, T& other_index)
   {
-    iteration_count++;
+    //iteration_count++;
     //if(iteration_count % 5000 == 0) std::cout << iteration_count << " " << open_hash.size() << " " << other_open.size() << " " << lbmin << " " << UB << "\n";
-    auto f_val = (*open.begin())->f * 1.0002;
-    int count = 0;
     for(int cuda_count = 0; cuda_count < CUDA_STREAMS_COUNT; ++cuda_count) {
+      const double f_val = (*open.begin())->f * 1.0008;
       new_pancakes_vector[cuda_count].clear();
       while(UB > lbmin && !open.empty() && (*open.begin())->f <= f_val && (*open.begin())->f < UB && new_pancakes_vector[cuda_count].size() < BATCH_SIZE)
       {
@@ -136,7 +134,8 @@ public:
       {
         pancakes[i]->ftf_h = answers[i];
         if(answers[i] == UINT32_MAX) std::cout << "ERROR";
-        assert(pancakes[i]->ftf_h >= pancakes[i]->h);
+        //assert(pancakes[i]->ftf_h >= pancakes[i]->h);
+        if(pancakes[i]->h > pancakes[i]->ftf_h) pancakes[i]->ftf_h = pancakes[i]->h;
         pancakes[i]->f = pancakes[i]->g + pancakes[i]->ftf_h;
       }
       for(int i = 0; i < pancakes.size(); ++i)
@@ -176,17 +175,16 @@ public:
 
   inline void choose_dir()
   {
-    //if((*open_f.begin())->f * 1.001 < (*open_b.begin())->f) {
-    //  //if(dir == Direction::backward) std::cout << "Switching direction 1 backward to forward\n";
-    //  dir = Direction::forward;
-    //}
-    //else if((*open_b.begin())->f * 1.001 < (*open_f.begin())->f)
-    //{
-    //  //if(dir == Direction::forward) std::cout << "Switching direction 1 forward to backward\n";
-    //  dir = Direction::backward;
-    //}
-    //else 
-      if(UB < SIZE_MAX) {
+    if((*open_f.begin())->f * 1.01 < (*open_b.begin())->f) {
+      //if(dir == Direction::backward) std::cout << "Switching direction 1 backward to forward\n";
+      dir = Direction::forward;
+    }
+    else if((*open_b.begin())->f * 1.01 < (*open_f.begin())->f)
+    {
+      //if(dir == Direction::forward) std::cout << "Switching direction 1 forward to backward\n";
+      dir = Direction::backward;
+    }
+    else if(UB < SIZE_MAX) {
       //Do nothing, just expand dir until done
     }
     else if(dir == Direction::forward && open_f.size() > 2 * open_b.size())
@@ -211,7 +209,7 @@ public:
     auto ptr_start = storage.push_back(start);
     forward_index.insert(ptr_start);
     ptr_start->ftf_h = ptr_start->f = forward_index.match_one(cuda_vector[0], &goal);
-    assert(ptr_start->ftf_h == MAX(ptr_start->h, goal.h));
+    //assert(ptr_start->ftf_h == MAX(ptr_start->h, goal.h));
     open_f.insert(ptr_start);
     open_f_hash.insert(ptr_start);
     auto ptr_goal = storage.push_back(goal);

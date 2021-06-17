@@ -19,5 +19,9 @@ static constexpr coordinate_t RAD_TO_DEG_I360 = RAD_TO_DEG / 360.;
 
 
 struct Coordinate { coordinate_t lng, lat; };
+struct fCoordinate
+{
+  float lng, lat;
+};
 
 constexpr size_t MEM_LIMIT = 100ui64 * 1024 * 1024 * 1024; //100GB

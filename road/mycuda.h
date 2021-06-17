@@ -20,14 +20,12 @@ class mycuda
   uint32_t* h_answers = nullptr;
   uint32_t* d_a = nullptr;
   uint32_t* d_g_vals = nullptr;
-  static inline Coordinate* d_coordinates = nullptr;
+  static inline fCoordinate* d_coordinates = nullptr;
 
 public:
   cudaStream_t stream = nullptr;
   size_t other_num_nodes = 0;
-  //Hash_array used to store NUM_INTS_PER_PANCAKE for each item inserted, replace with a single int and lookup?
   uint32_t* h_nodes = nullptr;
-  //static constexpr size_t MAX_BATCH = 16384;
 
   mycuda()
   {
@@ -39,6 +37,7 @@ public:
   ~mycuda()
   {
     cudaDeviceSynchronize();
+    //Do NOT free d_a or d_g_vals, they are from cuda_vectors that cleanup during destruction
     if(stream) { cudaStreamDestroy(stream); stream = nullptr; }
     if(h_answers) { cudaFreeHost(h_answers); h_answers = nullptr; }
     if(d_answers) { cudaFree(d_answers); d_answers = nullptr; }
@@ -68,7 +67,7 @@ public:
 
   static void initialize()
   {
-    
+
   }
   void set_ptrs(size_t m_rows, size_t n_cols, uint32_t* A, uint32_t* g_vals);
 
@@ -78,9 +77,13 @@ public:
   static inline void LoadCoordinates(const std::vector<Coordinate>& coordinates)
   {
     cudaDeviceSynchronize();
+    std::vector<fCoordinate> fcoordinates;
+    for(const auto& c : coordinates) {
+      fcoordinates.push_back(fCoordinate{static_cast<float>(c.lng), static_cast<float>(c.lat)});
+    }
     if(d_coordinates) { cudaFree(d_coordinates); d_coordinates = nullptr; }
-    CUDA_CHECK_RESULT(cudaMalloc(&d_coordinates, coordinates.size() * sizeof(Coordinate)));
-    cudaMemcpy(d_coordinates, coordinates.data(), coordinates.size() * sizeof(Coordinate), cudaMemcpyHostToDevice);
+    CUDA_CHECK_RESULT(cudaMalloc(&d_coordinates, fcoordinates.size() * sizeof(fCoordinate)));
+    cudaMemcpy(d_coordinates, fcoordinates.data(), fcoordinates.size() * sizeof(fCoordinate), cudaMemcpyHostToDevice);
   }
 };
 

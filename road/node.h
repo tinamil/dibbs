@@ -5,6 +5,7 @@
 
 
 enum class Direction { forward, backward };
+
 struct Node
 {
   static inline uint32_t start_node_index;

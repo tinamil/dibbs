@@ -13,7 +13,6 @@
 
 class Astar
 {
-
 public:
   std::priority_queue<const Node*, std::vector<const Node*>, NodeFSort> open;
   std::unordered_set<const Node*, NodeHash, NodeEqual> closed;
